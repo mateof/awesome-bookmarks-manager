@@ -18,9 +18,16 @@ let browserSingleton: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
   if (browserSingleton) return browserSingleton;
+  // `CHROMIUM_PATH` lets the production image point Playwright at the
+  // system Chromium binary (Debian's `chromium` package) instead of
+  // shipping the full Playwright bundle of 3 browsers. In dev it's unset
+  // and Playwright falls back to whatever `playwright install chromium`
+  // dropped under `~/.cache/ms-playwright`.
+  const executablePath = process.env.CHROMIUM_PATH || undefined;
   browserSingleton = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    executablePath,
   });
   return browserSingleton;
 }

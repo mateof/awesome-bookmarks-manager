@@ -39,24 +39,28 @@ RUN pnpm exec turbo run build \
 RUN pnpm --filter @awesome-bookmarks/api deploy --prod /out
 
 # --- Runtime ---
-# Playwright base ships Chromium and matching system libs (~1.2 GB).
-# Bringing Chromium in any other way ends up similar — the browser is the bulk.
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy AS runtime
+# Plain Node + Debian's Chromium (~400 MB) instead of the Playwright base
+# image (which ships Chromium + Firefox + WebKit and weights ~1.5 GB).
+# The snapshot worker reads CHROMIUM_PATH (set below) and calls
+# `chromium.launch({ executablePath })` from playwright-core.
+FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     API_PORT=3001 \
-    PUBLIC_DIR=/app/public
+    PUBLIC_DIR=/app/public \
+    CHROMIUM_PATH=/usr/bin/chromium
 
-# Playwright 1.48.0-jammy ships Node 20, but the builder uses Node 22, so
-# better-sqlite3's native binary is compiled against NODE_MODULE_VERSION 127.
-# Install Node 22 here from NodeSource so the runtime ABI matches the binary.
-# Also pulls OS security patches in the same layer.
+# Chromium + minimal fonts so captured pages don't render with tofu boxes.
+# fonts-noto-cjk is 100 MB but Asian-text snapshots are otherwise unreadable.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
- && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
- && apt-get install -y --no-install-recommends nodejs \
  && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends \
+        chromium \
+        ca-certificates \
+        fonts-liberation \
+        fonts-noto-color-emoji \
+        fonts-noto-cjk \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
