@@ -1,0 +1,32 @@
+# Single-container compose. The API serves both /api/* and the SPA from
+# /app/public via Fastify static.
+#
+# Required .env:
+#   MASTER_KEY=$(openssl rand -base64 32)
+#   SESSION_SECRET=$(openssl rand -base64 48)
+#
+# Optional .env knobs:
+#   API_PORT=3001                        # internal Fastify port AND host
+#                                        #   binding (1:1 mapping). To map
+#                                        #   a different host port without
+#                                        #   touching Fastify, edit the
+#                                        #   `ports:` line below directly.
+#   PUBLIC_BASE_URL=http://localhost:3001
+#   CORS_ORIGIN=http://localhost:3001    # only matters if you expose
+#                                        # the app under a different host
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:${API_PORT:-3001}}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${API_PORT:-3001}}
+    volumes:
+      - ./data:/data
+    ports:
+      - "${API_PORT:-3001}:${API_PORT:-3001}"
+    restart: unless-stopped

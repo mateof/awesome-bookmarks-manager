@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AwesomeBookmarks · Opciones</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 480px; margin: 24px auto; padding: 0 16px; }
+      input, button { padding: 6px; width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+      label { font-size: 12px; color: #64748b; }
+      .ok { color: #059669; }
+      .err { color: #dc2626; }
+    </style>
+  </head>
+  <body>
+    <h2>Configuración</h2>
+    <label>Endpoint del backend</label>
+    <input id="endpoint" placeholder="http://localhost:3001" />
+    <label>Token (genéralo en la web → Ajustes)</label>
+    <input id="token" placeholder="abc123…" />
+    <button id="save-btn">Guardar</button>
+    <div id="status"></div>
+    <script src="options.js"></script>
+  </body>
+</html>

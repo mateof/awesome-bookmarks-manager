@@ -1,0 +1,55 @@
+node_modules/
+dist/
+build/
+.turbo/
+.vite/
+coverage/
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Persistent data (sqlite + blobs)
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+.envrc
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Browser extension build output
+apps/extension/dist/
+
+# Docker overrides (developer-specific)
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# Backup / scratch files
+*.bak
+*.tmp

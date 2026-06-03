@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "AwesomeBookmarks",
+  "version": "0.1.0",
+  "description": "Guarda la pestaña actual en tu instancia de AwesomeBookmarks.",
+  "permissions": ["activeTab", "storage", "commands"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AwesomeBookmarks"
+  },
+  "options_page": "options.html",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "commands": {
+    "save-tab": {
+      "suggested_key": { "default": "Ctrl+Shift+D", "mac": "Command+Shift+D" },
+      "description": "Guardar pestaña actual"
+    }
+  }
+}

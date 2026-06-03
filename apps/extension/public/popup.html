@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>AwesomeBookmarks</title>
+    <style>
+      body { width: 320px; margin: 0; font-family: system-ui, sans-serif; }
+      .wrap { padding: 12px; }
+      input, button, textarea { width: 100%; box-sizing: border-box; padding: 6px; margin-bottom: 6px; }
+      .url { font-size: 12px; color: #64748b; word-break: break-all; }
+      .ok { color: #059669; font-size: 12px; }
+      .err { color: #dc2626; font-size: 12px; }
+      a { color: #2563eb; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h3 id="title-display">…</h3>
+      <div class="url" id="url-display"></div>
+      <input id="title-input" placeholder="Título" />
+      <input id="tags-input" placeholder="Tags separadas por coma" />
+      <button id="save-btn">Guardar</button>
+      <div id="status"></div>
+      <a href="#" id="options-link">Configurar →</a>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "@awesome-bookmarks/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node build.js --watch",
+    "build": "node build.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'no lint'",
+    "test": "echo 'no tests'",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@awesome-bookmarks/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.275",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.3"
+  }
+}

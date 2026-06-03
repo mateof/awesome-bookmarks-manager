@@ -1,0 +1,36 @@
+# Pull-from-GHCR compose. No local build, no source tree needed.
+# Single container: Fastify serves the /api/* endpoints and the SPA from disk.
+#
+# Usage:
+#   1. Save this file + a .env (see below) anywhere on your host.
+#   2. docker compose -f docker-compose.ghcr.yml pull
+#   3. docker compose -f docker-compose.ghcr.yml up -d
+#
+# Required .env:
+#   MASTER_KEY=$(openssl rand -base64 32)
+#   SESSION_SECRET=$(openssl rand -base64 48)
+#
+# Optional .env knobs:
+#   IMAGE_OWNER=mateof                   # change if you forked
+#   IMAGE_TAG=latest                     # or a pinned version: 1.2.3
+#   API_PORT=3001                        # internal Fastify port AND host
+#                                        #   binding (1:1 mapping). To map
+#                                        #   a different host port without
+#                                        #   touching Fastify, edit the
+#                                        #   `ports:` line below directly.
+#   PUBLIC_BASE_URL=http://localhost:3001
+#   CORS_ORIGIN=http://localhost:3001
+
+services:
+  app:
+    image: ghcr.io/${IMAGE_OWNER:-mateof}/awesome-bookmarks-manager:${IMAGE_TAG:-latest}
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:${API_PORT:-3001}}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${API_PORT:-3001}}
+    volumes:
+      - ./data:/data
+    ports:
+      - "${API_PORT:-3001}:${API_PORT:-3001}"
+    restart: unless-stopped

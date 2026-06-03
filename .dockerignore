@@ -1,0 +1,62 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# CI / GitHub
+.github
+
+# Local dev runtime
+node_modules
+**/node_modules
+dist
+build
+**/dist
+**/build
+.turbo
+.vite
+**/.vite
+coverage
+**/coverage
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Persistent state — never bake user data into images
+data
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test artifacts
+test-results
+playwright-report
+playwright/.cache
+
+# Obsidian memory (not part of the repo, just in case)
+memory
+
+# Repo docs that don't belong in the image
+README.md
+TODO.md
+instructions.md
+LICENSE
+docker-compose.yml
+docker-compose.ghcr.yml
