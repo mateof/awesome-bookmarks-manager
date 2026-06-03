@@ -26,7 +26,7 @@ export async function registerSession(app: FastifyInstance) {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
-      secure: env.NODE_ENV === "production",
+      secure: env.COOKIE_SECURE,
       maxAge: 60 * 60 * 24 * 30, // 30 days
     },
   });

@@ -10,6 +10,15 @@ const Schema = z.object({
   MASTER_KEY: z.string().min(1, "MASTER_KEY is required"),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 chars"),
 
+  // Whether the session cookie has the Secure flag. Default false so a
+  // first-run self-host over plain HTTP (LAN, NAS) works out of the box.
+  // Flip to "true" once you serve behind HTTPS — otherwise the browser will
+  // happily send the cookie over plaintext.
+  COOKIE_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
   KEY_CACHE_IDLE_MIN: z.coerce.number().int().default(30),
   KEY_CACHE_HARD_MIN: z.coerce.number().int().default(1440),
 
