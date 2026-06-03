@@ -48,8 +48,14 @@ ENV NODE_ENV=production \
     API_PORT=3001 \
     PUBLIC_DIR=/app/public
 
-# Refresh OS packages for latest security patches on top of the base.
+# Playwright 1.48.0-jammy ships Node 20, but the builder uses Node 22, so
+# better-sqlite3's native binary is compiled against NODE_MODULE_VERSION 127.
+# Install Node 22 here from NodeSource so the runtime ABI matches the binary.
+# Also pulls OS security patches in the same layer.
 RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+ && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
  && apt-get upgrade -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
