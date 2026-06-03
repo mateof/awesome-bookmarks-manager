@@ -36,7 +36,7 @@ RUN pnpm exec turbo run build \
       --filter=@awesome-bookmarks/web
 
 # Deploy api with production-only deps into /out (drops devDependencies)
-RUN pnpm --filter @awesome-bookmarks/api deploy --prod --legacy /out
+RUN pnpm --filter @awesome-bookmarks/api deploy --prod /out
 
 # --- Runtime ---
 # Playwright base ships Chromium and matching system libs (~1.2 GB).
