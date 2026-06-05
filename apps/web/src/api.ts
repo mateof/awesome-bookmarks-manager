@@ -280,6 +280,28 @@ export const api = {
     const blob = await res.blob();
     return new File([blob], `favicon${ext}`, { type: ct });
   },
+  fetchImageFromUrl: async (url: string): Promise<File> => {
+    const res = await fetch(`${BASE}/icons/fetch-image`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = "No se pudo descargar la imagen";
+      try {
+        msg = (JSON.parse(text) as { error?: string }).error ?? msg;
+      } catch {
+        /* keep default */
+      }
+      throw new ApiError(res.status, "image_fetch_failed", msg);
+    }
+    const ct = res.headers.get("content-type") ?? "image/png";
+    const ext = extFromContentType(ct);
+    const blob = await res.blob();
+    return new File([blob], `image${ext}`, { type: ct });
+  },
   uploadBookmarkIcon: async (id: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);

@@ -1,4 +1,4 @@
-import { Globe, Image as ImageIcon, X } from "lucide-react";
+import { Globe, Image as ImageIcon, Link2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
@@ -16,6 +16,7 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
   const [busy, setBusy] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl);
   const [msg, setMsg] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
 
   const handleFile = async (file: File) => {
     setBusy(true);
@@ -45,13 +46,33 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
     }
   };
 
+  const handleUrlFetch = async () => {
+    const trimmed = imageUrl.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const file = await api.fetchImageFromUrl(trimmed);
+      await handleFile(file);
+      setMsg(t("iconPicker.downloaded"));
+      setImageUrl("");
+    } catch (e) {
+      setMsg(e instanceof ApiError ? e.message : t("iconPicker.urlError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const canAutoFetch =
     !!autoFetchUrl &&
     autoFetchUrl.startsWith("http") &&
     !busy;
 
+  const canUrlFetch =
+    imageUrl.trim().startsWith("http") && !busy;
+
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -110,6 +131,33 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
           </button>
         )}
       </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Link2 className="h-4 w-4 text-slate-400" />
+        <input
+          type="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (canUrlFetch) void handleUrlFetch();
+            }
+          }}
+          placeholder={t("iconPicker.fromUrlPlaceholder")}
+          disabled={busy}
+          className="flex-1 min-w-[10rem] rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800"
+        />
+        <button
+          type="button"
+          onClick={handleUrlFetch}
+          disabled={!canUrlFetch}
+          className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          {busy ? t("iconPicker.downloading") : t("iconPicker.fetchUrl")}
+        </button>
+      </div>
+
       {msg && (
         <div className="text-xs text-slate-500" role="status">
           {msg}

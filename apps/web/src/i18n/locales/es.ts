@@ -376,6 +376,9 @@ const es = {
     iconAlt: "icono",
     downloaded: "Icono descargado",
     downloadError: "Error al descargar",
+    fromUrlPlaceholder: "https://… (URL directa a una imagen)",
+    fetchUrl: "Descargar",
+    urlError: "No se pudo descargar la imagen",
   },
   richText: {
     bold: "Negrita",

@@ -378,6 +378,9 @@ const en = {
     iconAlt: "icon",
     downloaded: "Icon downloaded",
     downloadError: "Download error",
+    fromUrlPlaceholder: "https://… (direct URL to an image)",
+    fetchUrl: "Fetch",
+    urlError: "Could not download the image",
   },
   richText: {
     bold: "Bold",

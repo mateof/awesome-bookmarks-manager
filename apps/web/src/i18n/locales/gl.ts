@@ -378,6 +378,9 @@ const gl = {
     iconAlt: "icona",
     downloaded: "Icona descargada",
     downloadError: "Erro ao descargar",
+    fromUrlPlaceholder: "https://… (URL directa a unha imaxe)",
+    fetchUrl: "Descargar",
+    urlError: "Non se puido descargar a imaxe",
   },
   richText: {
     bold: "Negra",
