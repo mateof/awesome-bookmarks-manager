@@ -379,8 +379,17 @@ const gl = {
     downloaded: "Icona descargada",
     downloadError: "Erro ao descargar",
     fromUrlPlaceholder: "https://… (URL directa a unha imaxe)",
-    fetchUrl: "Descargar",
+    fetchUrl: "Servidor",
+    fetchUrlServerTitle:
+      "O servidor descarga a imaxe. Máis estable, pero falla se o URL só é accesible dende o teu equipo (VPN, intranet sen saída).",
+    fetchUrlBrowser: "Dende aquí",
+    fetchUrlBrowserTitle:
+      "O teu navegador descarga a imaxe. Útil para URLs só accesibles dende o teu equipo (VPN, intranet). Falla se o servidor da imaxe non permite CORS.",
     urlError: "Non se puido descargar a imaxe",
+    urlBrowserError:
+      "O teu navegador non puido descargar a imaxe (probable bloqueo CORS). Se o URL só é accesible aquí, garda a imaxe en disco e súbea con 'Subir'.",
+    notAnImage: "Ese recurso non semella unha imaxe",
+    tooLarge: "A imaxe supera 4MB",
   },
   richText: {
     bold: "Negra",

@@ -377,8 +377,17 @@ const es = {
     downloaded: "Icono descargado",
     downloadError: "Error al descargar",
     fromUrlPlaceholder: "https://… (URL directa a una imagen)",
-    fetchUrl: "Descargar",
+    fetchUrl: "Servidor",
+    fetchUrlServerTitle:
+      "El servidor descarga la imagen. Más estable, pero falla si la URL solo es accesible desde tu equipo (VPN, intranet sin salida).",
+    fetchUrlBrowser: "Desde aquí",
+    fetchUrlBrowserTitle:
+      "Tu navegador descarga la imagen. Útil para URLs solo accesibles desde tu equipo (VPN, intranet). Falla si el servidor de la imagen no permite CORS.",
     urlError: "No se pudo descargar la imagen",
+    urlBrowserError:
+      "Tu navegador no pudo descargar la imagen (puede ser CORS bloqueado). Si la URL solo es accesible aquí, prueba a guardar la imagen en disco y subirla con 'Subir'.",
+    notAnImage: "El recurso no parece ser una imagen",
+    tooLarge: "La imagen excede 4MB",
   },
   richText: {
     bold: "Negrita",

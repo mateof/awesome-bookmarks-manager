@@ -379,8 +379,17 @@ const en = {
     downloaded: "Icon downloaded",
     downloadError: "Download error",
     fromUrlPlaceholder: "https://… (direct URL to an image)",
-    fetchUrl: "Fetch",
+    fetchUrl: "Server",
+    fetchUrlServerTitle:
+      "The server downloads the image. More stable, but fails if the URL is only reachable from your device (VPN, intranet without outbound access).",
+    fetchUrlBrowser: "From here",
+    fetchUrlBrowserTitle:
+      "Your browser downloads the image. Useful for URLs only reachable from your device (VPN, intranet). Fails if the image server doesn't allow CORS.",
     urlError: "Could not download the image",
+    urlBrowserError:
+      "Your browser couldn't download the image (likely CORS-blocked). If the URL is only reachable from here, save the image to disk and use 'Upload'.",
+    notAnImage: "That resource doesn't look like an image",
+    tooLarge: "The image exceeds 4MB",
   },
   richText: {
     bold: "Bold",

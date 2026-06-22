@@ -1,4 +1,4 @@
-import { Globe, Image as ImageIcon, Link2, X } from "lucide-react";
+import { Globe, Image as ImageIcon, Link2, MonitorDown, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
@@ -8,6 +8,18 @@ interface Props {
   onPick: (file: File) => Promise<void> | void;
   onClear?: () => Promise<void> | void;
   autoFetchUrl?: string;
+}
+
+const MAX_CLIENT_FETCH_BYTES = 4 * 1024 * 1024; // mirror the server cap
+
+function extFromMime(ct: string): string {
+  const lower = ct.toLowerCase();
+  if (lower.includes("png")) return ".png";
+  if (lower.includes("jpeg") || lower.includes("jpg")) return ".jpg";
+  if (lower.includes("gif")) return ".gif";
+  if (lower.includes("webp")) return ".webp";
+  if (lower.includes("svg")) return ".svg";
+  return ".ico";
 }
 
 export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props) {
@@ -63,6 +75,46 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
     }
   };
 
+  /**
+   * Browser-side fetch. Useful when the URL is only reachable from the
+   * user's device (e.g. an intranet host behind a VPN) and the server
+   * can't see it. Subject to CORS — origins that don't send
+   * `Access-Control-Allow-Origin` will fail; fall back to "Subir" then.
+   */
+  const handleUrlFetchClient = async () => {
+    const trimmed = imageUrl.trim();
+    if (!trimmed) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(trimmed, { mode: "cors", credentials: "omit" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      if (!blob.type.startsWith("image/")) {
+        throw new Error(t("iconPicker.notAnImage"));
+      }
+      if (blob.size > MAX_CLIENT_FETCH_BYTES) {
+        throw new Error(t("iconPicker.tooLarge"));
+      }
+      const ext = extFromMime(blob.type);
+      const file = new File([blob], `image${ext}`, { type: blob.type });
+      await handleFile(file);
+      setMsg(t("iconPicker.downloaded"));
+      setImageUrl("");
+    } catch (e) {
+      // Generic CORS failures surface as TypeError in fetch; we can't
+      // tell that apart from network errors so we show a hint pointing
+      // at the most common cause.
+      setMsg(
+        e instanceof Error && e.message
+          ? `${t("iconPicker.urlBrowserError")} (${e.message})`
+          : t("iconPicker.urlBrowserError"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const canAutoFetch =
     !!autoFetchUrl &&
     autoFetchUrl.startsWith("http") &&
@@ -70,6 +122,9 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
 
   const canUrlFetch =
     imageUrl.trim().startsWith("http") && !busy;
+  const canUrlFetchClient =
+    (imageUrl.trim().startsWith("http") || imageUrl.trim().startsWith("data:")) &&
+    !busy;
 
   return (
     <div className="space-y-2">
@@ -152,9 +207,21 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
           type="button"
           onClick={handleUrlFetch}
           disabled={!canUrlFetch}
-          className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          title={t("iconPicker.fetchUrlServerTitle")}
+          className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
         >
+          <Globe className="h-3 w-3" />
           {busy ? t("iconPicker.downloading") : t("iconPicker.fetchUrl")}
+        </button>
+        <button
+          type="button"
+          onClick={handleUrlFetchClient}
+          disabled={!canUrlFetchClient}
+          title={t("iconPicker.fetchUrlBrowserTitle")}
+          className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <MonitorDown className="h-3 w-3" />
+          {busy ? t("iconPicker.downloading") : t("iconPicker.fetchUrlBrowser")}
         </button>
       </div>
 
