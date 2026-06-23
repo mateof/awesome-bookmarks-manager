@@ -54,6 +54,21 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * When any request returns 401 (session expired / missing cookie) or 423
+ * (KeyUnavailable — DEK evicted from cache), broadcast a window event so
+ * AuthProvider can clear the cached "me" and let RequireAuth bounce the
+ * user back to /login. Otherwise the SPA stays on a "logged-in" route
+ * with every API call failing silently.
+ */
+function signalAuthInvalidated(status: number) {
+  if (status === 401 || status === 423) {
+    window.dispatchEvent(
+      new CustomEvent("auth:invalidated", { detail: { status } }),
+    );
+  }
+}
+
 async function request<T>(
   path: string,
   init: RequestInit = {},
@@ -75,6 +90,7 @@ async function request<T>(
     credentials: "include",
     headers,
   });
+  signalAuthInvalidated(res.status);
   if (res.status === 204) return undefined as T;
   const text = await res.text();
   const body = text ? JSON.parse(text) : null;
@@ -193,6 +209,7 @@ export const api = {
       credentials: "include",
       body: fd,
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) throw new ApiError(res.status, "import_failed", "Import failed");
     return (await res.json()) as { jobId: string };
   },
@@ -210,6 +227,7 @@ export const api = {
         bookmarkIds: body.bookmarkIds ?? [],
       }),
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) {
       const text = await res.text();
       let msg = `Export failed (HTTP ${res.status})`;
@@ -241,9 +259,11 @@ export const api = {
   deleteShare: (id: string) =>
     request<void>(`/shares/${id}`, { method: "DELETE" }),
 
-  // icons (URL helpers — used as <img src=>)
+  // icons / images (URL helpers — used as <img src=>)
   folderIconUrl: (id: string) => `${BASE}/folders/${id}/icon`,
+  folderBgImageUrl: (id: string) => `${BASE}/folders/${id}/bg-image`,
   bookmarkIconUrl: (id: string) => `${BASE}/bookmarks/${id}/icon`,
+  bookmarkBgImageUrl: (id: string) => `${BASE}/bookmarks/${id}/bg-image`,
   bookmarkSnapshotUrl: (id: string) => `${BASE}/bookmarks/${id}/snapshot.html`,
   bookmarkScreenshotUrl: (id: string) =>
     `${BASE}/bookmarks/${id}/snapshot.png`,
@@ -255,6 +275,7 @@ export const api = {
       credentials: "include",
       body: fd,
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) throw await iconError(res);
     return res.json() as Promise<{ iconBlobPath: string }>;
   },
@@ -265,6 +286,7 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ url }),
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) {
       const text = await res.text();
       let msg = "No se pudo obtener el favicon";
@@ -287,6 +309,7 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ url }),
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) {
       const text = await res.text();
       let msg = "No se pudo descargar la imagen";
@@ -310,9 +333,38 @@ export const api = {
       credentials: "include",
       body: fd,
     });
+    signalAuthInvalidated(res.status);
     if (!res.ok) throw await iconError(res);
     return res.json() as Promise<{ iconBlobPath: string }>;
   },
+  uploadFolderBgImage: async (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/folders/${id}/bg-image`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) throw await iconError(res);
+    return res.json() as Promise<{ imageBlobPath: string }>;
+  },
+  uploadBookmarkBgImage: async (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/bookmarks/${id}/bg-image`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) throw await iconError(res);
+    return res.json() as Promise<{ imageBlobPath: string }>;
+  },
+  clearFolderBgImage: (id: string) =>
+    request<void>(`/folders/${id}/bg-image`, { method: "DELETE" }),
+  clearBookmarkBgImage: (id: string) =>
+    request<void>(`/bookmarks/${id}/bg-image`, { method: "DELETE" }),
 
   // groups
   listGroups: () => request<Group[]>("/groups"),

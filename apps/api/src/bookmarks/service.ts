@@ -18,6 +18,8 @@ interface BookmarkRow {
   urlCt: Buffer;
   descriptionCt: Buffer | null;
   iconBlobPath: string | null;
+  imageBlobPath: string | null;
+  bgColor: string | null;
   snapshotHtmlPath: string | null;
   snapshotStatus: string;
   snapshotError: string | null;
@@ -40,6 +42,8 @@ function decode(
       ? openField(ctx.dek, ctx.userId, "bookmark.description", row.descriptionCt)
       : null,
     iconBlobPath: row.iconBlobPath,
+    imageBlobPath: row.imageBlobPath,
+    bgColor: row.bgColor,
     snapshotStatus: row.snapshotStatus as SnapshotStatus,
     snapshotError: row.snapshotError,
     hasSnapshot: !!row.snapshotHtmlPath,
@@ -166,6 +170,8 @@ export function listBookmarks(
             urlCt: Buffer.from(r.urlCt),
             descriptionCt: r.descriptionCt ? Buffer.from(r.descriptionCt) : null,
             iconBlobPath: r.iconBlobPath,
+            imageBlobPath: r.imageBlobPath,
+            bgColor: r.bgColor,
             snapshotHtmlPath: r.snapshotHtmlPath,
             snapshotStatus: r.snapshotStatus,
             snapshotError: r.snapshotError,
@@ -220,6 +226,8 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       urlCt: Buffer.from(row.urlCt),
       descriptionCt: row.descriptionCt ? Buffer.from(row.descriptionCt) : null,
       iconBlobPath: row.iconBlobPath,
+      imageBlobPath: row.imageBlobPath,
+      bgColor: row.bgColor,
       snapshotHtmlPath: row.snapshotHtmlPath,
       snapshotStatus: row.snapshotStatus,
       snapshotError: row.snapshotError,
@@ -239,6 +247,7 @@ export function createBookmark(
     title?: string;
     description?: string;
     tagIds?: string[];
+    bgColor?: string | null;
     fetchSnapshot?: boolean;
   },
 ): Bookmark {
@@ -273,6 +282,7 @@ export function createBookmark(
           )
         : null,
       urlHash: urlHash(input.url, ctx.userId),
+      bgColor: input.bgColor ?? null,
       snapshotStatus: fetch ? "pending" : "none",
       snapshotError: null,
       position: nextPosition(ctx, folderId),
@@ -313,6 +323,7 @@ export function updateBookmark(
     url?: string;
     description?: string | null;
     tagIds?: string[];
+    bgColor?: string | null;
   },
 ): Bookmark {
   const existing = getBookmark(ctx, id);
@@ -344,6 +355,9 @@ export function updateBookmark(
     update.descriptionCt = clean
       ? sealField(ctx.dek, ctx.userId, "bookmark.description", clean)
       : null;
+  }
+  if (input.bgColor !== undefined) {
+    update.bgColor = input.bgColor;
   }
 
   getDb().update(bookmarks).set(update).where(eq(bookmarks.id, id)).run();
@@ -432,6 +446,19 @@ export function setBookmarkIconPath(
   getDb()
     .update(bookmarks)
     .set({ iconBlobPath: path, updatedAt: new Date().toISOString() })
+    .where(eq(bookmarks.id, id))
+    .run();
+}
+
+export function setBookmarkBgImagePath(
+  ctx: AuthedContext,
+  id: string,
+  path: string | null,
+) {
+  assertBookmarkOwnedAndAlive(ctx, id);
+  getDb()
+    .update(bookmarks)
+    .set({ imageBlobPath: path, updatedAt: new Date().toISOString() })
     .where(eq(bookmarks.id, id))
     .run();
 }

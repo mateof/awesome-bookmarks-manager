@@ -9,6 +9,11 @@ export const SnapshotStatusSchema = z.enum([
 ]);
 export type SnapshotStatus = z.infer<typeof SnapshotStatusSchema>;
 
+const BgColor = z
+  .string()
+  .max(40)
+  .regex(/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))$/, "Invalid color");
+
 export const BookmarkSchema = z.object({
   id: z.string().uuid(),
   folderId: z.string().uuid().nullable(),
@@ -16,6 +21,8 @@ export const BookmarkSchema = z.object({
   url: z.string().url(),
   description: z.string().nullable(),
   iconBlobPath: z.string().nullable(),
+  imageBlobPath: z.string().nullable().optional(),
+  bgColor: z.string().nullable().optional(),
   snapshotStatus: SnapshotStatusSchema,
   snapshotError: z.string().nullable().optional(),
   hasSnapshot: z.boolean(),
@@ -32,6 +39,7 @@ export const CreateBookmarkBodySchema = z.object({
   title: z.string().min(1).max(1024).optional(),
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
+  bgColor: BgColor.nullable().optional(),
   fetchSnapshot: z.boolean().default(true),
 });
 export type CreateBookmarkBody = z.infer<typeof CreateBookmarkBodySchema>;
@@ -42,6 +50,7 @@ export const UpdateBookmarkBodySchema = z.object({
   url: z.string().url().max(8192).optional(),
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
+  bgColor: BgColor.nullable().optional(),
 });
 export type UpdateBookmarkBody = z.infer<typeof UpdateBookmarkBodySchema>;
 

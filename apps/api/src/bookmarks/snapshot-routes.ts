@@ -6,7 +6,9 @@ import { requireAuth } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import { bookmarks } from "../db/schema.js";
 import { readBlob } from "../storage/blobs.js";
-import { NotFound } from "../util/errors.js";
+import { storeBookmarkBgImage } from "../storage/icons.js";
+import { BadRequest, NotFound } from "../util/errors.js";
+import { getBookmark, setBookmarkBgImagePath } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
 
@@ -112,6 +114,48 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
       .header("content-type", detectImageContentType(png))
       .header("cache-control", "private, max-age=86400")
       .send(png);
+  });
+
+  app.post("/bookmarks/:id/bg-image", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
+    const file = await req.file();
+    if (!file) throw BadRequest("file part missing");
+    getBookmark(ctx, id);
+    const path = await storeBookmarkBgImage(ctx.userId, ctx.dek, id, file);
+    setBookmarkBgImagePath(ctx, id, path);
+    return { imageBlobPath: path };
+  });
+
+  app.delete("/bookmarks/:id/bg-image", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    setBookmarkBgImagePath(ctx, id, null);
+    reply.code(204);
+  });
+
+  app.get("/bookmarks/:id/bg-image", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const row = getDb()
+      .select({ path: bookmarks.imageBlobPath })
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.id, id),
+          eq(bookmarks.userId, ctx.userId),
+          isNull(bookmarks.deletedAt),
+        ),
+      )
+      .get();
+    if (!row || !row.path) throw NotFound("Background not set");
+    const sealed = await readBlob(row.path);
+    const bytes = aeadDecrypt(ctx.dek, sealed, `${ctx.userId}|bookmark.bg`);
+    reply
+      .header("content-type", detectImageContentType(bytes))
+      .header("cache-control", "private, max-age=86400")
+      .send(bytes);
   });
 };
 

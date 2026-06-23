@@ -15,6 +15,7 @@ interface FolderRow {
   descriptionCt: Buffer | null;
   iconBlobPath: string | null;
   imageBlobPath: string | null;
+  bgColor: string | null;
   position: number;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +31,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
       : null,
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
+    bgColor: row.bgColor,
     position: row.position,
     tagIds,
     createdAt: row.createdAt,
@@ -74,6 +76,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             descriptionCt: r.descriptionCt ? Buffer.from(r.descriptionCt) : null,
             iconBlobPath: r.iconBlobPath,
             imageBlobPath: r.imageBlobPath,
+            bgColor: r.bgColor,
             position: r.position,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
@@ -114,6 +117,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       descriptionCt: row.descriptionCt ? Buffer.from(row.descriptionCt) : null,
       iconBlobPath: row.iconBlobPath,
       imageBlobPath: row.imageBlobPath,
+      bgColor: row.bgColor,
       position: row.position,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -172,6 +176,7 @@ export function createFolder(
     name: string;
     description?: string;
     tagIds?: string[];
+    bgColor?: string | null;
   },
 ): Folder {
   const parentId = input.parentId ?? null;
@@ -191,6 +196,7 @@ export function createFolder(
       descriptionCt: cleanDescription
         ? sealField(ctx.dek, ctx.userId, "folder.description", cleanDescription)
         : null,
+      bgColor: input.bgColor ?? null,
       position: nextPosition(ctx, parentId),
     })
     .run();
@@ -211,6 +217,7 @@ export function updateFolder(
     name?: string;
     description?: string | null;
     tagIds?: string[];
+    bgColor?: string | null;
   },
 ): Folder {
   const existing = getFolder(ctx, id);
@@ -225,6 +232,9 @@ export function updateFolder(
     update.descriptionCt = clean
       ? sealField(ctx.dek, ctx.userId, "folder.description", clean)
       : null;
+  }
+  if (input.bgColor !== undefined) {
+    update.bgColor = input.bgColor;
   }
   getDb().update(folders).set(update).where(eq(folders.id, existing.id)).run();
 
@@ -315,6 +325,19 @@ export function setFolderIconPath(
   getDb()
     .update(folders)
     .set({ iconBlobPath: path, updatedAt: new Date().toISOString() })
+    .where(eq(folders.id, id))
+    .run();
+}
+
+export function setFolderBgImagePath(
+  ctx: AuthedContext,
+  id: string,
+  path: string | null,
+) {
+  assertFolderOwnedAndAlive(ctx, id);
+  getDb()
+    .update(folders)
+    .set({ imageBlobPath: path, updatedAt: new Date().toISOString() })
     .where(eq(folders.id, id))
     .run();
 }

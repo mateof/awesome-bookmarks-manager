@@ -193,6 +193,11 @@ export function ensureSchema() {
   tryAddColumn("users", "nickname", "TEXT");
   tryAddColumn("users", "auto_snapshots", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
+  // Per-card appearance: optional background colour (hex with optional
+  // alpha) and an encrypted background image stored as a blob.
+  tryAddColumn("folders", "bg_color", "TEXT");
+  tryAddColumn("bookmarks", "bg_color", "TEXT");
+  tryAddColumn("bookmarks", "image_blob_path", "TEXT");
 
   // Unique index on nickname — applied even if added later. Multiple NULLs are
   // allowed by SQLite UNIQUE constraints, so existing users without a

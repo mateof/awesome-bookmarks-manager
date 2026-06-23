@@ -114,6 +114,8 @@ const en = {
     addBookmark: "Bookmark",
     editFolder: "Edit",
     shareWithGroup: "Share with group",
+    editFolderKebab: "Edit folder",
+    editBookmarkKebab: "Edit bookmark",
     deleteFolderKebab: "Delete folder",
     exportFolderKebab: "Export folder",
     exportBookmarkKebab: "Export bookmark",
@@ -189,6 +191,7 @@ const en = {
     noResults: "No results.",
     scopeChip: "in: {{folder}}",
     removeScope: "Remove folder filter",
+    back: "Back",
   },
   groups: {
     listTitle: "Groups",
@@ -378,6 +381,11 @@ const en = {
     iconAlt: "icon",
     downloaded: "Icon downloaded",
     downloadError: "Download error",
+    faviconFromBrowser: "From here",
+    faviconBrowserTitle:
+      "Your browser tries /favicon.ico, /favicon.png and /apple-touch-icon.png of the URL. Useful if the page is only reachable from your device (VPN, intranet). Fails if those paths don't allow CORS.",
+    faviconBrowserError:
+      "Your browser couldn't download the favicon (likely CORS-blocked).",
     fromUrlPlaceholder: "https://… (direct URL to an image)",
     fetchUrl: "Server",
     fetchUrlServerTitle:
@@ -565,6 +573,23 @@ const en = {
     info: "Info",
     added: "Added",
     tags: "Tags",
+  },
+  background: {
+    dialogTitle: "Appearance",
+    kebabItem: "Appearance",
+    colorLabel: "Background color",
+    customColor: "Custom color",
+    clearColor: "Clear color",
+    opacity: "Opacity",
+    imageLabel: "Background image",
+    clearImage: "Clear image",
+    imageSaved: "Image saved",
+    imageUploadError: "Could not save the image",
+    imageUrlError: "Could not download the image",
+    imageBrowserError:
+      "Your browser couldn't download the image (likely CORS-blocked).",
+    notAnImage: "That resource doesn't look like an image",
+    tooLarge: "The image exceeds 4MB",
   },
   language: {
     label: "Language",

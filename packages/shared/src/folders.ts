@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// CSS color values: hex (`#rrggbb`, `#rrggbbaa`) or `rgba(...)` are the
+// only forms we set; we accept null to clear.
+const BgColor = z
+  .string()
+  .max(40)
+  .regex(/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))$/, "Invalid color");
+
 export const FolderSchema = z.object({
   id: z.string().uuid(),
   parentId: z.string().uuid().nullable(),
@@ -7,6 +14,7 @@ export const FolderSchema = z.object({
   description: z.string().nullable(),
   iconBlobPath: z.string().nullable(),
   imageBlobPath: z.string().nullable(),
+  bgColor: z.string().nullable().optional(),
   position: z.number().int(),
   tagIds: z.array(z.string().uuid()).default([]),
   createdAt: z.string(),
@@ -19,6 +27,7 @@ export const CreateFolderBodySchema = z.object({
   name: z.string().min(1).max(256),
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
+  bgColor: BgColor.nullable().optional(),
 });
 export type CreateFolderBody = z.infer<typeof CreateFolderBodySchema>;
 
@@ -26,6 +35,7 @@ export const UpdateFolderBodySchema = z.object({
   name: z.string().min(1).max(256).optional(),
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
+  bgColor: BgColor.nullable().optional(),
 });
 export type UpdateFolderBody = z.infer<typeof UpdateFolderBodySchema>;
 

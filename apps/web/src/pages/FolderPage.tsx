@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FolderClosed,
   FolderPlus,
+  Palette,
   PencilLine,
   Plus,
   Share2,
@@ -15,6 +16,9 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { AppearanceDialog } from "../components/AppearanceDialog.js";
+import { BackgroundPicker } from "../components/BackgroundPicker.js";
+import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { IconPicker } from "../components/IconPicker.js";
 import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
@@ -80,6 +84,13 @@ export function FolderPage() {
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showEditFolder, setShowEditFolder] = useState(false);
   const [showShareFolder, setShowShareFolder] = useState(false);
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+  const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
+  const [appearanceTarget, setAppearanceTarget] = useState<
+    | { kind: "folder"; folder: Folder }
+    | { kind: "bookmark"; bookmark: Bookmark }
+    | null
+  >(null);
   const [selection, setSelection] = useState<Set<SelectionKey>>(
     () => new Set(),
   );
@@ -305,6 +316,16 @@ export function FolderPage() {
 
   const folderKebab = (f: Folder): KebabItem[] => [
     {
+      label: t("folder.editFolderKebab"),
+      icon: <PencilLine className="h-4 w-4" />,
+      onClick: () => setEditingFolder(f),
+    },
+    {
+      label: t("background.kebabItem"),
+      icon: <Palette className="h-4 w-4" />,
+      onClick: () => setAppearanceTarget({ kind: "folder", folder: f }),
+    },
+    {
       label: t("folder.exportFolderKebab"),
       icon: <Download className="h-4 w-4" />,
       onClick: () => void exportSingle({ folderId: f.id }),
@@ -318,6 +339,16 @@ export function FolderPage() {
   ];
 
   const bookmarkKebab = (b: Bookmark): KebabItem[] => [
+    {
+      label: t("folder.editBookmarkKebab"),
+      icon: <PencilLine className="h-4 w-4" />,
+      onClick: () => setEditingBookmark(b),
+    },
+    {
+      label: t("background.kebabItem"),
+      icon: <Palette className="h-4 w-4" />,
+      onClick: () => setAppearanceTarget({ kind: "bookmark", bookmark: b }),
+    },
     {
       label: t("folder.exportBookmarkKebab"),
       icon: <Download className="h-4 w-4" />,
@@ -491,6 +522,28 @@ export function FolderPage() {
           onClose={() => setShowShareFolder(false)}
         />
       )}
+      {editingFolder && (
+        <FolderDialog
+          parentId={editingFolder.parentId}
+          folder={editingFolder}
+          onClose={() => setEditingFolder(null)}
+          onSaved={invalidate}
+        />
+      )}
+      {editingBookmark && (
+        <BookmarkEditDialog
+          bookmark={editingBookmark}
+          onClose={() => setEditingBookmark(null)}
+          onSaved={invalidate}
+        />
+      )}
+      {appearanceTarget && (
+        <AppearanceDialog
+          target={appearanceTarget}
+          onClose={() => setAppearanceTarget(null)}
+          onSaved={invalidate}
+        />
+      )}
     </div>
   );
 }
@@ -626,6 +679,28 @@ function stopBubble(e: React.MouseEvent | React.KeyboardEvent) {
   e.stopPropagation();
 }
 
+function folderBgStyle(f: Folder): React.CSSProperties {
+  const s: React.CSSProperties = {};
+  if (f.bgColor) s.backgroundColor = f.bgColor;
+  if (f.imageBlobPath) {
+    s.backgroundImage = `url('${api.folderBgImageUrl(f.id)}')`;
+    s.backgroundSize = "cover";
+    s.backgroundPosition = "center";
+  }
+  return s;
+}
+
+function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
+  const s: React.CSSProperties = {};
+  if (b.bgColor) s.backgroundColor = b.bgColor;
+  if (b.imageBlobPath) {
+    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.id)}')`;
+    s.backgroundSize = "cover";
+    s.backgroundPosition = "center";
+  }
+  return s;
+}
+
 function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
   if (sf.iconBlobPath) {
     return (
@@ -701,6 +776,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
+      style={folderBgStyle(sf)}
       className="group relative flex cursor-pointer flex-col items-center gap-2 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -746,6 +822,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
+      style={folderBgStyle(sf)}
       className="group flex cursor-pointer items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -784,6 +861,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
+      style={folderBgStyle(sf)}
       className="group relative flex min-h-[8rem] cursor-pointer flex-col rounded border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -839,6 +917,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
+      style={folderBgStyle(sf)}
       className="group relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -872,7 +951,10 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
-    <div className="group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900">
+    <div
+      style={bookmarkBgStyle(b)}
+      className="group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900"
+    >
       <HoverCheckbox
         selected={selected}
         onToggle={() => p.toggle(key)}
@@ -927,7 +1009,10 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
-    <div className="group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800">
+    <div
+      style={bookmarkBgStyle(b)}
+      className="group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+    >
       <HoverCheckbox
         selected={selected}
         onToggle={() => p.toggle(key)}
@@ -978,7 +1063,10 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const selected = p.selection.has(key);
   const desc = stripTags(b.description);
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <div
+      style={bookmarkBgStyle(b)}
+      className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+    >
       {b.hasSnapshot && (
         <a
           href={b.url}
@@ -1062,7 +1150,10 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
-    <div className="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800">
+    <div
+      style={bookmarkBgStyle(b)}
+      className="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+    >
       <HoverCheckbox
         selected={selected}
         onToggle={() => p.toggle(key)}
@@ -1126,6 +1217,7 @@ function TableLayout(p: BodyProps) {
             return (
               <tr
                 key={`f-${sf.id}`}
+                style={folderBgStyle(sf)}
                 className="cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
                 onClick={() => p.onNavFolder(sf.id)}
               >
@@ -1169,6 +1261,7 @@ function TableLayout(p: BodyProps) {
             return (
               <tr
                 key={`b-${b.id}`}
+                style={bookmarkBgStyle(b)}
                 className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
               >
                 <td className="px-2 py-2">
@@ -1253,6 +1346,8 @@ function BookmarkDialog({
   const [description, setDescription] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [iconFile, setIconFile] = useState<File | null>(null);
+  const [bgColor, setBgColor] = useState<string | null>(null);
+  const [bgImageFile, setBgImageFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const m = useMutation({
     mutationFn: async () => {
@@ -1262,10 +1357,14 @@ function BookmarkDialog({
         title: title || undefined,
         description: description || undefined,
         tagIds,
+        bgColor,
         fetchSnapshot: true,
       });
       if (iconFile) {
         await api.uploadBookmarkIcon(created.id, iconFile);
+      }
+      if (bgImageFile) {
+        await api.uploadBookmarkBgImage(created.id, bgImageFile);
       }
       return created;
     },
@@ -1306,6 +1405,13 @@ function BookmarkDialog({
           placeholder={t("folder.fieldDescription")}
         />
         <TagPicker value={tagIds} onChange={setTagIds} />
+        <BackgroundPicker
+          bgColor={bgColor}
+          onBgColorChange={setBgColor}
+          currentImageUrl={null}
+          onImagePick={async (f) => setBgImageFile(f)}
+          onImageClear={async () => setBgImageFile(null)}
+        />
         {err && (
           <div className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
             {err}
@@ -1339,6 +1445,8 @@ function FolderDialog({
   const [description, setDescription] = useState(folder?.description ?? "");
   const [tagIds, setTagIds] = useState<string[]>(folder?.tagIds ?? []);
   const [iconFile, setIconFile] = useState<File | null>(null);
+  const [bgColor, setBgColor] = useState<string | null>(folder?.bgColor ?? null);
+  const [bgImageFile, setBgImageFile] = useState<File | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const isEdit = !!folder;
   const m = useMutation({
@@ -1348,14 +1456,17 @@ function FolderDialog({
             name,
             description: description || null,
             tagIds,
+            bgColor,
           })
         : await api.createFolder({
             parentId,
             name,
             description: description || undefined,
             tagIds,
+            bgColor,
           });
       if (iconFile) await api.uploadFolderIcon(target.id, iconFile);
+      if (bgImageFile) await api.uploadFolderBgImage(target.id, bgImageFile);
       return target;
     },
     onSuccess: () => {
@@ -1387,6 +1498,31 @@ function FolderDialog({
         />
         <RichTextEditor value={description} onChange={setDescription} />
         <TagPicker value={tagIds} onChange={setTagIds} />
+        <BackgroundPicker
+          bgColor={bgColor}
+          onBgColorChange={setBgColor}
+          currentImageUrl={
+            isEdit && folder?.imageBlobPath
+              ? api.folderBgImageUrl(folder.id)
+              : null
+          }
+          onImagePick={async (file) => {
+            if (isEdit && folder) {
+              await api.uploadFolderBgImage(folder.id, file);
+              onSaved();
+            } else {
+              setBgImageFile(file);
+            }
+          }}
+          onImageClear={async () => {
+            if (isEdit && folder) {
+              await api.clearFolderBgImage(folder.id);
+              onSaved();
+            } else {
+              setBgImageFile(null);
+            }
+          }}
+        />
         {err && (
           <div className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
             {err}

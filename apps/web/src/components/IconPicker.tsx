@@ -58,6 +58,72 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
     }
   };
 
+  /**
+   * Browser-side favicon fetch. Useful when the target host is only
+   * reachable from the user's device (VPN, intranet) so the server can't
+   * see it. We only try the conventional locations (`/favicon.ico`,
+   * `/favicon.png`, `/apple-touch-icon.png`) — discovering via the
+   * page's `<link rel="icon">` would require fetching the HTML, which
+   * browsers usually block via CORS.
+   */
+  const handleAutoFetchClient = async () => {
+    if (!autoFetchUrl) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      let origin: string;
+      try {
+        origin = new URL(autoFetchUrl).origin;
+      } catch {
+        throw new Error(t("iconPicker.enterUrlFirst"));
+      }
+      const candidates = [
+        `${origin}/favicon.ico`,
+        `${origin}/favicon.png`,
+        `${origin}/apple-touch-icon.png`,
+      ];
+      let file: File | null = null;
+      let lastErr: string | null = null;
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url, { mode: "cors", credentials: "omit" });
+          if (!res.ok) {
+            lastErr = `HTTP ${res.status}`;
+            continue;
+          }
+          const blob = await res.blob();
+          if (!blob.type.startsWith("image/") && blob.type !== "") {
+            lastErr = `${t("iconPicker.notAnImage")} (${blob.type})`;
+            continue;
+          }
+          const ct = blob.type || "image/x-icon";
+          const ext = ct.includes("png")
+            ? ".png"
+            : ct.includes("svg")
+              ? ".svg"
+              : ".ico";
+          file = new File([blob], `favicon${ext}`, { type: ct });
+          break;
+        } catch (e) {
+          lastErr = e instanceof Error ? e.message : String(e);
+        }
+      }
+      if (!file) {
+        throw new Error(lastErr ?? t("iconPicker.urlBrowserError"));
+      }
+      await handleFile(file);
+      setMsg(t("iconPicker.downloaded"));
+    } catch (e) {
+      setMsg(
+        e instanceof Error && e.message
+          ? `${t("iconPicker.faviconBrowserError")} (${e.message})`
+          : t("iconPicker.faviconBrowserError"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleUrlFetch = async () => {
     const trimmed = imageUrl.trim();
     if (!trimmed) return;
@@ -170,20 +236,34 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
           </div>
         </div>
         {autoFetchUrl !== undefined && (
-          <button
-            type="button"
-            onClick={handleAutoFetch}
-            disabled={!canAutoFetch}
-            title={
-              canAutoFetch
-                ? t("iconPicker.downloadTitle")
-                : t("iconPicker.enterUrlFirst")
-            }
-            className="ml-auto flex items-center gap-1 rounded border border-slate-300 px-3 py-2 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <Globe className="h-4 w-4" />
-            {busy ? t("iconPicker.downloading") : t("iconPicker.download")}
-          </button>
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            <button
+              type="button"
+              onClick={handleAutoFetch}
+              disabled={!canAutoFetch}
+              title={
+                canAutoFetch
+                  ? t("iconPicker.downloadTitle")
+                  : t("iconPicker.enterUrlFirst")
+              }
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-2 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <Globe className="h-4 w-4" />
+              {busy ? t("iconPicker.downloading") : t("iconPicker.download")}
+            </button>
+            <button
+              type="button"
+              onClick={handleAutoFetchClient}
+              disabled={!canAutoFetch}
+              title={t("iconPicker.faviconBrowserTitle")}
+              className="flex items-center gap-1 rounded border border-slate-300 px-2 py-2 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <MonitorDown className="h-4 w-4" />
+              {busy
+                ? t("iconPicker.downloading")
+                : t("iconPicker.faviconFromBrowser")}
+            </button>
+          </div>
         )}
       </div>
 

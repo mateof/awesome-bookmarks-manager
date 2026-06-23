@@ -9,6 +9,7 @@ import {
 } from "./blobs.js";
 
 const MAX_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_BG_BYTES = 4 * 1024 * 1024; // 4 MB — background images are larger
 const OK_TYPES = new Set([
   "image/png",
   "image/jpeg",
@@ -21,7 +22,10 @@ const OK_TYPES = new Set([
   "application/octet-stream", // browsers occasionally use this for .ico
 ]);
 
-async function readMultipart(file: MultipartFile): Promise<Buffer> {
+async function readMultipart(
+  file: MultipartFile,
+  cap = MAX_BYTES,
+): Promise<Buffer> {
   // Be lenient: accept any "image/*" mimetype, plus the explicit list above
   // (which covers ICO and the generic octet-stream that some servers serve
   // favicons as). The bytes are sniffed on read for the GET endpoint anyway.
@@ -34,7 +38,11 @@ async function readMultipart(file: MultipartFile): Promise<Buffer> {
     const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
     chunks.push(buf);
     size += buf.length;
-    if (size > MAX_BYTES) throw BadRequest("El icono supera los 2MB");
+    if (size > cap) {
+      throw BadRequest(
+        `La imagen supera ${Math.round(cap / 1024 / 1024)}MB`,
+      );
+    }
   }
   return Buffer.concat(chunks);
 }
@@ -63,6 +71,34 @@ export async function storeFolderIcon(
   const sealed = aeadEncrypt(dek, bytes, `${userId}|folder.icon`);
   return writeBlob(
     join(folderBlobDir(userId, folderId), "user-icon.bin"),
+    sealed,
+  );
+}
+
+export async function storeBookmarkBgImage(
+  userId: string,
+  dek: Buffer,
+  bookmarkId: string,
+  file: MultipartFile,
+): Promise<string> {
+  const bytes = await readMultipart(file, MAX_BG_BYTES);
+  const sealed = aeadEncrypt(dek, bytes, `${userId}|bookmark.bg`);
+  return writeBlob(
+    join(bookmarkBlobDir(userId, bookmarkId), "user-bg.bin"),
+    sealed,
+  );
+}
+
+export async function storeFolderBgImage(
+  userId: string,
+  dek: Buffer,
+  folderId: string,
+  file: MultipartFile,
+): Promise<string> {
+  const bytes = await readMultipart(file, MAX_BG_BYTES);
+  const sealed = aeadEncrypt(dek, bytes, `${userId}|folder.bg`);
+  return writeBlob(
+    join(folderBlobDir(userId, folderId), "user-bg.bin"),
     sealed,
   );
 }

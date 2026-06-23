@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { FolderClosed, X } from "lucide-react";
+import { ArrowLeft, FolderClosed, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -10,6 +10,15 @@ export function SearchPage() {
   const nav = useNavigate();
   const q = params.get("q") ?? "";
   const folderId = params.get("folderId");
+
+  const goBack = () => {
+    // `window.history.state?.idx` is set by react-router; if we're not the
+    // first entry, go back. Otherwise (e.g. direct link to /search) fall
+    // back to home so the button never feels broken.
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) nav(-1);
+    else nav("/", { replace: true });
+  };
 
   const folders = useQuery({
     queryKey: ["folders"],
@@ -35,6 +44,15 @@ export function SearchPage() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={goBack}
+          title={t("search.back")}
+          className="flex items-center gap-1 rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">{t("search.back")}</span>
+        </button>
         <h1 className="text-xl font-semibold">
           {t("search.pageTitle", { query: q })}
         </h1>

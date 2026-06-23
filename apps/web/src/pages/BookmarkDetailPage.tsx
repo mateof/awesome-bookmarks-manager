@@ -13,14 +13,11 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
-import { IconPicker } from "../components/IconPicker.js";
-import { Modal } from "../components/Modal.js";
-import { RichTextEditor } from "../components/RichTextEditor.js";
 import { RichTextView } from "../components/RichTextView.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
-import { TagPicker } from "../components/TagPicker.js";
 
 export function BookmarkDetailPage() {
   const { t } = useTranslation();
@@ -214,15 +211,8 @@ export function BookmarkDetailPage() {
       </div>
 
       {showEdit && (
-        <EditBookmarkDialog
-          bookmarkId={b.id}
-          initial={{
-            title: b.title,
-            url: b.url,
-            description: b.description ?? "",
-            iconUrl: b.iconBlobPath ? api.bookmarkIconUrl(b.id) : null,
-            tagIds: b.tagIds ?? [],
-          }}
+        <BookmarkEditDialog
+          bookmark={b}
           onClose={() => setShowEdit(false)}
           onSaved={() => qc.invalidateQueries({ queryKey: ["bookmark", b.id] })}
         />
@@ -296,84 +286,3 @@ function SnapshotViewer({
   );
 }
 
-function EditBookmarkDialog({
-  bookmarkId,
-  initial,
-  onClose,
-  onSaved,
-}: {
-  bookmarkId: string;
-  initial: {
-    title: string;
-    url: string;
-    description: string;
-    iconUrl: string | null;
-    tagIds: string[];
-  };
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { t } = useTranslation();
-  const [title, setTitle] = useState(initial.title);
-  const [url, setUrl] = useState(initial.url);
-  const [description, setDescription] = useState(initial.description);
-  const [tagIds, setTagIds] = useState<string[]>(initial.tagIds);
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const m = useMutation({
-    mutationFn: async () => {
-      await api.updateBookmark(bookmarkId, {
-        title,
-        url,
-        description: description || null,
-        tagIds,
-      });
-      if (iconFile) await api.uploadBookmarkIcon(bookmarkId, iconFile);
-    },
-    onSuccess: () => {
-      setErr(null);
-      onSaved();
-      onClose();
-    },
-    onError: (e) =>
-      setErr(e instanceof Error ? e.message : t("folder.errorGenericSave")),
-  });
-  return (
-    <Modal title={t("bookmark.dialogEditTitle")} onClose={onClose} size="lg">
-      <div className="space-y-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("bookmark.fieldTitle")}
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-        />
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder={t("bookmark.fieldUrl")}
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-        />
-        <IconPicker
-          currentUrl={initial.iconUrl}
-          onPick={async (f) => setIconFile(f)}
-          autoFetchUrl={url}
-        />
-        <RichTextEditor value={description} onChange={setDescription} />
-        <TagPicker value={tagIds} onChange={setTagIds} />
-        {err && (
-          <div className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {err}
-          </div>
-        )}
-        <button
-          disabled={!title || !url || m.isPending}
-          onClick={() => m.mutate()}
-          className="w-full rounded bg-slate-900 py-2 text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-        >
-          {m.isPending ? t("common.saving") : t("common.save")}
-        </button>
-      </div>
-    </Modal>
-  );
-}

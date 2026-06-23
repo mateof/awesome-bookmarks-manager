@@ -114,6 +114,8 @@ const gl = {
     addBookmark: "Marcador",
     editFolder: "Editar",
     shareWithGroup: "Compartir con grupo",
+    editFolderKebab: "Editar cartafol",
+    editBookmarkKebab: "Editar marcador",
     deleteFolderKebab: "Eliminar cartafol",
     exportFolderKebab: "Exportar cartafol",
     exportBookmarkKebab: "Exportar marcador",
@@ -189,6 +191,7 @@ const gl = {
     noResults: "Sen resultados.",
     scopeChip: "en: {{folder}}",
     removeScope: "Quitar filtro de cartafol",
+    back: "Volver",
   },
   groups: {
     listTitle: "Grupos",
@@ -378,6 +381,11 @@ const gl = {
     iconAlt: "icona",
     downloaded: "Icona descargada",
     downloadError: "Erro ao descargar",
+    faviconFromBrowser: "Dende aquí",
+    faviconBrowserTitle:
+      "O teu navegador proba /favicon.ico, /favicon.png e /apple-touch-icon.png do URL. Útil se a páxina só é accesible dende o teu equipo (VPN, intranet). Falla se eses paths non permiten CORS.",
+    faviconBrowserError:
+      "O teu navegador non puido descargar o favicon (probable bloqueo CORS).",
     fromUrlPlaceholder: "https://… (URL directa a unha imaxe)",
     fetchUrl: "Servidor",
     fetchUrlServerTitle:
@@ -565,6 +573,23 @@ const gl = {
     info: "Info",
     added: "Engadido",
     tags: "Etiquetas",
+  },
+  background: {
+    dialogTitle: "Aparencia",
+    kebabItem: "Aparencia",
+    colorLabel: "Cor de fondo",
+    customColor: "Cor personalizada",
+    clearColor: "Quitar cor",
+    opacity: "Opacidade",
+    imageLabel: "Imaxe de fondo",
+    clearImage: "Quitar imaxe",
+    imageSaved: "Imaxe gardada",
+    imageUploadError: "Non se puido gardar a imaxe",
+    imageUrlError: "Non se puido descargar a imaxe",
+    imageBrowserError:
+      "O teu navegador non puido descargar a imaxe (probable bloqueo CORS).",
+    notAnImage: "Ese recurso non semella unha imaxe",
+    tooLarge: "A imaxe supera 4MB",
   },
   language: {
     label: "Idioma",

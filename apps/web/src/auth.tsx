@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, api } from "./api.js";
 
@@ -29,12 +29,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         return await api.me();
       } catch (e) {
-        if (e instanceof ApiError && e.status === 401) return null;
+        if (e instanceof ApiError && (e.status === 401 || e.status === 423)) {
+          return null;
+        }
         throw e;
       }
     },
     staleTime: 60_000,
   });
+
+  // Any API call returning 401 (session expired) or 423 (DEK evicted from
+  // cache) fires `auth:invalidated`. We tear down the local session here
+  // so RequireAuth bounces the user to /login automatically; otherwise the
+  // SPA stays on a "logged-in" route with every subsequent call failing.
+  useEffect(() => {
+    let bouncing = false;
+    const onInvalid = () => {
+      if (bouncing) return;
+      bouncing = true;
+      // Best-effort server cookie clear. We ignore failures because the
+      // cookie may already be invalid — what matters is the next /me
+      // returns null so the user lands on /login.
+      void api.logout().catch(() => {});
+      qc.setQueryData(["me"], null);
+      // Allow a fresh signal after the user logs back in.
+      setTimeout(() => {
+        bouncing = false;
+      }, 1000);
+    };
+    window.addEventListener("auth:invalidated", onInvalid);
+    return () => window.removeEventListener("auth:invalidated", onInvalid);
+  }, [qc]);
   const value = useMemo<AuthState>(
     () => ({
       user: me.data
