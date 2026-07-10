@@ -44,6 +44,12 @@ export const CreateBookmarkBodySchema = z.object({
 });
 export type CreateBookmarkBody = z.infer<typeof CreateBookmarkBodySchema>;
 
+export const MoveBookmarkBodySchema = z.object({
+  newFolderId: z.string().uuid().nullable(),
+  position: z.number().int().min(0),
+});
+export type MoveBookmarkBody = z.infer<typeof MoveBookmarkBodySchema>;
+
 export const UpdateBookmarkBodySchema = z.object({
   folderId: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(1024).optional(),

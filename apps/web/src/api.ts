@@ -166,6 +166,11 @@ export const api = {
     }),
   deleteBookmark: (id: string) =>
     request<void>(`/bookmarks/${id}`, { method: "DELETE" }),
+  moveBookmark: (id: string, newFolderId: string | null, position: number) =>
+    request<{ ok: true }>(`/bookmarks/${id}/move`, {
+      method: "POST",
+      body: JSON.stringify({ newFolderId, position }),
+    }),
   refreshSnapshot: (id: string) =>
     request<{ ok: true }>(`/bookmarks/${id}/refresh-snapshot`, {
       method: "POST",

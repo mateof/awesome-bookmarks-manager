@@ -29,8 +29,14 @@ import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 import { TagPicker } from "../components/TagPicker.js";
 import { ViewModeToggle } from "../components/ViewModeToggle.js";
+import {
+  BOOKMARK_SORTABLE_IDS,
+  useBookmarkSortable,
+  useFolderDrag,
+} from "../dnd.js";
 import { useViewMode, type ViewMode } from "../view-mode.js";
 import type { Tag } from "@awesome-bookmarks/shared";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 
 type SelectionKey = `folder:${string}` | `bookmark:${string}`;
 
@@ -638,41 +644,49 @@ function FoldersBlock(p: BodyProps) {
 }
 
 function BookmarksBlock(p: BodyProps) {
-  switch (p.mode) {
-    case "list":
-      return (
-        <div className="divide-y divide-slate-200 rounded border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-          {p.items.map((b) => (
-            <BookmarkListRow key={b.id} b={b} p={p} />
-          ))}
-        </div>
-      );
-    case "large":
-      return (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {p.items.map((b) => (
-            <BookmarkLargeCard key={b.id} b={b} p={p} />
-          ))}
-        </div>
-      );
-    case "mosaic":
-      return (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-          {p.items.map((b) => (
-            <BookmarkMosaicCard key={b.id} b={b} p={p} />
-          ))}
-        </div>
-      );
-    case "grid":
-    default:
-      return (
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {p.items.map((b) => (
-            <BookmarkGridCard key={b.id} b={b} p={p} />
-          ))}
-        </div>
-      );
-  }
+  const ids = BOOKMARK_SORTABLE_IDS(p.items);
+  const inner = (() => {
+    switch (p.mode) {
+      case "list":
+        return (
+          <div className="divide-y divide-slate-200 rounded border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+            {p.items.map((b) => (
+              <BookmarkListRow key={b.id} b={b} p={p} />
+            ))}
+          </div>
+        );
+      case "large":
+        return (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {p.items.map((b) => (
+              <BookmarkLargeCard key={b.id} b={b} p={p} />
+            ))}
+          </div>
+        );
+      case "mosaic":
+        return (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            {p.items.map((b) => (
+              <BookmarkMosaicCard key={b.id} b={b} p={p} />
+            ))}
+          </div>
+        );
+      case "grid":
+      default:
+        return (
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+            {p.items.map((b) => (
+              <BookmarkGridCard key={b.id} b={b} p={p} />
+            ))}
+          </div>
+        );
+    }
+  })();
+  return (
+    <SortableContext items={ids} strategy={rectSortingStrategy}>
+      {inner}
+    </SortableContext>
+  );
 }
 
 function stopBubble(e: React.MouseEvent | React.KeyboardEvent) {
@@ -766,17 +780,20 @@ function selectBookmarkLabel(t: any, title: string) {
 
 function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useFolderDrag(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (
     <div
+      ref={drag.ref}
+      {...drag.props}
       role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
-      style={folderBgStyle(sf)}
+      style={{ ...drag.style, ...folderBgStyle(sf) }}
       className="group relative flex cursor-pointer flex-col items-center gap-2 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -811,18 +828,21 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useFolderDrag(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const count = p.countDirectItems(sf.id);
   return (
     <div
+      ref={drag.ref}
+      {...drag.props}
       role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
-      style={folderBgStyle(sf)}
+      style={{ ...drag.style, ...folderBgStyle(sf) }}
       className="group flex cursor-pointer items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -849,19 +869,22 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useFolderDrag(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const desc = stripTags(sf.description);
   const count = p.countDirectItems(sf.id);
   return (
     <div
+      ref={drag.ref}
+      {...drag.props}
       role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
-      style={folderBgStyle(sf)}
+      style={{ ...drag.style, ...folderBgStyle(sf) }}
       className="group relative flex min-h-[8rem] cursor-pointer flex-col rounded border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -907,17 +930,20 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useFolderDrag(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (
     <div
+      ref={drag.ref}
+      {...drag.props}
       role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
-      style={folderBgStyle(sf)}
+      style={{ ...drag.style, ...folderBgStyle(sf) }}
       className="group relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -948,11 +974,14 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useBookmarkSortable(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
     <div
-      style={bookmarkBgStyle(b)}
+      ref={drag.ref}
+      {...drag.props}
+      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900"
     >
       <HoverCheckbox
@@ -1006,11 +1035,14 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 
 function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useBookmarkSortable(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
     <div
-      style={bookmarkBgStyle(b)}
+      ref={drag.ref}
+      {...drag.props}
+      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox
@@ -1059,12 +1091,15 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
 
 function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useBookmarkSortable(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   const desc = stripTags(b.description);
   return (
     <div
-      style={bookmarkBgStyle(b)}
+      ref={drag.ref}
+      {...drag.props}
+      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
     >
       {b.hasSnapshot && (
@@ -1147,11 +1182,14 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 
 function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
+  const drag = useBookmarkSortable(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
     <div
-      style={bookmarkBgStyle(b)}
+      ref={drag.ref}
+      {...drag.props}
+      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
       <HoverCheckbox

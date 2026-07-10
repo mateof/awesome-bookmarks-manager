@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { useSidebarFolderDrop } from "../dnd.js";
 import { buildFolderPath, useActiveFolderId } from "../hooks.js";
 
 export function FolderTree({ folders }: { folders: Folder[] }) {
@@ -70,17 +71,19 @@ function Node({
   useEffect(() => {
     if (onPath) setOpen(true);
   }, [onPath]);
+  const drop = useSidebarFolderDrop(folder.id);
 
   const children = folders.filter((f) => f.parentId === folder.id);
   const isActive = activeId === folder.id;
   return (
     <div>
       <div
+        ref={drop.ref}
         className={`flex items-center gap-1 rounded px-1 py-0.5 text-sm ${
           isActive
             ? "bg-slate-200 font-medium dark:bg-slate-800"
             : "hover:bg-slate-100 dark:hover:bg-slate-800"
-        }`}
+        } ${drop.isOver ? "ring-2 ring-blue-500 ring-inset" : ""}`}
         style={{ paddingLeft: 4 + depth * 12 }}
       >
         {children.length > 0 ? (

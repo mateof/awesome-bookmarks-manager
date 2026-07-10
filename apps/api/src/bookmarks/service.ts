@@ -409,6 +409,25 @@ function assertBookmarkOwnedAndAlive(ctx: AuthedContext, id: string) {
   if (!row) throw NotFound("Bookmark not found");
 }
 
+export function moveBookmark(
+  ctx: AuthedContext,
+  id: string,
+  newFolderId: string | null,
+  position: number,
+) {
+  assertBookmarkOwnedAndAlive(ctx, id);
+  if (newFolderId) ensureFolderExists(ctx, newFolderId);
+  getDb()
+    .update(bookmarks)
+    .set({
+      folderId: newFolderId,
+      position,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(bookmarks.id, id))
+    .run();
+}
+
 export function deleteBookmark(ctx: AuthedContext, id: string) {
   assertBookmarkOwnedAndAlive(ctx, id);
   getDb()

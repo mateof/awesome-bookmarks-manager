@@ -1,4 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FolderClosed,
   LogOut,
@@ -10,6 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { parseDropTargetFolderId } from "../dnd.js";
 import { LanguageToggle } from "./LanguageToggle.js";
 import { ThemeToggle } from "./ThemeToggle.js";
 import { useEffect, useMemo, useState } from "react";
@@ -24,8 +32,78 @@ import { FolderTree } from "./FolderTree.js";
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
+  const qc = useQueryClient();
   const nav = useNavigate();
   const loc = useLocation();
+
+  // 5px activation constraint so a normal click on a card still fires
+  // instead of activating drag.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const onDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const activeData = active.data.current as
+      | { kind: "folder" | "bookmark"; folderId?: string; bookmarkId?: string; parentId?: string | null }
+      | undefined;
+    if (!activeData) return;
+
+    const overId = String(over.id);
+    const targetFolderId = parseDropTargetFolderId(overId);
+
+    if (targetFolderId !== null) {
+      // Cross-folder move.
+      if (activeData.kind === "bookmark" && activeData.bookmarkId) {
+        if (activeData.folderId === targetFolderId) return;
+        await api.moveBookmark(activeData.bookmarkId, targetFolderId, 0);
+        qc.invalidateQueries({ queryKey: ["bookmarks"] });
+      } else if (activeData.kind === "folder" && activeData.folderId) {
+        // Prevent dropping a folder into itself. Deeper cycle checks live
+        // on the backend (moveFolder walks ancestors).
+        if (activeData.folderId === targetFolderId) return;
+        try {
+          await api.moveFolder(activeData.folderId, targetFolderId, 0);
+          qc.invalidateQueries({ queryKey: ["folders"] });
+        } catch (e) {
+          // moveFolder rejects on descendant loops; keep quiet in the UI.
+          console.warn("moveFolder rejected", e);
+        }
+      }
+      return;
+    }
+
+    // Reorder within the current bookmarks list. `over.id` is another
+    // sortable bookmark; use its data to derive the target position.
+    const overData = over.data.current as
+      | { kind: "bookmark"; bookmarkId?: string; folderId?: string | null }
+      | undefined;
+    if (
+      activeData.kind === "bookmark" &&
+      activeData.bookmarkId &&
+      overData?.kind === "bookmark" &&
+      overData.bookmarkId
+    ) {
+      // Get positions from the cached list to compute the new integer
+      // position. Ties may occur; the backend orders by (position ASC,
+      // createdAt DESC) so the drop lands in the intended place.
+      const list = qc.getQueryData(["bookmarks", "all"]) as
+        | Array<{ id: string; folderId: string | null; position: number }>
+        | undefined;
+      if (!list) return;
+      const targetFolderId = overData.folderId ?? null;
+      const siblings = list.filter((b) => b.folderId === targetFolderId);
+      const overIdx = siblings.findIndex((b) => b.id === overData.bookmarkId);
+      if (overIdx < 0) return;
+      await api.moveBookmark(
+        activeData.bookmarkId,
+        targetFolderId,
+        overIdx,
+      );
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    }
+  };
   const [q, setQ] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const activeFolderId = useActiveFolderId();
@@ -104,6 +182,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
+    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
     <div className="flex h-full flex-col">
       <header className="border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-2">
@@ -232,5 +311,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto p-3 sm:p-6">{children}</main>
       </div>
     </div>
+    </DndContext>
   );
 }

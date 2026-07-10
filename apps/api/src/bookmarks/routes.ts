@@ -1,6 +1,7 @@
 import {
   CreateBookmarkBodySchema,
   ListBookmarksQuerySchema,
+  MoveBookmarkBodySchema,
   UpdateBookmarkBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
@@ -13,6 +14,7 @@ import {
   deleteBookmark,
   getBookmark,
   listBookmarks,
+  moveBookmark,
   refreshSnapshot,
   setBookmarkIconPath,
   updateBookmark,
@@ -53,6 +55,14 @@ export const bookmarkRoutes: FastifyPluginAsync = async (app) => {
     const { id } = IdParam.parse(req.params);
     deleteBookmark(ctx, id);
     reply.code(204);
+  });
+
+  app.post("/bookmarks/:id/move", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const body = MoveBookmarkBodySchema.parse(req.body);
+    moveBookmark(ctx, id, body.newFolderId, body.position);
+    return { ok: true };
   });
 
   app.post("/bookmarks/:id/refresh-snapshot", async (req) => {
