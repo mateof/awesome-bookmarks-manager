@@ -27,6 +27,7 @@ import { folderRoutes } from "./folders/routes.js";
 import { iconRoutes } from "./icons/routes.js";
 import { importRoutes } from "./imports/routes.js";
 import { jobRoutes } from "./jobs/routes.js";
+import { mcpRoutes } from "./mcp/routes.js";
 import { reawakenForUser } from "./jobs/queue.js";
 import { startWorker, stopWorker } from "./jobs/worker.js";
 import { refreshBackupSchedules, stopScheduler } from "./scheduler.js";
@@ -134,6 +135,9 @@ export async function buildServer() {
 
   // Public, stable, token-authenticatable API for native apps / MCP.
   await app.register(apiV1Routes, { prefix: "/api/v1" });
+
+  // Remote MCP endpoint (Streamable HTTP) at /api/mcp.
+  await app.register(mcpRoutes);
 
   // Serve the SPA build (production / single-container mode). Dev skips
   // this because Vite owns :3000.

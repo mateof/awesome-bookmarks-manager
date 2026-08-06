@@ -87,7 +87,7 @@ function ok(data: unknown) {
 
 const server = new McpServer({
   name: "awesomebookmarks",
-  version: "0.5.0",
+  version: "0.6.0",
 });
 
 server.tool(

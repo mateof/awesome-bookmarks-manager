@@ -6,6 +6,32 @@ import type { AuthedContext } from "./session.js";
 import { unwrapDekForToken } from "./token-crypto.js";
 
 /**
+ * Resolve a raw API token string into an authenticated context, unlocking
+ * (and caching) the DEK from the token's envelope on first use. Shared by
+ * the REST API and the MCP transport.
+ */
+export function authFromToken(token: string): AuthedContext {
+  const resolved = resolveToken(token);
+  if (!resolved) throw Unauthorized("Invalid API token");
+
+  let dek = keyCache.get(resolved.userId);
+  if (!dek) {
+    if (!resolved.dekWrap) {
+      // Legacy token minted before headless DEK wrapping.
+      throw KeyUnavailable();
+    }
+    dek = unwrapDekForToken(
+      resolved.userId,
+      resolved.tokenId,
+      resolved.rawSecret,
+      resolved.dekWrap,
+    );
+    keyCache.put(resolved.userId, dek);
+  }
+  return { userId: resolved.userId, dek };
+}
+
+/**
  * Auth for the public /api/v1 surface. Accepts EITHER a browser session
  * cookie (so the web app can reuse it) OR an `Authorization: Bearer <token>`
  * header (native apps, MCP, scripts).
@@ -25,26 +51,7 @@ export function requireApiAuth(req: FastifyRequest): AuthedContext {
   // 2. Bearer token (headless clients).
   const authz = req.headers.authorization;
   if (authz && authz.startsWith("Bearer ")) {
-    const token = authz.slice("Bearer ".length).trim();
-    const resolved = resolveToken(token);
-    if (!resolved) throw Unauthorized("Invalid API token");
-
-    let dek = keyCache.get(resolved.userId);
-    if (!dek) {
-      if (!resolved.dekWrap) {
-        // Legacy token minted before headless DEK wrapping — the user has to
-        // log into the web app once to warm the cache.
-        throw KeyUnavailable();
-      }
-      dek = unwrapDekForToken(
-        resolved.userId,
-        resolved.tokenId,
-        resolved.rawSecret,
-        resolved.dekWrap,
-      );
-      keyCache.put(resolved.userId, dek);
-    }
-    return { userId: resolved.userId, dek };
+    return authFromToken(authz.slice("Bearer ".length).trim());
   }
 
   throw Unauthorized();

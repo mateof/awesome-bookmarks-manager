@@ -1,24 +1,81 @@
 # MCP server
 
-The `@awesome-bookmarks/mcp` package is a
-[Model Context Protocol](https://modelcontextprotocol.io) server that lets an
-AI assistant (Claude Desktop, or anything that speaks MCP) add, search and
-manage bookmarks in your self-hosted instance.
+AwesomeBookmarks exposes a
+[Model Context Protocol](https://modelcontextprotocol.io) server so an AI
+assistant (Claude, or anything that speaks MCP) can add, search and manage
+bookmarks in your self-hosted instance.
 
-It's a small stdio program that runs **locally on the machine with the AI
-client** and talks to your remote AwesomeBookmarks over the public
-[`/api/v1`](./api.md) API using a Bearer token. Your instance can live on a
-NAS / server / Docker on your network; only the MCP process needs to reach it.
+There are **two ways** to connect, and both use the same API token:
+
+| Mode | What you configure | Runs where | Best when |
+|------|--------------------|------------|-----------|
+| **Remote (URL)** | a URL: `https://<host>/api/mcp` | inside the AwesomeBookmarks server itself | you just want to paste a URL — nothing to install |
+| **Local (stdio)** | a command that runs `apps/mcp` | on the machine with the AI client | your client only supports stdio servers |
+
+The web app builds ready-to-paste snippets for both under
+**Settings → API** the moment you create a token.
+
+---
+
+## Create a token
+
+In the web app: **Settings → API → Create token**, give it a label, copy the
+values shown. The token is displayed **once**.
+
+---
+
+## Option A — Remote MCP (recommended, no install)
+
+The server hosts an MCP endpoint at **`/api/mcp`** (Streamable HTTP). Point
+your client at it directly.
+
+```
+Claude ──HTTPS──> https://<host>/api/mcp   (in-process, no local program)
+```
+
+**Auth** is the API token, provided either as a header
+(`Authorization: Bearer <token>`) or, for clients that only accept a URL, as
+a `?token=` query parameter.
+
+### Claude Code / CLI
+
+```bash
+claude mcp add --scope user --transport http awesomebookmarks \
+  https://<host>/api/mcp \
+  --header "Authorization: Bearer <token>"
+```
+
+### Claude Desktop (custom connector)
+
+Add a custom connector and paste the URL with the token embedded (this is the
+exact string shown in Settings → API):
+
+```
+https://<host>/api/mcp?token=<token>
+```
+
+> The token is part of the URL — treat the whole URL as a secret, and prefer
+> the header form (CLI) where you can.
+
+### Notes
+
+- The remote endpoint is **stateless**: each tool call is an independent
+  authenticated request. No session to keep alive.
+- The instance must be reachable from wherever the AI client runs. Serve it
+  behind HTTPS for anything beyond your LAN.
+
+---
+
+## Option B — Local stdio server (`apps/mcp`)
+
+A small program that runs next to the AI client and forwards to
+[`/api/v1`](./api.md). Use it if your client only supports stdio MCP servers.
 
 ```
 Claude Desktop ──stdio──> awesomebookmarks-mcp ──HTTPS /api/v1──> AwesomeBookmarks
 ```
 
-## 1. Create a token
-
-In the web app: **Settings → API → Create token**. Copy it.
-
-## 2. Build the server
+### Build it
 
 From the repo:
 
@@ -30,7 +87,7 @@ pnpm --filter @awesome-bookmarks/mcp build
 This produces `apps/mcp/dist/index.js`. (You can also run it without
 building via `pnpm --filter @awesome-bookmarks/mcp dev`.)
 
-## 3. Configure your MCP client
+### Configure your MCP client
 
 The server reads two environment variables:
 

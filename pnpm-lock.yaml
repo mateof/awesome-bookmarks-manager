@@ -44,6 +44,9 @@ importers:
       '@fastify/static':
         specifier: ^8.0.4
         version: 8.3.0
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.11.0
+        version: 1.30.0(zod@3.25.76)
       '@mozilla/readability':
         specifier: ^0.5.0
         version: 0.5.0

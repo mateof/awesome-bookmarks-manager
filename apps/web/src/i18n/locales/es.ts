@@ -284,6 +284,16 @@ const es = {
       revoke: "Revocar",
       empty: "Aún no tienes tokens.",
       usageTitle: "Uso",
+      tokenLabel: "Token",
+      tokensListTitle: "Tus tokens",
+      claudeTitle: "Claude / IA (MCP remoto)",
+      claudeHint:
+        "Añade esta URL en Claude como conector personalizado, o ejecuta el comando de abajo.",
+      mcpUrlLabel: "URL del MCP remoto",
+      urlNote:
+        "El token va incrustado en la URL; trata la URL entera como un secreto.",
+      cliTitle: "Línea de comandos",
+      restTitle: "API REST (curl)",
       docsHint:
         "Documentación completa de la API en la carpeta doc/ del repositorio.",
     },

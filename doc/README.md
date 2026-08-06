@@ -17,7 +17,8 @@ apps, scripts and AI assistants.
 | Surface | Path | Auth | For |
 |---------|------|------|-----|
 | Internal web API | `/api/*` | session cookie | the bundled web app only |
-| Public API | `/api/v1/*` | `Authorization: Bearer <token>` **or** session cookie | native apps, scripts, MCP |
+| Public API | `/api/v1/*` | `Authorization: Bearer <token>` **or** session cookie | native apps, scripts |
+| Remote MCP | `/api/mcp` | Bearer token or `?token=` | AI assistants (Claude, etc.) |
 
 The public API is the stable, documented, versioned surface. Build against
 `/api/v1`. The internal `/api/*` routes back the web SPA and may change.
@@ -37,8 +38,9 @@ The public API is the stable, documented, versioned surface. Build against
      -d '{"url":"https://example.com","title":"Example"}'
    ```
 
-3. For AI access, point an MCP client at the bundled server — see
-   [mcp.md](./mcp.md).
+3. For AI access, paste `https://your-host/api/mcp?token=<token>` into Claude
+   as a custom connector — or use the local stdio server. See
+   [mcp.md](./mcp.md). Settings → API generates both snippets for you.
 
 ## Data model in one glance
 

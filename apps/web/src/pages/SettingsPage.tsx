@@ -1,4 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Check,
+  Cloud as CloudIcon,
+  Copy,
+  Download,
+  HelpCircle,
+  KeyRound,
+  Plus,
+  ScrollText,
+  ShieldCheck,
+  Trash2,
+  User,
+  Users,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Route, Routes } from "react-router-dom";
@@ -7,51 +21,191 @@ import { useAuth } from "../auth.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
 import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
-import { Copy, HelpCircle, Plus, Trash2 } from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/* Shared presentation primitives                                     */
+/* ------------------------------------------------------------------ */
+
+const inputCls =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:focus:ring-slate-700/50";
+const btnPrimary =
+  "inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white";
+const btnSecondary =
+  "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3.5 py-2 text-sm transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800";
+const btnDanger =
+  "inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs text-red-600 transition hover:bg-red-50 dark:border-red-900/60 dark:hover:bg-red-950";
+
+function Card({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={`rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 ${className}`}
+    >
+      {children}
+    </section>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  subtitle,
+  action,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-4 flex items-start gap-3">
+      {icon && (
+        <div className="mt-0.5 rounded-lg bg-slate-100 p-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          {icon}
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <h2 className="text-base font-semibold">{title}</h2>
+        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+function CopyField({
+  label,
+  value,
+  hint,
+}: {
+  label?: string;
+  value: string;
+  hint?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="space-y-1">
+      {label && (
+        <div className="text-xs font-medium text-slate-500">{label}</div>
+      )}
+      <div className="flex items-stretch gap-2">
+        <code className="flex-1 overflow-x-auto whitespace-pre rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-950/40">
+          {value}
+        </code>
+        <button
+          type="button"
+          onClick={() => {
+            navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          className="shrink-0 rounded-lg border border-slate-300 px-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        >
+          {copied ? (
+            <Check className="h-4 w-4 text-emerald-600" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+      {hint && <p className="text-[11px] text-slate-400">{hint}</p>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page shell                                                         */
+/* ------------------------------------------------------------------ */
 
 export function SettingsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-[12rem_1fr] md:gap-6">
-      <nav className="flex flex-wrap gap-1 text-sm md:flex-col md:flex-nowrap">
-        <Tab to="/settings">{t("settings.tabs.profile")}</Tab>
-        <Tab to="/settings/security">{t("settings.tabs.security")}</Tab>
-        <Tab to="/settings/cloud">{t("settings.tabs.cloud")}</Tab>
-        <Tab to="/settings/import-export">{t("settings.tabs.importExport")}</Tab>
-        <Tab to="/settings/api">{t("settings.tabs.api")}</Tab>
-        {isAdmin && <Tab to="/settings/admin">{t("settings.tabs.admin")}</Tab>}
-        {isAdmin && <Tab to="/settings/logs">{t("settings.tabs.logs")}</Tab>}
-      </nav>
-      <Routes>
-        <Route index element={<Profile />} />
-        <Route path="security" element={<Security />} />
-        <Route path="cloud" element={<Cloud />} />
-        <Route path="import-export" element={<ImportExport />} />
-        <Route path="api" element={<ApiTokens />} />
-        {isAdmin && <Route path="admin" element={<Admin />} />}
-        {isAdmin && <Route path="logs" element={<Logs />} />}
-      </Routes>
+    <div className="mx-auto max-w-4xl">
+      <h1 className="mb-4 text-xl font-semibold">{t("layout.settings")}</h1>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[13rem_1fr] md:gap-6">
+        <nav className="flex flex-wrap gap-1 md:flex-col md:flex-nowrap">
+          <Tab to="/settings" icon={<User className="h-4 w-4" />}>
+            {t("settings.tabs.profile")}
+          </Tab>
+          <Tab to="/settings/security" icon={<ShieldCheck className="h-4 w-4" />}>
+            {t("settings.tabs.security")}
+          </Tab>
+          <Tab to="/settings/cloud" icon={<CloudIcon className="h-4 w-4" />}>
+            {t("settings.tabs.cloud")}
+          </Tab>
+          <Tab
+            to="/settings/import-export"
+            icon={<Download className="h-4 w-4" />}
+          >
+            {t("settings.tabs.importExport")}
+          </Tab>
+          <Tab to="/settings/api" icon={<KeyRound className="h-4 w-4" />}>
+            {t("settings.tabs.api")}
+          </Tab>
+          {isAdmin && (
+            <Tab to="/settings/admin" icon={<Users className="h-4 w-4" />}>
+              {t("settings.tabs.admin")}
+            </Tab>
+          )}
+          {isAdmin && (
+            <Tab to="/settings/logs" icon={<ScrollText className="h-4 w-4" />}>
+              {t("settings.tabs.logs")}
+            </Tab>
+          )}
+        </nav>
+        <div className="min-w-0">
+          <Routes>
+            <Route index element={<Profile />} />
+            <Route path="security" element={<Security />} />
+            <Route path="cloud" element={<Cloud />} />
+            <Route path="import-export" element={<ImportExport />} />
+            <Route path="api" element={<ApiTokens />} />
+            {isAdmin && <Route path="admin" element={<Admin />} />}
+            {isAdmin && <Route path="logs" element={<Logs />} />}
+          </Routes>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Tab({ to, children }: { to: string; children: React.ReactNode }) {
+function Tab({
+  to,
+  icon,
+  children,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <NavLink
       to={to}
       end
       className={({ isActive }) =>
-        `block rounded px-2 py-1 ${
-          isActive ? "bg-slate-200 dark:bg-slate-800" : "hover:bg-slate-100 dark:hover:bg-slate-800"
+        `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition ${
+          isActive
+            ? "bg-slate-900 font-medium text-white dark:bg-slate-100 dark:text-slate-900"
+            : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
         }`
       }
     >
-      {children}
+      {icon}
+      <span>{children}</span>
     </NavLink>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Profile                                                            */
+/* ------------------------------------------------------------------ */
 
 function Profile() {
   const { t } = useTranslation();
@@ -68,67 +222,86 @@ function Profile() {
       setMsg(e instanceof ApiError ? e.message : t("settings.profile.saveError")),
   });
   const toggleAuto = useMutation({
-    mutationFn: (value: boolean) =>
-      api.updateMyProfile({ autoSnapshots: value }),
+    mutationFn: (value: boolean) => api.updateMyProfile({ autoSnapshots: value }),
     onSuccess: () => refresh(),
   });
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">{t("settings.profile.heading")}</h2>
-
-      <div className="text-sm text-slate-600 dark:text-slate-400">
-        {t("settings.profile.emailLabel")}{" "}
-        <span className="font-mono">{user?.email}</span>
-      </div>
-
-      <label className="block text-sm">
-        <span className="mb-1 block text-xs text-slate-500">
-          {t("settings.profile.nicknameLabel")}
-        </span>
-        <input
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="tu_nickname"
-          minLength={3}
-          maxLength={32}
-          pattern="[a-zA-Z0-9._\-]+"
-          className="w-80 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+    <div className="space-y-6">
+      <Card>
+        <SectionHeader
+          icon={<User className="h-5 w-5" />}
+          title={t("settings.profile.heading")}
         />
-      </label>
-      <button
-        onClick={() => saveNick.mutate()}
-        disabled={
-          !nickname || saveNick.isPending || nickname === user?.nickname
-        }
-        className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-      >
-        {t("settings.profile.saveNickname")}
-      </button>
-      {msg && <div className="text-sm text-slate-500">{msg}</div>}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-500">
+              {t("settings.profile.emailLabel")}
+            </span>
+            <span className="font-mono">{user?.email}</span>
+            {user?.role === "admin" && (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                admin
+              </span>
+            )}
+          </div>
 
-      <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
-        <h3 className="mb-2 text-sm font-medium">
-          {t("settings.profile.autoSnapshotsHeading")}
-        </h3>
-        <label className="flex items-start gap-2 text-sm">
+          <label className="block text-sm">
+            <span className="mb-1 block text-xs text-slate-500">
+              {t("settings.profile.nicknameLabel")}
+            </span>
+            <input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="nickname"
+              minLength={3}
+              maxLength={32}
+              pattern="[a-zA-Z0-9._\-]+"
+              className={`${inputCls} max-w-xs`}
+            />
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => saveNick.mutate()}
+              disabled={
+                !nickname || saveNick.isPending || nickname === user?.nickname
+              }
+              className={btnPrimary}
+            >
+              {t("settings.profile.saveNickname")}
+            </button>
+            {msg && <span className="text-sm text-slate-500">{msg}</span>}
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<Download className="h-5 w-5" />}
+          title={t("settings.profile.autoSnapshotsHeading")}
+        />
+        <label className="flex items-start gap-3 text-sm">
           <input
             type="checkbox"
-            className="mt-0.5"
+            className="mt-0.5 h-4 w-4 accent-slate-700"
             checked={user?.autoSnapshots ?? true}
             onChange={(e) => toggleAuto.mutate(e.target.checked)}
             disabled={toggleAuto.isPending}
           />
           <span>
             {t("settings.profile.autoSnapshotsLabel")}
-            <span className="block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-slate-500">
               {t("settings.profile.autoSnapshotsHint")}
             </span>
           </span>
         </label>
-      </div>
+      </Card>
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Security                                                           */
+/* ------------------------------------------------------------------ */
 
 function Security() {
   const { t } = useTranslation();
@@ -145,33 +318,46 @@ function Security() {
     onError: (e) => setMsg(e instanceof ApiError ? e.message : t("common.error")),
   });
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">{t("settings.security.heading")}</h2>
-      <input
-        type="password"
-        placeholder={t("settings.security.currentPassword")}
-        value={current}
-        onChange={(e) => setCurrent(e.target.value)}
-        className="w-80 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+    <Card>
+      <SectionHeader
+        icon={<ShieldCheck className="h-5 w-5" />}
+        title={t("settings.security.heading")}
       />
-      <input
-        type="password"
-        placeholder={t("settings.security.newPassword")}
-        value={next}
-        onChange={(e) => setNext(e.target.value)}
-        className="w-80 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-      />
-      <button
-        onClick={() => m.mutate()}
-        disabled={!current || !next || m.isPending}
-        className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-      >
-        {t("settings.security.changeButton")}
-      </button>
-      {msg && <div className="text-sm text-slate-500">{msg}</div>}
-    </div>
+      <div className="max-w-xs space-y-3">
+        <input
+          type="password"
+          placeholder={t("settings.security.currentPassword")}
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          autoComplete="current-password"
+          className={inputCls}
+        />
+        <input
+          type="password"
+          placeholder={t("settings.security.newPassword")}
+          value={next}
+          onChange={(e) => setNext(e.target.value)}
+          autoComplete="new-password"
+          className={inputCls}
+        />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => m.mutate()}
+            disabled={!current || !next || m.isPending}
+            className={btnPrimary}
+          >
+            {t("settings.security.changeButton")}
+          </button>
+          {msg && <span className="text-sm text-slate-500">{msg}</span>}
+        </div>
+      </div>
+    </Card>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Cloud                                                              */
+/* ------------------------------------------------------------------ */
 
 function Cloud() {
   const { t } = useTranslation();
@@ -185,15 +371,18 @@ function Cloud() {
     null,
   );
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">{t("settings.cloud.heading")}</h2>
+    <Card>
+      <SectionHeader
+        icon={<CloudIcon className="h-5 w-5" />}
+        title={t("settings.cloud.heading")}
+      />
       <div className="space-y-2">
         {(conns.data ?? []).map((c) => (
           <div
             key={c.id}
-            className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+            className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
           >
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="font-medium">{c.label}</div>
               <div className="text-xs text-slate-500">
                 {c.provider} ·{" "}
@@ -207,7 +396,7 @@ function Cloud() {
                 await api.startBackup(c.id);
                 qc.invalidateQueries({ queryKey: ["cloud", "connections"] });
               }}
-              className="ml-auto rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              className={btnSecondary}
             >
               {t("settings.cloud.backupNow")}
             </button>
@@ -225,7 +414,7 @@ function Cloud() {
         ))}
       </div>
 
-      <div className="space-y-2">
+      <div className="mt-3 space-y-2">
         <ConnectRow
           label={t("settings.cloud.connectGdrive")}
           href="/api/cloud/connect/gdrive"
@@ -251,10 +440,8 @@ function Cloud() {
           }
         />
       )}
-      {help && (
-        <CloudSetupHelp provider={help} onClose={() => setHelp(null)} />
-      )}
-    </div>
+      {help && <CloudSetupHelp provider={help} onClose={() => setHelp(null)} />}
+    </Card>
   );
 }
 
@@ -287,10 +474,7 @@ function SynologyDialog({
         password: form.password,
       }),
     onSuccess: (r) =>
-      setTestStatus({
-        state: r.ok ? "ok" : "err",
-        message: r.message,
-      }),
+      setTestStatus({ state: r.ok ? "ok" : "err", message: r.message }),
     onError: (e) =>
       setTestStatus({
         state: "err",
@@ -327,11 +511,7 @@ function SynologyDialog({
           />
         </Field>
         <Field label={t("settings.cloud.username")}>
-          <input
-            value={form.username}
-            onChange={set("username")}
-            className={inputCls}
-          />
+          <input value={form.username} onChange={set("username")} className={inputCls} />
         </Field>
         <Field label={t("settings.cloud.password")}>
           <input
@@ -361,7 +541,7 @@ function SynologyDialog({
                 }
                 setShowBrowser(true);
               }}
-              className="rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              className={btnSecondary}
             >
               {t("settings.cloud.browse")}
             </button>
@@ -373,16 +553,14 @@ function SynologyDialog({
             type="button"
             onClick={() => test.mutate()}
             disabled={!credsReady || test.isPending}
-            className="rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            className={btnSecondary}
           >
             {test.isPending
               ? t("settings.cloud.testing")
               : t("settings.cloud.testConnection")}
           </button>
           {testStatus.state === "ok" && (
-            <span className="text-sm text-emerald-600">
-              ✓ {testStatus.message}
-            </span>
+            <span className="text-sm text-emerald-600">✓ {testStatus.message}</span>
           )}
           {testStatus.state === "err" && (
             <span className="text-sm text-red-600">✗ {testStatus.message}</span>
@@ -393,14 +571,11 @@ function SynologyDialog({
           <button
             onClick={() => save.mutate()}
             disabled={!credsReady || save.isPending}
-            className="flex-1 rounded bg-slate-900 py-2 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+            className={`${btnPrimary} flex-1 justify-center`}
           >
             {save.isPending ? t("settings.cloud.saving") : t("settings.cloud.save")}
           </button>
-          <button
-            onClick={onClose}
-            className="rounded border border-slate-300 px-3 py-2 text-sm dark:border-slate-700"
-          >
+          <button onClick={onClose} className={btnSecondary}>
             {t("settings.cloud.cancel")}
           </button>
         </div>
@@ -425,9 +600,6 @@ function SynologyDialog({
   );
 }
 
-const inputCls =
-  "w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800";
-
 function Field({
   label,
   children,
@@ -443,14 +615,52 @@ function Field({
   );
 }
 
+function ConnectRow({
+  label,
+  href,
+  onClick,
+  onHelp,
+}: {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  onHelp: () => void;
+}) {
+  const { t } = useTranslation();
+  const cls =
+    "flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800";
+  return (
+    <div className="flex items-stretch gap-2">
+      {href ? (
+        <a href={href} className={cls}>
+          {label}
+        </a>
+      ) : (
+        <button onClick={onClick} className={`${cls} text-left`}>
+          {label}
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={onHelp}
+        title={t("settings.cloud.helpHint")}
+        className="flex items-center gap-1 rounded-lg border border-slate-300 px-3 text-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+      >
+        <HelpCircle className="h-4 w-4" /> {t("settings.cloud.help")}
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Import / Export                                                    */
+/* ------------------------------------------------------------------ */
+
 function ImportExport() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const folders = useQuery({
-    queryKey: ["folders"],
-    queryFn: api.listFolders,
-  });
+  const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
   const folderOptions = useMemo(
     () => buildFolderOptions(folders.data ?? []),
     [folders.data],
@@ -527,73 +737,72 @@ function ImportExport() {
     }
   };
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">{t("settings.importExport.heading")}</h2>
-      <p className="text-sm text-slate-500">{t("settings.importExport.description")}</p>
-
-      <label className="block text-sm">
-        <span className="mb-1 block text-xs text-slate-500">
-          {t("settings.importExport.destFolderLabel")}
-        </span>
-        <select
-          value={parentId}
-          onChange={(e) => setParentId(e.target.value)}
-          disabled={busy}
-          className="w-80 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-        >
-          <option value="">{t("settings.importExport.destRoot")}</option>
-          {folderOptions.map((o) => (
-            <option key={o.id} value={o.id}>
-              {"— ".repeat(o.depth)}
-              {o.name}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="block text-sm">
-        <span className="mb-1 block text-xs text-slate-500">
-          {t("settings.importExport.wrapperLabel")}
-        </span>
-        <input
-          value={wrapperName}
-          onChange={(e) => setWrapperName(e.target.value)}
-          disabled={busy}
-          maxLength={256}
-          placeholder={t("settings.importExport.wrapperPlaceholder", {
-            date: "2026-05-06",
-          })}
-          className="w-80 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-        />
-        <span className="mt-0.5 block text-xs text-slate-500">
-          {t("settings.importExport.wrapperHint")}
-        </span>
-      </label>
-
-      <label className="flex items-start gap-2 text-sm">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={fetchSnapshots}
-          onChange={(e) => setFetchSnapshots(e.target.checked)}
-          disabled={busy}
-        />
-        <span>
-          {t("settings.importExport.autoSnapshotsLabel")}
-          <span className="block text-xs text-slate-500">
-            {t("settings.importExport.autoSnapshotsHint")}
-          </span>
-        </span>
-      </label>
-
-      <input
-        type="file"
-        accept=".html,.htm"
-        onChange={onFile}
-        disabled={busy}
+    <Card>
+      <SectionHeader
+        icon={<Download className="h-5 w-5" />}
+        title={t("settings.importExport.heading")}
+        subtitle={t("settings.importExport.description")}
       />
-      {msg && <div className="text-sm text-slate-500">{msg}</div>}
-    </div>
+      <div className="space-y-4">
+        <label className="block text-sm">
+          <span className="mb-1 block text-xs text-slate-500">
+            {t("settings.importExport.destFolderLabel")}
+          </span>
+          <select
+            value={parentId}
+            onChange={(e) => setParentId(e.target.value)}
+            disabled={busy}
+            className={`${inputCls} max-w-sm`}
+          >
+            <option value="">{t("settings.importExport.destRoot")}</option>
+            {folderOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {"— ".repeat(o.depth)}
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block text-sm">
+          <span className="mb-1 block text-xs text-slate-500">
+            {t("settings.importExport.wrapperLabel")}
+          </span>
+          <input
+            value={wrapperName}
+            onChange={(e) => setWrapperName(e.target.value)}
+            disabled={busy}
+            maxLength={256}
+            placeholder={t("settings.importExport.wrapperPlaceholder", {
+              date: "2026-05-06",
+            })}
+            className={`${inputCls} max-w-sm`}
+          />
+          <span className="mt-1 block text-xs text-slate-500">
+            {t("settings.importExport.wrapperHint")}
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-slate-700"
+            checked={fetchSnapshots}
+            onChange={(e) => setFetchSnapshots(e.target.checked)}
+            disabled={busy}
+          />
+          <span>
+            {t("settings.importExport.autoSnapshotsLabel")}
+            <span className="mt-0.5 block text-xs text-slate-500">
+              {t("settings.importExport.autoSnapshotsHint")}
+            </span>
+          </span>
+        </label>
+
+        <input type="file" accept=".html,.htm" onChange={onFile} disabled={busy} />
+        {msg && <div className="text-sm text-slate-500">{msg}</div>}
+      </div>
+    </Card>
   );
 }
 
@@ -626,6 +835,164 @@ function buildFolderOptions(
   return out;
 }
 
+/* ------------------------------------------------------------------ */
+/* API access & tokens                                                */
+/* ------------------------------------------------------------------ */
+
+function ApiTokens() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const tokens = useQuery({
+    queryKey: ["api-tokens"],
+    queryFn: api.listApiTokens,
+  });
+  const [label, setLabel] = useState("");
+  const [created, setCreated] = useState<string | null>(null);
+
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "http://your-host";
+
+  const create = useMutation({
+    mutationFn: () => api.createApiToken(label.trim() || "token"),
+    onSuccess: (r) => {
+      setCreated(r.token);
+      setLabel("");
+      qc.invalidateQueries({ queryKey: ["api-tokens"] });
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: (id: string) => api.revokeApiToken(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-tokens"] }),
+  });
+
+  const mcpUrl = `${origin}/api/mcp`;
+  const mcpUrlWithToken = created ? `${mcpUrl}?token=${created}` : "";
+  const cliCmd = created
+    ? `claude mcp add --scope user --transport http awesomebookmarks ${mcpUrl} --header "Authorization: Bearer ${created}"`
+    : "";
+  const curlCmd = created
+    ? `curl ${origin}/api/v1/bookmarks -H "Authorization: Bearer ${created}"`
+    : "";
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <SectionHeader
+          icon={<KeyRound className="h-5 w-5" />}
+          title={t("settings.api.heading")}
+          subtitle={t("settings.api.intro")}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder={t("settings.api.labelPlaceholder")}
+            maxLength={128}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !create.isPending) create.mutate();
+            }}
+            className={`${inputCls} w-64`}
+          />
+          <button
+            onClick={() => create.mutate()}
+            disabled={create.isPending}
+            className={btnPrimary}
+          >
+            <Plus className="h-4 w-4" /> {t("settings.api.create")}
+          </button>
+        </div>
+      </Card>
+
+      {created && (
+        <Card className="border-amber-300 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/30">
+          <SectionHeader
+            title={t("settings.api.createdTitle")}
+            subtitle={t("settings.api.createdWarning")}
+            action={
+              <button
+                onClick={() => setCreated(null)}
+                className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+              >
+                {t("common.close")}
+              </button>
+            }
+          />
+          <div className="space-y-5">
+            <CopyField label={t("settings.api.tokenLabel")} value={created} />
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">
+                {t("settings.api.claudeTitle")}
+              </div>
+              <p className="text-xs text-slate-500">
+                {t("settings.api.claudeHint")}
+              </p>
+              <CopyField
+                label={t("settings.api.mcpUrlLabel")}
+                value={mcpUrlWithToken}
+                hint={t("settings.api.urlNote")}
+              />
+              <CopyField label={t("settings.api.cliTitle")} value={cliCmd} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="text-sm font-medium">
+                {t("settings.api.restTitle")}
+              </div>
+              <CopyField value={curlCmd} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <SectionHeader title={t("settings.api.tokensListTitle")} />
+        <div className="space-y-2">
+          {(tokens.data ?? []).map((tok) => (
+            <div
+              key={tok.id}
+              className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{tok.label}</div>
+                <div className="text-xs text-slate-500">
+                  {t("settings.api.createdAt", { when: tok.createdAt.slice(0, 10) })}
+                  {" · "}
+                  {tok.lastUsedAt
+                    ? t("settings.api.lastUsed", {
+                        when: tok.lastUsedAt.slice(0, 10),
+                      })
+                    : t("settings.api.neverUsed")}
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  if (
+                    !confirm(t("settings.api.confirmRevoke", { label: tok.label }))
+                  )
+                    return;
+                  revoke.mutate(tok.id);
+                }}
+                className={btnDanger}
+              >
+                <Trash2 className="h-3 w-3" /> {t("settings.api.revoke")}
+              </button>
+            </div>
+          ))}
+          {(tokens.data ?? []).length === 0 && !tokens.isLoading && (
+            <div className="text-sm text-slate-400">{t("settings.api.empty")}</div>
+          )}
+        </div>
+        <p className="mt-4 text-xs text-slate-400">{t("settings.api.docsHint")}</p>
+      </Card>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin                                                              */
+/* ------------------------------------------------------------------ */
+
 function Admin() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -644,16 +1011,21 @@ function Admin() {
   });
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-lg font-semibold">{t("settings.admin.heading")}</h2>
-      {users.isLoading && <div className="text-slate-400">{t("common.loading")}</div>}
+    <Card>
+      <SectionHeader
+        icon={<Users className="h-5 w-5" />}
+        title={t("settings.admin.heading")}
+      />
+      {users.isLoading && (
+        <div className="text-slate-400">{t("common.loading")}</div>
+      )}
       <div className="space-y-2">
         {(users.data ?? []).map((u) => (
           <div
             key={u.id}
-            className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
           >
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="font-medium">{u.email}</div>
               <div className="text-xs text-slate-500">
                 {t("settings.admin.bookmarksFoldersCreated", {
@@ -668,22 +1040,18 @@ function Admin() {
               onChange={(e) =>
                 role.mutate({ id: u.id, r: e.target.value as "user" | "admin" })
               }
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800"
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800"
             >
               <option value="user">{t("settings.admin.roleUser")}</option>
               <option value="admin">{t("settings.admin.roleAdmin")}</option>
             </select>
             <button
               onClick={async () => {
-                if (
-                  !confirm(
-                    t("settings.admin.confirmDeleteUser", { email: u.email }),
-                  )
-                )
+                if (!confirm(t("settings.admin.confirmDeleteUser", { email: u.email })))
                   return;
                 del.mutate(u.id);
               }}
-              className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+              className={btnDanger}
             >
               {t("settings.admin.delete")}
             </button>
@@ -693,175 +1061,13 @@ function Admin() {
           <div className="text-sm text-slate-400">{t("settings.admin.noUsers")}</div>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
-function ApiTokens() {
-  const { t } = useTranslation();
-  const qc = useQueryClient();
-  const tokens = useQuery({
-    queryKey: ["api-tokens"],
-    queryFn: api.listApiTokens,
-  });
-  const [label, setLabel] = useState("");
-  const [created, setCreated] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const create = useMutation({
-    mutationFn: () => api.createApiToken(label.trim() || "token"),
-    onSuccess: (r) => {
-      setCreated(r.token);
-      setLabel("");
-      qc.invalidateQueries({ queryKey: ["api-tokens"] });
-    },
-  });
-  const revoke = useMutation({
-    mutationFn: (id: string) => api.revokeApiToken(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["api-tokens"] }),
-  });
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold">{t("settings.api.heading")}</h2>
-      <p className="text-sm text-slate-500">{t("settings.api.intro")}</p>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder={t("settings.api.labelPlaceholder")}
-          maxLength={128}
-          className="w-64 rounded border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
-        />
-        <button
-          onClick={() => create.mutate()}
-          disabled={create.isPending}
-          className="flex items-center gap-1 rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-        >
-          <Plus className="h-4 w-4" /> {t("settings.api.create")}
-        </button>
-      </div>
-
-      {created && (
-        <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-          <p className="text-sm font-medium">{t("settings.api.createdTitle")}</p>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
-            {t("settings.api.createdWarning")}
-          </p>
-          <div className="flex items-center gap-2 rounded border border-slate-300 bg-white p-2 dark:border-slate-700 dark:bg-slate-900">
-            <code className="flex-1 break-all text-xs">{created}</code>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(created);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }}
-              title={t("settings.api.copy")}
-              className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
-            >
-              <Copy className="h-4 w-4" />
-            </button>
-          </div>
-          {copied && (
-            <p className="text-xs text-emerald-600">{t("settings.api.copied")}</p>
-          )}
-          <button
-            onClick={() => setCreated(null)}
-            className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-          >
-            {t("common.close")}
-          </button>
-        </div>
-      )}
-
-      <div className="space-y-2">
-        {(tokens.data ?? []).map((tok) => (
-          <div
-            key={tok.id}
-            className="flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="flex-1">
-              <div className="font-medium">{tok.label}</div>
-              <div className="text-xs text-slate-500">
-                {t("settings.api.createdAt", {
-                  when: tok.createdAt.slice(0, 10),
-                })}
-                {" · "}
-                {tok.lastUsedAt
-                  ? t("settings.api.lastUsed", {
-                      when: tok.lastUsedAt.slice(0, 10),
-                    })
-                  : t("settings.api.neverUsed")}
-              </div>
-            </div>
-            <button
-              onClick={async () => {
-                if (!confirm(t("settings.api.confirmRevoke", { label: tok.label })))
-                  return;
-                revoke.mutate(tok.id);
-              }}
-              className="flex items-center gap-1 rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-            >
-              <Trash2 className="h-3 w-3" /> {t("settings.api.revoke")}
-            </button>
-          </div>
-        ))}
-        {(tokens.data ?? []).length === 0 && !tokens.isLoading && (
-          <div className="text-sm text-slate-400">{t("settings.api.empty")}</div>
-        )}
-      </div>
-
-      <div className="rounded border border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-700">
-        <p className="mb-1 font-medium text-slate-600 dark:text-slate-300">
-          {t("settings.api.usageTitle")}
-        </p>
-        <pre className="overflow-x-auto whitespace-pre-wrap">
-{`curl ${typeof window !== "undefined" ? window.location.origin : "http://your-host"}/api/v1/bookmarks \\
-  -H "Authorization: Bearer <token>"`}
-        </pre>
-        <p className="mt-2">{t("settings.api.docsHint")}</p>
-      </div>
-    </div>
-  );
-}
-
-function ConnectRow({
-  label,
-  href,
-  onClick,
-  onHelp,
-}: {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-  onHelp: () => void;
-}) {
-  const { t } = useTranslation();
-  const cls =
-    "flex-1 rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800";
-  return (
-    <div className="flex items-stretch gap-2">
-      {href ? (
-        <a href={href} className={cls}>
-          {label}
-        </a>
-      ) : (
-        <button onClick={onClick} className={`${cls} text-left`}>
-          {label}
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={onHelp}
-        title={t("settings.cloud.helpHint")}
-        className="flex items-center gap-1 rounded border border-slate-300 px-3 text-sm text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-      >
-        <HelpCircle className="h-4 w-4" /> {t("settings.cloud.help")}
-      </button>
-    </div>
-  );
-}
+/* ------------------------------------------------------------------ */
+/* Logs                                                               */
+/* ------------------------------------------------------------------ */
 
 function Logs() {
   const { t } = useTranslation();
@@ -899,52 +1105,50 @@ function Logs() {
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold">{t("settings.logs.heading")}</h2>
-        <span className="text-xs text-slate-500">
-          {t("settings.logs.summary", {
-            errored: errored.length,
-            total: all.length,
-          })}
-        </span>
-        <button
-          onClick={copyAll}
-          disabled={all.length === 0}
-          className="ml-auto rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          {t("settings.logs.copyAll")}
-        </button>
-        <button
-          onClick={async () => {
-            if (
-              !confirm(
-                t("settings.logs.confirmCleanErrors", { count: errored.length }),
-              )
-            )
-              return;
-            purge.mutate("error");
-          }}
-          disabled={errored.length === 0 || purge.isPending}
-          className="rounded border border-red-300 px-3 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950"
-        >
-          {purge.isPending ? t("settings.logs.cleaning") : t("settings.logs.cleanErrors")}
-        </button>
-        <button
-          onClick={() => jobs.refetch()}
-          className="rounded border border-slate-300 px-3 py-1 text-xs hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          {t("settings.logs.refresh")}
-        </button>
-      </div>
+    <Card>
+      <SectionHeader
+        icon={<ScrollText className="h-5 w-5" />}
+        title={t("settings.logs.heading")}
+        subtitle={t("settings.logs.summary", {
+          errored: errored.length,
+          total: all.length,
+        })}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button onClick={copyAll} disabled={all.length === 0} className={btnSecondary}>
+              {t("settings.logs.copyAll")}
+            </button>
+            <button
+              onClick={async () => {
+                if (
+                  !confirm(
+                    t("settings.logs.confirmCleanErrors", { count: errored.length }),
+                  )
+                )
+                  return;
+                purge.mutate("error");
+              }}
+              disabled={errored.length === 0 || purge.isPending}
+              className={btnDanger}
+            >
+              {purge.isPending
+                ? t("settings.logs.cleaning")
+                : t("settings.logs.cleanErrors")}
+            </button>
+            <button onClick={() => jobs.refetch()} className={btnSecondary}>
+              {t("settings.logs.refresh")}
+            </button>
+          </div>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <label>
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-xs">
+        <label className="flex items-center gap-1">
           {t("settings.logs.statusLabel")}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="ml-1 rounded border border-slate-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-800"
+            className="rounded-lg border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800"
           >
             <option value="">{t("settings.logs.all")}</option>
             <option value="pending">pending</option>
@@ -954,12 +1158,12 @@ function Logs() {
             <option value="error">error</option>
           </select>
         </label>
-        <label>
+        <label className="flex items-center gap-1">
           {t("settings.logs.typeLabel")}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="ml-1 rounded border border-slate-300 bg-white px-2 py-0.5 dark:border-slate-700 dark:bg-slate-800"
+            className="rounded-lg border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-800"
           >
             <option value="">{t("settings.logs.all")}</option>
             <option value="snapshot">snapshot</option>
@@ -972,6 +1176,7 @@ function Logs() {
         <label className="flex items-center gap-1">
           <input
             type="checkbox"
+            className="h-3.5 w-3.5 accent-slate-700"
             checked={autoRefresh}
             onChange={(e) => setAutoRefresh(e.target.checked)}
           />
@@ -987,7 +1192,7 @@ function Logs() {
           <JobRow key={j.id} job={j} />
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -1033,7 +1238,7 @@ ${job.lastError ?? t("settings.logs.none")}`;
     navigator.clipboard.writeText(text);
   };
   return (
-    <div className={`rounded border p-3 text-sm ${cls}`}>
+    <div className={`rounded-lg border p-3 text-sm ${cls}`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] uppercase tracking-wider dark:bg-slate-700">
           {job.type}
@@ -1048,7 +1253,8 @@ ${job.lastError ?? t("settings.logs.none")}`;
           {job.status}
         </span>
         <span className="text-xs text-slate-500">
-          {t("settings.logs.attemptsLabel", { count: job.attempts })} · {job.userEmail}
+          {t("settings.logs.attemptsLabel", { count: job.attempts })} ·{" "}
+          {job.userEmail}
         </span>
         <span className="ml-auto text-xs text-slate-400">{job.createdAt}</span>
       </div>
