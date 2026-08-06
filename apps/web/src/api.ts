@@ -455,6 +455,24 @@ export const api = {
     >(`/admin/jobs${qs ? `?${qs}` : ""}`);
   },
 
+  // API access tokens (used by the browser extension, native apps and MCP)
+  listApiTokens: () =>
+    request<
+      Array<{
+        id: string;
+        label: string;
+        lastUsedAt: string | null;
+        createdAt: string;
+      }>
+    >("/extension/tokens"),
+  createApiToken: (label: string) =>
+    request<{ token: string; label: string }>("/extension/tokens", {
+      method: "POST",
+      body: JSON.stringify({ label }),
+    }),
+  revokeApiToken: (id: string) =>
+    request<void>(`/extension/tokens/${id}`, { method: "DELETE" }),
+
   // cloud
   listConnections: () => request<CloudConnection[]>("/cloud/connections"),
   connectSynology: (body: {

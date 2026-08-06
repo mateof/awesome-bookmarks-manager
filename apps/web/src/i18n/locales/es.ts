@@ -262,8 +262,30 @@ const es = {
       security: "Seguridad",
       cloud: "Cloud",
       importExport: "Import/Export",
+      api: "API",
       admin: "Admin",
       logs: "Logs",
+    },
+    api: {
+      heading: "Acceso por API y tokens",
+      intro:
+        "Crea tokens para acceder a tus datos desde apps nativas, scripts o un servidor MCP (para IA). Cada token concede acceso completo a tus bookmarks; guárdalo como una contraseña.",
+      labelPlaceholder: "Etiqueta (ej. Mi móvil, MCP)",
+      create: "Crear token",
+      createdTitle: "Token creado",
+      createdWarning:
+        "Cópialo ahora. No podrás volver a verlo. Si lo pierdes, revócalo y crea otro.",
+      copy: "Copiar",
+      copied: "Copiado",
+      createdAt: "creado {{when}}",
+      lastUsed: "usado {{when}}",
+      neverUsed: "sin usar",
+      confirmRevoke: '¿Revocar el token "{{label}}"? Dejará de funcionar de inmediato.',
+      revoke: "Revocar",
+      empty: "Aún no tienes tokens.",
+      usageTitle: "Uso",
+      docsHint:
+        "Documentación completa de la API en la carpeta doc/ del repositorio.",
     },
     profile: {
       heading: "Perfil",

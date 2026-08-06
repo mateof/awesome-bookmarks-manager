@@ -10,6 +10,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
 import { adminRoutes } from "./admin/routes.js";
+import { apiV1Routes } from "./apiv1/routes.js";
 import { authRoutes } from "./auth/routes.js";
 import { keyCache } from "./auth/key-cache.js";
 import { registerSession } from "./auth/session.js";
@@ -130,6 +131,9 @@ export async function buildServer() {
     },
     { prefix: "/api" },
   );
+
+  // Public, stable, token-authenticatable API for native apps / MCP.
+  await app.register(apiV1Routes, { prefix: "/api/v1" });
 
   // Serve the SPA build (production / single-container mode). Dev skips
   // this because Vite owns :3000.

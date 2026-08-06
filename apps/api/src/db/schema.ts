@@ -286,6 +286,10 @@ export const extensionTokens = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     label: text("label").notNull(),
     tokenHash: text("token_hash").notNull(),
+    // Master-sealed, token-wrapped copy of the user's DEK. Lets a headless
+    // API/MCP client decrypt data without an interactive password login.
+    // Nullable so pre-existing (legacy) tokens keep working via the cache.
+    dekWrap: blob("dek_wrap", { mode: "buffer" }),
     lastUsedAt: text("last_used_at"),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },

@@ -3,20 +3,40 @@ import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../db/client.js";
 import { extensionTokens } from "../db/schema.js";
+import { wrapDekForToken } from "../auth/token-crypto.js";
 
-export function createToken(userId: string, label: string) {
+export interface ResolvedToken {
+  userId: string;
+  tokenId: string;
+  rawSecret: string;
+  dekWrap: Buffer | null;
+}
+
+/**
+ * Mint an API token. When a DEK is supplied (the caller is a logged-in web
+ * session), we also store a token-wrapped copy of the DEK so the token can
+ * later unlock the user's data headlessly (native app, MCP). Without a DEK
+ * the token still works, but only while the DEK is warm in the cache.
+ */
+export function createToken(
+  userId: string,
+  label: string,
+  dek?: Buffer,
+): string {
   const id = uuidv4();
   const raw = randomBytes(32).toString("base64url");
   const hash = sha256(raw);
+  const dekWrap = dek ? wrapDekForToken(userId, id, raw, dek) : null;
   getDb()
     .insert(extensionTokens)
-    .values({ id, userId, label, tokenHash: hash })
+    .values({ id, userId, label, tokenHash: hash, dekWrap })
     .run();
   // Token format: <id>.<raw> so we can do a fast lookup by id (avoid scanning).
   return `${id}.${raw}`;
 }
 
-export function verifyToken(token: string): string | null {
+/** Resolve a token to its owner + the material needed to unlock the DEK. */
+export function resolveToken(token: string): ResolvedToken | null {
   const dot = token.indexOf(".");
   if (dot <= 0) return null;
   const id = token.slice(0, dot);
@@ -39,7 +59,17 @@ export function verifyToken(token: string): string | null {
     .set({ lastUsedAt: sql`current_timestamp` })
     .where(eq(extensionTokens.id, id))
     .run();
-  return row.userId;
+  return {
+    userId: row.userId,
+    tokenId: id,
+    rawSecret: raw,
+    dekWrap: row.dekWrap ? Buffer.from(row.dekWrap) : null,
+  };
+}
+
+/** Backwards-compatible helper: token → userId (or null). */
+export function verifyToken(token: string): string | null {
+  return resolveToken(token)?.userId ?? null;
 }
 
 export function listTokens(userId: string) {

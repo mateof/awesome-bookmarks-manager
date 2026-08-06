@@ -198,6 +198,8 @@ export function ensureSchema() {
   tryAddColumn("folders", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "image_blob_path", "TEXT");
+  // Token-wrapped DEK envelope for headless API / MCP access.
+  tryAddColumn("extension_tokens", "dek_wrap", "BLOB");
 
   // Unique index on nickname — applied even if added later. Multiple NULLs are
   // allowed by SQLite UNIQUE constraints, so existing users without a

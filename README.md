@@ -221,6 +221,25 @@ pnpm db:generate      # generate new Drizzle migration after schema edits
 pnpm db:migrate       # apply migrations to ./data/db.sqlite
 ```
 
+## Programmatic access (API & MCP)
+
+AwesomeBookmarks exposes a stable public REST API and ships an MCP server so
+an AI assistant can manage your bookmarks.
+
+- Create a token in **Settings → API**.
+- Public API base: `https://<host>/api/v1` with
+  `Authorization: Bearer <token>`.
+- MCP server: [apps/mcp](apps/mcp) — point Claude Desktop (or any MCP client)
+  at it.
+
+Full docs in [doc/](doc/):
+[overview](doc/README.md) · [authentication](doc/authentication.md) ·
+[REST API](doc/api.md) · [MCP](doc/mcp.md).
+
+```bash
+curl https://your-host/api/v1/bookmarks -H "Authorization: Bearer <token>"
+```
+
 ## CI / release
 
 [.github/workflows/docker.yml](.github/workflows/docker.yml) builds the

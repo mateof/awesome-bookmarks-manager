@@ -4,16 +4,14 @@ import {
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { keyCache } from "../auth/key-cache.js";
+import { requireApiAuth } from "../auth/api-auth.js";
 import { requireAuth } from "../auth/session.js";
 import { createBookmark } from "../bookmarks/service.js";
 import { createTag, listTags } from "../tags/service.js";
-import { KeyUnavailable, Unauthorized } from "../util/errors.js";
 import {
   createToken,
   listTokens,
   revokeToken,
-  verifyToken,
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
@@ -28,7 +26,8 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
   app.post("/extension/tokens", async (req, reply) => {
     const ctx = requireAuth(req);
     const body = CreateExtensionTokenBodySchema.parse(req.body);
-    const token = createToken(ctx.userId, body.label);
+    // Pass the live DEK so the token can unlock data headlessly later.
+    const token = createToken(ctx.userId, body.label, ctx.dek);
     reply.code(201);
     return { token, label: body.label };
   });
@@ -40,21 +39,12 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
     reply.code(204);
   });
 
-  // Quick-add — token-authenticated. Requires the user's DEK to be in cache,
-  // since titles/urls are encrypted at rest. If the user has been offline long
-  // enough that the DEK has been evicted, the request fails with 423 and the
-  // user must log in via the web app to re-warm the cache.
+  // Quick-add — token-authenticated. Tokens minted after headless DEK
+  // wrapping self-warm the DEK, so this keeps working across the idle
+  // timeout without a web login.
   app.post("/ext/quick-add", async (req) => {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith("Bearer ")) throw Unauthorized();
-    const token = auth.slice("Bearer ".length);
-    const userId = verifyToken(token);
-    if (!userId) throw Unauthorized();
-    const dek = keyCache.get(userId);
-    if (!dek) throw KeyUnavailable();
+    const ctx = requireApiAuth(req);
     const body = QuickAddBodySchema.parse(req.body);
-
-    const ctx = { userId, dek };
 
     let tagIds: string[] | undefined;
     if (body.tags && body.tags.length > 0) {

@@ -264,8 +264,30 @@ const gl = {
       security: "Seguridade",
       cloud: "Cloud",
       importExport: "Importar/Exportar",
+      api: "API",
       admin: "Admin",
       logs: "Rexistros",
+    },
+    api: {
+      heading: "Acceso por API e tokens",
+      intro:
+        "Crea tokens para acceder aos teus datos dende apps nativas, scripts ou un servidor MCP (para IA). Cada token concede acceso completo aos teus marcadores; gárdao coma un contrasinal.",
+      labelPlaceholder: "Etiqueta (ex. O meu móbil, MCP)",
+      create: "Crear token",
+      createdTitle: "Token creado",
+      createdWarning:
+        "Cópiao agora. Non poderás velo outra vez. Se o perdes, revócao e crea outro.",
+      copy: "Copiar",
+      copied: "Copiado",
+      createdAt: "creado {{when}}",
+      lastUsed: "usado {{when}}",
+      neverUsed: "sen usar",
+      confirmRevoke: 'Revogar o token "{{label}}"? Deixará de funcionar de inmediato.',
+      revoke: "Revogar",
+      empty: "Aínda non tes tokens.",
+      usageTitle: "Uso",
+      docsHint:
+        "Documentación completa da API na carpeta doc/ do repositorio.",
     },
     profile: {
       heading: "Perfil",
