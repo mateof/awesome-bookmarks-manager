@@ -110,6 +110,7 @@ const en = {
     bookmarksSection: "Bookmarks",
     noBookmarksHere: "No bookmarks here.",
     noItemsHere: "No items here.",
+    dropToNest: "Drop here to move inside this folder",
     addFolder: "Folder",
     addBookmark: "Bookmark",
     editFolder: "Edit",

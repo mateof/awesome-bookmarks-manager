@@ -110,6 +110,7 @@ const gl = {
     bookmarksSection: "Marcadores",
     noBookmarksHere: "Sen marcadores aquí.",
     noItemsHere: "Sen elementos aquí.",
+    dropToNest: "Solta aquí para mover dentro deste cartafol",
     addFolder: "Cartafol",
     addBookmark: "Marcador",
     editFolder: "Editar",

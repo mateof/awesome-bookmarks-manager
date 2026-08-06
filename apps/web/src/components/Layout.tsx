@@ -1,8 +1,11 @@
 import {
   DndContext,
   PointerSensor,
+  closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +44,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
+
+  // Nesting vs reordering: if the pointer is literally within a "nest"
+  // droppable (a folder icon or a sidebar entry), that wins → move inside.
+  // Otherwise fall back to closest-center among sortable items → reorder.
+  const collisionDetection: CollisionDetection = (args) => {
+    const within = pointerWithin(args);
+    const nest = within.filter((c) => String(c.id).startsWith("nest:"));
+    if (nest.length > 0) return nest;
+    return closestCenter(args);
+  };
 
   // A drag just ended — the browser will fire a synthetic `click` on
   // whatever is under the pointer (often a bookmark link → opens a tab).
@@ -199,7 +212,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragEnd={onDragEnd}
+    >
     <div className="flex h-full flex-col">
       <header className="border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-2">

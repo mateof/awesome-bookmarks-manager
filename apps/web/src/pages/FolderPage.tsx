@@ -34,6 +34,7 @@ import {
   FOLDER_SORTABLE_IDS,
   useBookmarkSortable,
   useFolderSortable,
+  useNestDrop,
 } from "../dnd.js";
 import { useViewMode, type ViewMode } from "../view-mode.js";
 import type { Tag } from "@awesome-bookmarks/shared";
@@ -737,6 +738,27 @@ function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
   return <FolderClosed className={`${size} text-slate-500`} />;
 }
 
+/**
+ * The folder icon doubles as a "drop inside" target. Dropping a dragged
+ * folder/bookmark on the icon nests it into this folder; dropping elsewhere
+ * on the card reorders. A ring highlights the icon while it's the target.
+ */
+function FolderNestZone({ sf, size }: { sf: Folder; size: string }) {
+  const { t } = useTranslation();
+  const nest = useNestDrop(sf.id);
+  return (
+    <span
+      ref={nest.ref}
+      title={t("folder.dropToNest")}
+      className={`inline-flex rounded-lg p-1 transition ${
+        nest.isOver ? "bg-blue-500/20 ring-2 ring-inset ring-blue-500" : ""
+      }`}
+    >
+      <FolderIcon sf={sf} size={size} />
+    </span>
+  );
+}
+
 function BookmarkIcon({ b, size }: { b: Bookmark; size: string }) {
   if (b.iconBlobPath) {
     return (
@@ -818,7 +840,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       >
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
-      <FolderIcon sf={sf} size="h-8 w-8" />
+      <FolderNestZone sf={sf} size="h-8 w-8" />
       <div className="w-full truncate text-center text-sm">{sf.name}</div>
       {(sf.tagIds?.length ?? 0) > 0 && (
         <div className="flex w-full justify-center">
@@ -859,7 +881,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         onToggle={() => p.toggle(key)}
         label={selectFolderLabel(t, sf.name)}
       />
-      <FolderIcon sf={sf} size="h-5 w-5" />
+      <FolderNestZone sf={sf} size="h-5 w-5" />
       <div className="flex-1 truncate text-sm">{sf.name}</div>
       <TagChipList
         tagIds={sf.tagIds ?? []}
@@ -910,7 +932,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <div className="flex items-center gap-3">
-        <FolderIcon sf={sf} size="h-10 w-10" />
+        <FolderNestZone sf={sf} size="h-10 w-10" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{sf.name}</div>
           <div className="text-xs text-slate-500">
@@ -968,7 +990,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       >
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
-      <FolderIcon sf={sf} size="h-10 w-10" />
+      <FolderNestZone sf={sf} size="h-10 w-10" />
       <div className="w-full truncate text-center text-xs">{sf.name}</div>
       {(sf.tagIds?.length ?? 0) > 0 && (
         <TagChipList

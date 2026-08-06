@@ -110,6 +110,7 @@ const es = {
     bookmarksSection: "Bookmarks",
     noBookmarksHere: "Sin bookmarks aquí.",
     noItemsHere: "Sin elementos aquí.",
+    dropToNest: "Suelta aquí para mover dentro de esta carpeta",
     addFolder: "Carpeta",
     addBookmark: "Bookmark",
     editFolder: "Editar",
