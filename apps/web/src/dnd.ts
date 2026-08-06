@@ -1,110 +1,96 @@
-import {
-  useDraggable,
-  useDroppable,
-} from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import type React from "react";
 
 /**
- * Draggable helper for a folder card. Also acts as a droppable target so
- * other folders / bookmarks can be dropped into it.
+ * DnD model
+ * ---------
+ * Folders and bookmarks are both *sortable* items, so dragging one over
+ * another of the same kind reorders them. Cross-kind and cross-container
+ * drops are interpreted in Layout's onDragEnd:
+ *
+ * - drop a bookmark onto a folder card        → move the bookmark into it
+ * - drop a folder onto another folder (grid)  → reorder folders
+ * - drop anything onto a sidebar folder / Home→ move it into that folder / root
+ *
+ * Sortable item ids:  `folder:<id>`, `bookmark:<id>`
+ * Nest droppable ids: `nest:<folderId>` and `nest:root`
  */
-export function useFolderDrag(sf: Folder): {
-  ref: (node: HTMLElement | null) => void;
-  props: Record<string, unknown>;
-  style: React.CSSProperties;
-  isDragging: boolean;
-  isOver: boolean;
-} {
-  const drag = useDraggable({
-    id: `dnd-folder:${sf.id}`,
-    data: {
-      kind: "folder" as const,
-      folderId: sf.id,
-      parentId: sf.parentId,
-    },
-  });
-  const drop = useDroppable({
-    id: `dnd-into:${sf.id}`,
-    data: {
-      drop: "into-folder" as const,
-      folderId: sf.id,
-    },
-  });
-  const setRef = (node: HTMLElement | null) => {
-    drag.setNodeRef(node);
-    drop.setNodeRef(node);
-  };
-  return {
-    ref: setRef,
-    props: { ...drag.attributes, ...drag.listeners },
-    style: {
-      transform: CSS.Translate.toString(drag.transform),
-      opacity: drag.isDragging ? 0.4 : undefined,
-      outline: drop.isOver ? "2px dashed rgb(59 130 246)" : undefined,
-      outlineOffset: drop.isOver ? "-2px" : undefined,
-    },
-    isDragging: drag.isDragging,
-    isOver: drop.isOver,
-  };
+
+export interface DragData {
+  kind: "folder" | "bookmark";
+  id: string;
+  parentId?: string | null; // folders
+  folderId?: string | null; // bookmarks
 }
 
-/**
- * Sortable helper for a bookmark card. Handles reordering within the
- * current folder and being dragged into another folder.
- */
-export function useBookmarkSortable(b: Bookmark): {
+export interface NestData {
+  target: "folder";
+  folderId: string | null; // null = root
+}
+
+interface SortableResult {
   ref: (node: HTMLElement | null) => void;
   props: Record<string, unknown>;
   style: React.CSSProperties;
   isDragging: boolean;
-} {
+}
+
+export function useFolderSortable(sf: Folder): SortableResult {
   const s = useSortable({
-    id: `dnd-bookmark:${b.id}`,
-    data: {
-      kind: "bookmark" as const,
-      bookmarkId: b.id,
-      folderId: b.folderId,
-    },
+    id: `folder:${sf.id}`,
+    data: { kind: "folder", id: sf.id, parentId: sf.parentId } satisfies DragData,
   });
   return {
     ref: s.setNodeRef,
     props: { ...s.attributes, ...s.listeners },
     style: {
-      transform: CSS.Translate.toString(s.transform),
+      transform: CSS.Transform.toString(s.transform),
       transition: s.transition,
       opacity: s.isDragging ? 0.4 : undefined,
+      zIndex: s.isDragging ? 20 : undefined,
+    },
+    isDragging: s.isDragging,
+  };
+}
+
+export function useBookmarkSortable(b: Bookmark): SortableResult {
+  const s = useSortable({
+    id: `bookmark:${b.id}`,
+    data: { kind: "bookmark", id: b.id, folderId: b.folderId } satisfies DragData,
+  });
+  return {
+    ref: s.setNodeRef,
+    props: { ...s.attributes, ...s.listeners },
+    style: {
+      transform: CSS.Transform.toString(s.transform),
+      transition: s.transition,
+      opacity: s.isDragging ? 0.4 : undefined,
+      zIndex: s.isDragging ? 20 : undefined,
     },
     isDragging: s.isDragging,
   };
 }
 
 /**
- * Droppable-only helper used by the sidebar folder tree so a dragged
- * folder or bookmark can be dropped onto any entry.
+ * Droppable "nest" target: a sidebar folder entry, or the Home/root entry.
+ * Pass null for the root.
  */
-export function useSidebarFolderDrop(folderId: string): {
+export function useNestDrop(folderId: string | null): {
   ref: (node: HTMLElement | null) => void;
   isOver: boolean;
 } {
   const drop = useDroppable({
-    id: `dnd-sidebar-into:${folderId}`,
-    data: {
-      drop: "into-folder" as const,
-      folderId,
-    },
+    id: folderId === null ? "nest:root" : `nest:${folderId}`,
+    data: { target: "folder", folderId } satisfies NestData,
   });
   return { ref: drop.setNodeRef, isOver: drop.isOver };
 }
 
-export const BOOKMARK_SORTABLE_IDS = (bookmarks: Bookmark[]) =>
-  bookmarks.map((b) => `dnd-bookmark:${b.id}`);
+export const FOLDER_SORTABLE_IDS = (folders: Folder[]) =>
+  folders.map((f) => `folder:${f.id}`);
 
-export function parseDropTargetFolderId(overId: string): string | null {
-  if (overId.startsWith("dnd-into:")) return overId.slice("dnd-into:".length);
-  if (overId.startsWith("dnd-sidebar-into:"))
-    return overId.slice("dnd-sidebar-into:".length);
-  return null;
-}
+export const BOOKMARK_SORTABLE_IDS = (bookmarks: Bookmark[]) =>
+  bookmarks.map((b) => `bookmark:${b.id}`);

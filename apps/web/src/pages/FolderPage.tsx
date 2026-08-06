@@ -31,8 +31,9 @@ import { TagPicker } from "../components/TagPicker.js";
 import { ViewModeToggle } from "../components/ViewModeToggle.js";
 import {
   BOOKMARK_SORTABLE_IDS,
+  FOLDER_SORTABLE_IDS,
   useBookmarkSortable,
-  useFolderDrag,
+  useFolderSortable,
 } from "../dnd.js";
 import { useViewMode, type ViewMode } from "../view-mode.js";
 import type { Tag } from "@awesome-bookmarks/shared";
@@ -606,41 +607,49 @@ function Section({
 }
 
 function FoldersBlock(p: BodyProps) {
-  switch (p.mode) {
-    case "list":
-      return (
-        <div className="divide-y divide-slate-200 rounded border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
-          {p.subfolders.map((sf) => (
-            <FolderListRow key={sf.id} sf={sf} p={p} />
-          ))}
-        </div>
-      );
-    case "large":
-      return (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {p.subfolders.map((sf) => (
-            <FolderLargeCard key={sf.id} sf={sf} p={p} />
-          ))}
-        </div>
-      );
-    case "mosaic":
-      return (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-          {p.subfolders.map((sf) => (
-            <FolderMosaicCard key={sf.id} sf={sf} p={p} />
-          ))}
-        </div>
-      );
-    case "grid":
-    default:
-      return (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {p.subfolders.map((sf) => (
-            <FolderGridCard key={sf.id} sf={sf} p={p} />
-          ))}
-        </div>
-      );
-  }
+  const ids = FOLDER_SORTABLE_IDS(p.subfolders);
+  const inner = (() => {
+    switch (p.mode) {
+      case "list":
+        return (
+          <div className="divide-y divide-slate-200 rounded border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+            {p.subfolders.map((sf) => (
+              <FolderListRow key={sf.id} sf={sf} p={p} />
+            ))}
+          </div>
+        );
+      case "large":
+        return (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {p.subfolders.map((sf) => (
+              <FolderLargeCard key={sf.id} sf={sf} p={p} />
+            ))}
+          </div>
+        );
+      case "mosaic":
+        return (
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
+            {p.subfolders.map((sf) => (
+              <FolderMosaicCard key={sf.id} sf={sf} p={p} />
+            ))}
+          </div>
+        );
+      case "grid":
+      default:
+        return (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {p.subfolders.map((sf) => (
+              <FolderGridCard key={sf.id} sf={sf} p={p} />
+            ))}
+          </div>
+        );
+    }
+  })();
+  return (
+    <SortableContext items={ids} strategy={rectSortingStrategy}>
+      {inner}
+    </SortableContext>
+  );
 }
 
 function BookmarksBlock(p: BodyProps) {
@@ -780,7 +789,7 @@ function selectBookmarkLabel(t: any, title: string) {
 
 function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
-  const drag = useFolderDrag(sf);
+  const drag = useFolderSortable(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (
@@ -828,7 +837,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
-  const drag = useFolderDrag(sf);
+  const drag = useFolderSortable(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const count = p.countDirectItems(sf.id);
@@ -869,7 +878,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
-  const drag = useFolderDrag(sf);
+  const drag = useFolderSortable(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const desc = stripTags(sf.description);
@@ -930,7 +939,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 
 function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
-  const drag = useFolderDrag(sf);
+  const drag = useFolderSortable(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (

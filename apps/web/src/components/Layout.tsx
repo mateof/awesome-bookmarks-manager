@@ -17,7 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { parseDropTargetFolderId } from "../dnd.js";
+import type { DragData, NestData } from "../dnd.js";
 import { LanguageToggle } from "./LanguageToggle.js";
 import { ThemeToggle } from "./ThemeToggle.js";
 import { useEffect, useMemo, useState } from "react";
@@ -42,66 +42,83 @@ export function Layout({ children }: { children: React.ReactNode }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
+  // A drag just ended — the browser will fire a synthetic `click` on
+  // whatever is under the pointer (often a bookmark link → opens a tab).
+  // Swallow that one click so dropping never triggers navigation.
+  const suppressNextClick = () => {
+    const handler = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener("click", handler, { capture: true, once: true });
+    window.setTimeout(
+      () => window.removeEventListener("click", handler, { capture: true }),
+      350,
+    );
+  };
+
   const onDragEnd = async (event: DragEndEvent) => {
+    suppressNextClick();
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const activeData = active.data.current as
-      | { kind: "folder" | "bookmark"; folderId?: string; bookmarkId?: string; parentId?: string | null }
-      | undefined;
-    if (!activeData) return;
 
-    const overId = String(over.id);
-    const targetFolderId = parseDropTargetFolderId(overId);
+    const a = active.data.current as DragData | undefined;
+    const o = over.data.current as (DragData | NestData) | undefined;
+    if (!a) return;
 
-    if (targetFolderId !== null) {
-      // Cross-folder move.
-      if (activeData.kind === "bookmark" && activeData.bookmarkId) {
-        if (activeData.folderId === targetFolderId) return;
-        await api.moveBookmark(activeData.bookmarkId, targetFolderId, 0);
+    // Resolve an explicit "nest" target: a sidebar folder / Home droppable,
+    // or a folder card that a bookmark was dropped onto.
+    let nestFolderId: string | null | undefined;
+    if (o && "target" in o && o.target === "folder") {
+      nestFolderId = o.folderId; // sidebar folder or root
+    } else if (o && "kind" in o && o.kind === "folder" && a.kind === "bookmark") {
+      nestFolderId = o.id; // bookmark dropped onto a folder card
+    }
+
+    if (nestFolderId !== undefined) {
+      if (a.kind === "bookmark") {
+        if ((a.folderId ?? null) === nestFolderId) return;
+        await api.moveBookmark(a.id, nestFolderId, 0);
         qc.invalidateQueries({ queryKey: ["bookmarks"] });
-      } else if (activeData.kind === "folder" && activeData.folderId) {
-        // Prevent dropping a folder into itself. Deeper cycle checks live
-        // on the backend (moveFolder walks ancestors).
-        if (activeData.folderId === targetFolderId) return;
+      } else {
+        if (a.id === nestFolderId) return; // can't nest into self
+        if ((a.parentId ?? null) === nestFolderId) return; // already there
         try {
-          await api.moveFolder(activeData.folderId, targetFolderId, 0);
+          await api.moveFolder(a.id, nestFolderId, 0);
           qc.invalidateQueries({ queryKey: ["folders"] });
         } catch (e) {
-          // moveFolder rejects on descendant loops; keep quiet in the UI.
+          // moveFolder rejects descendant loops; stay quiet in the UI.
           console.warn("moveFolder rejected", e);
         }
       }
       return;
     }
 
-    // Reorder within the current bookmarks list. `over.id` is another
-    // sortable bookmark; use its data to derive the target position.
-    const overData = over.data.current as
-      | { kind: "bookmark"; bookmarkId?: string; folderId?: string | null }
-      | undefined;
-    if (
-      activeData.kind === "bookmark" &&
-      activeData.bookmarkId &&
-      overData?.kind === "bookmark" &&
-      overData.bookmarkId
-    ) {
-      // Get positions from the cached list to compute the new integer
-      // position. Ties may occur; the backend orders by (position ASC,
-      // createdAt DESC) so the drop lands in the intended place.
+    // Reorder within a sortable list (same kind, over another item).
+    if (!o || !("kind" in o) || o.kind !== a.kind) return;
+
+    if (a.kind === "bookmark") {
       const list = qc.getQueryData(["bookmarks", "all"]) as
         | Array<{ id: string; folderId: string | null; position: number }>
         | undefined;
       if (!list) return;
-      const targetFolderId = overData.folderId ?? null;
-      const siblings = list.filter((b) => b.folderId === targetFolderId);
-      const overIdx = siblings.findIndex((b) => b.id === overData.bookmarkId);
+      const folderId = a.folderId ?? null;
+      const siblings = list.filter((b) => b.folderId === folderId);
+      const overIdx = siblings.findIndex((b) => b.id === o.id);
       if (overIdx < 0) return;
-      await api.moveBookmark(
-        activeData.bookmarkId,
-        targetFolderId,
-        overIdx,
-      );
+      await api.moveBookmark(a.id, folderId, overIdx);
       qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    } else {
+      const list = qc.getQueryData(["folders"]) as
+        | Array<{ id: string; parentId: string | null; position: number }>
+        | undefined;
+      if (!list) return;
+      const parentId = a.parentId ?? null;
+      const siblings = list.filter((f) => f.parentId === parentId);
+      const overIdx = siblings.findIndex((f) => f.id === o.id);
+      if (overIdx < 0) return;
+      await api.moveFolder(a.id, parentId, overIdx);
+      qc.invalidateQueries({ queryKey: ["folders"] });
     }
   };
   const [q, setQ] = useState("");

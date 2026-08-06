@@ -9,13 +9,15 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { useSidebarFolderDrop } from "../dnd.js";
+import { useNestDrop } from "../dnd.js";
 import { buildFolderPath, useActiveFolderId } from "../hooks.js";
 
 export function FolderTree({ folders }: { folders: Folder[] }) {
   const { t } = useTranslation();
   const roots = folders.filter((f) => f.parentId === null);
   const activeId = useActiveFolderId();
+  // "Home" is a drop target for the root (move a folder/bookmark to top level).
+  const rootDrop = useNestDrop(null);
 
   // Auto-expand the path from root to the active folder so the highlight
   // is always visible even if the user manually collapsed parents earlier.
@@ -27,12 +29,13 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
   return (
     <nav className="space-y-0.5">
       <Link
+        ref={rootDrop.ref}
         to="/"
         className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
           !activeId
             ? "bg-slate-200 font-medium dark:bg-slate-800"
             : "hover:bg-slate-100 dark:hover:bg-slate-800"
-        }`}
+        } ${rootDrop.isOver ? "ring-2 ring-inset ring-blue-500" : ""}`}
       >
         <Home className="h-4 w-4" />
         <span>{t("sidebar.home")}</span>
@@ -71,7 +74,7 @@ function Node({
   useEffect(() => {
     if (onPath) setOpen(true);
   }, [onPath]);
-  const drop = useSidebarFolderDrop(folder.id);
+  const drop = useNestDrop(folder.id);
 
   const children = folders.filter((f) => f.parentId === folder.id);
   const isActive = activeId === folder.id;
