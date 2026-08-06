@@ -1,21 +1,47 @@
-import { UpdateUserRoleBodySchema } from "@awesome-bookmarks/shared";
+import {
+  CreateUserBodySchema,
+  UpdateAppSettingsBodySchema,
+  UpdateUserRoleBodySchema,
+} from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import {
+  createUser,
   deleteJobsByStatus,
   deleteUser,
+  getSettings,
   listAllJobs,
   listAllUsers,
   setUserRole,
+  updateSettings,
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
+  app.get("/admin/settings", async (req) => {
+    const ctx = requireAuth(req);
+    return getSettings(ctx);
+  });
+
+  app.patch("/admin/settings", async (req) => {
+    const ctx = requireAuth(req);
+    const body = UpdateAppSettingsBodySchema.parse(req.body);
+    return updateSettings(ctx, body);
+  });
+
   app.get("/admin/users", async (req) => {
     const ctx = requireAuth(req);
     return listAllUsers(ctx);
+  });
+
+  app.post("/admin/users", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const body = CreateUserBodySchema.parse(req.body);
+    const result = await createUser(ctx, body);
+    reply.code(201);
+    return result;
   });
 
   app.delete("/admin/users/:id", async (req, reply) => {

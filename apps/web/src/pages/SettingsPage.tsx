@@ -1000,6 +1000,10 @@ function Admin() {
     queryKey: ["admin-users"],
     queryFn: api.adminListUsers,
   });
+  const settings = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: api.adminGetSettings,
+  });
   const del = useMutation({
     mutationFn: (id: string) => api.adminDeleteUser(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
@@ -1009,18 +1013,127 @@ function Admin() {
       api.adminSetUserRole(id, r),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
+  const toggleReg = useMutation({
+    mutationFn: (enabled: boolean) =>
+      api.adminSetSettings({ registrationEnabled: enabled }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+      qc.invalidateQueries({ queryKey: ["auth-config"] });
+    },
+  });
+
+  // Create-user form.
+  const [nu, setNu] = useState({ email: "", nickname: "", password: "" });
+  const [otp, setOtp] = useState<{ email: string; password: string } | null>(
+    null,
+  );
+  const [createErr, setCreateErr] = useState<string | null>(null);
+  const create = useMutation({
+    mutationFn: () =>
+      api.adminCreateUser({
+        email: nu.email.trim(),
+        nickname: nu.nickname.trim(),
+        password: nu.password.trim() || undefined,
+      }),
+    onSuccess: (r) => {
+      setOtp({ email: r.email, password: r.oneTimePassword });
+      setNu({ email: "", nickname: "", password: "" });
+      setCreateErr(null);
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e) =>
+      setCreateErr(e instanceof ApiError ? e.message : t("common.error")),
+  });
 
   return (
-    <Card>
-      <SectionHeader
-        icon={<Users className="h-5 w-5" />}
-        title={t("settings.admin.heading")}
-      />
-      {users.isLoading && (
-        <div className="text-slate-400">{t("common.loading")}</div>
-      )}
-      <div className="space-y-2">
-        {(users.data ?? []).map((u) => (
+    <div className="space-y-6">
+      <Card>
+        <SectionHeader
+          icon={<ShieldCheck className="h-5 w-5" />}
+          title={t("settings.admin.registrationHeading")}
+          subtitle={t("settings.admin.registrationHint")}
+        />
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-slate-700"
+            checked={settings.data?.registrationEnabled ?? true}
+            onChange={(e) => toggleReg.mutate(e.target.checked)}
+            disabled={toggleReg.isPending || settings.isLoading}
+          />
+          <span>{t("settings.admin.registrationToggle")}</span>
+        </label>
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<Plus className="h-5 w-5" />}
+          title={t("settings.admin.createUserHeading")}
+          subtitle={t("settings.admin.createUserHint")}
+        />
+        <div className="grid max-w-lg gap-2 sm:grid-cols-2">
+          <input
+            value={nu.email}
+            onChange={(e) => setNu({ ...nu, email: e.target.value })}
+            placeholder={t("settings.admin.email")}
+            type="email"
+            className={inputCls}
+          />
+          <input
+            value={nu.nickname}
+            onChange={(e) => setNu({ ...nu, nickname: e.target.value })}
+            placeholder={t("settings.admin.nickname")}
+            className={inputCls}
+          />
+          <input
+            value={nu.password}
+            onChange={(e) => setNu({ ...nu, password: e.target.value })}
+            placeholder={t("settings.admin.optionalPassword")}
+            className={`${inputCls} sm:col-span-2`}
+          />
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={() => create.mutate()}
+            disabled={
+              !nu.email.trim() || nu.nickname.trim().length < 3 || create.isPending
+            }
+            className={btnPrimary}
+          >
+            <Plus className="h-4 w-4" /> {t("settings.admin.createUser")}
+          </button>
+          {createErr && <span className="text-sm text-red-600">{createErr}</span>}
+        </div>
+
+        {otp && (
+          <div className="mt-4 space-y-2 rounded-lg border border-amber-300 bg-amber-50/60 p-3 dark:border-amber-900/70 dark:bg-amber-950/30">
+            <p className="text-sm font-medium">
+              {t("settings.admin.userCreatedTitle", { email: otp.email })}
+            </p>
+            <p className="text-xs text-slate-500">
+              {t("settings.admin.userCreatedHint")}
+            </p>
+            <CopyField label={t("settings.admin.oneTimePassword")} value={otp.password} />
+            <button
+              onClick={() => setOtp(null)}
+              className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+            >
+              {t("common.close")}
+            </button>
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<Users className="h-5 w-5" />}
+          title={t("settings.admin.heading")}
+        />
+        {users.isLoading && (
+          <div className="text-slate-400">{t("common.loading")}</div>
+        )}
+        <div className="space-y-2">
+          {(users.data ?? []).map((u) => (
           <div
             key={u.id}
             className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
@@ -1057,11 +1170,14 @@ function Admin() {
             </button>
           </div>
         ))}
-        {(users.data ?? []).length === 0 && !users.isLoading && (
-          <div className="text-sm text-slate-400">{t("settings.admin.noUsers")}</div>
-        )}
-      </div>
-    </Card>
+          {(users.data ?? []).length === 0 && !users.isLoading && (
+            <div className="text-sm text-slate-400">
+              {t("settings.admin.noUsers")}
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 }
 

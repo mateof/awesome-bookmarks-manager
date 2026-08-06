@@ -1,15 +1,18 @@
 import {
   ChangePasswordBodySchema,
+  FirstPasswordBodySchema,
   LoginBodySchema,
   SignupBodySchema,
   UpdateProfileBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
+import { getRegistrationEnabled } from "../settings/service.js";
 import {
   changePassword,
   getMe,
   login as loginService,
   setAutoSnapshots,
+  setFirstPassword,
   setNickname,
   signup as signupService,
 } from "./service.js";
@@ -21,6 +24,11 @@ import {
 } from "./session.js";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
+  // Public: lets the login/signup page know whether signup is open.
+  app.get("/auth/config", async () => ({
+    registrationEnabled: getRegistrationEnabled(),
+  }));
+
   app.post("/auth/signup", async (req, reply) => {
     const body = SignupBodySchema.parse(req.body);
     const user = await signupService(body.email, body.password, body.nickname);
@@ -44,6 +52,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req); // ensures DEK is unlockable from current pw
     const body = ChangePasswordBodySchema.parse(req.body);
     await changePassword(ctx.userId, body.currentPassword, body.newPassword);
+    return { ok: true };
+  });
+
+  // First-login password set (admin-provisioned accounts). The one-time
+  // password was already used to log in, so we re-key from the cached DEK.
+  app.post("/auth/first-password", async (req) => {
+    const ctx = requireAuth(req);
+    const body = FirstPasswordBodySchema.parse(req.body);
+    await setFirstPassword(ctx.userId, body.newPassword);
     return { ok: true };
   });
 

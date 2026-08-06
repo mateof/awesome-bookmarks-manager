@@ -47,6 +47,16 @@ export const ChangePasswordBodySchema = z.object({
 });
 export type ChangePasswordBody = z.infer<typeof ChangePasswordBodySchema>;
 
+export const FirstPasswordBodySchema = z.object({
+  newPassword: PasswordSchema,
+});
+export type FirstPasswordBody = z.infer<typeof FirstPasswordBodySchema>;
+
+export const AuthConfigSchema = z.object({
+  registrationEnabled: z.boolean(),
+});
+export type AuthConfig = z.infer<typeof AuthConfigSchema>;
+
 export const UserRoleSchema = z.enum(["user", "admin"]);
 export type UserRole = z.infer<typeof UserRoleSchema>;
 
@@ -56,6 +66,7 @@ export const MeResponseSchema = z.object({
   nickname: z.string().nullable(),
   role: UserRoleSchema,
   autoSnapshots: z.boolean(),
+  mustChangePassword: z.boolean(),
   createdAt: z.string(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, api } from "./api.js";
+import { ForcePasswordChange } from "./components/ForcePasswordChange.js";
 
 interface AuthState {
   user: {
@@ -10,6 +11,7 @@ interface AuthState {
     nickname: string | null;
     role: "user" | "admin";
     autoSnapshots: boolean;
+    mustChangePassword: boolean;
   } | null;
   loading: boolean;
   refresh: () => void;
@@ -69,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             nickname: me.data.nickname,
             role: me.data.role,
             autoSnapshots: me.data.autoSnapshots,
+            mustChangePassword: me.data.mustChangePassword,
           }
         : null,
       loading: me.isLoading,
@@ -90,5 +93,8 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!user) {
     return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
   }
+  // Admin-provisioned account still on its one-time password: force a change
+  // before anything else is reachable.
+  if (user.mustChangePassword) return <ForcePasswordChange />;
   return <>{children}</>;
 }

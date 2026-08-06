@@ -22,6 +22,11 @@ export const users = sqliteTable(
     autoSnapshots: integer("auto_snapshots", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Set when an admin creates the account with a one-time password: the
+    // user must set a new password before they can use the app.
+    mustChangePassword: integer("must_change_password", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },
@@ -30,6 +35,12 @@ export const users = sqliteTable(
     nicknameIdx: uniqueIndex("users_nickname_idx").on(t.nickname),
   }),
 );
+
+/** Instance-wide key/value settings managed by admins (e.g. signup toggle). */
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+});
 
 export const groups = sqliteTable(
   "groups",

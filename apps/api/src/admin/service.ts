@@ -1,8 +1,13 @@
-import type { AdminUser } from "@awesome-bookmarks/shared";
+import type { AdminUser, CreateUserResponse } from "@awesome-bookmarks/shared";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { adminCreateUser as createUserCore } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import { bookmarks, folders, jobs, users } from "../db/schema.js";
+import {
+  getRegistrationEnabled,
+  setRegistrationEnabled,
+} from "../settings/service.js";
 import { deleteUserBlobs } from "../storage/blobs.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
 
@@ -61,6 +66,28 @@ export function listAllUsers(ctx: AuthedContext): AdminUser[] {
     bookmarkCount: bookmarkCounts.get(r.id) ?? 0,
     folderCount: folderCounts.get(r.id) ?? 0,
   }));
+}
+
+export function getSettings(ctx: AuthedContext): { registrationEnabled: boolean } {
+  ensureAdmin(ctx);
+  return { registrationEnabled: getRegistrationEnabled() };
+}
+
+export function updateSettings(
+  ctx: AuthedContext,
+  input: { registrationEnabled: boolean },
+): { registrationEnabled: boolean } {
+  ensureAdmin(ctx);
+  setRegistrationEnabled(input.registrationEnabled);
+  return { registrationEnabled: input.registrationEnabled };
+}
+
+export async function createUser(
+  ctx: AuthedContext,
+  input: { email: string; nickname: string; password?: string },
+): Promise<CreateUserResponse> {
+  ensureAdmin(ctx);
+  return createUserCore(input);
 }
 
 export async function deleteUser(ctx: AuthedContext, targetId: string) {

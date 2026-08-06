@@ -50,6 +50,17 @@ const en = {
     noAccount: "Sign up",
     signupWarning:
       "⚠️ If you lose your password you won't be able to recover your data. Store it somewhere safe.",
+    registrationDisabled:
+      "Registration is disabled. Ask an administrator to create an account for you.",
+  },
+  firstPassword: {
+    title: "Set your password",
+    intro:
+      "Your account was created with a one-time password. Choose a new password to continue.",
+    newPassword: "New password (min 10)",
+    confirm: "Repeat password",
+    mismatch: "Passwords don't match",
+    submit: "Save and continue",
   },
   layout: {
     appTitle: "AwesomeBookmarks",
@@ -371,6 +382,21 @@ const en = {
     },
     admin: {
       heading: "Users",
+      registrationHeading: "User registration",
+      registrationHint:
+        "When disabled, nobody can create their own account; only admins create users.",
+      registrationToggle: "Allow public registration",
+      createUserHeading: "Create user",
+      createUserHint:
+        "A one-time password is generated that the user must change on their first login.",
+      email: "Email",
+      nickname: "Nickname",
+      optionalPassword: "Password (optional, generated if empty)",
+      createUser: "Create user",
+      userCreatedTitle: "User {{email}} created",
+      userCreatedHint:
+        "Share this one-time password with the user. You won't be able to see it again.",
+      oneTimePassword: "One-time password",
       noUsers: "No users.",
       bookmarksFoldersCreated:
         "{{bookmarks}} bookmarks · {{folders}} folders · created {{when}}",

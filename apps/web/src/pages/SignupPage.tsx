@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -13,8 +14,28 @@ export function SignupPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig });
 
   if (user) return <Navigate to="/" replace />;
+
+  if (config.data && !config.data.registrationEnabled) {
+    return (
+      <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="w-80 space-y-3 rounded-lg border border-slate-200 bg-white p-6 text-center dark:border-slate-800 dark:bg-slate-900">
+          <h1 className="text-lg font-semibold">{t("auth.signup")}</h1>
+          <p className="text-sm text-slate-500">
+            {t("auth.registrationDisabled")}
+          </p>
+          <Link
+            to="/login"
+            className="inline-block text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            {t("auth.haveAccount")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-slate-950">

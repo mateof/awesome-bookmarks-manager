@@ -122,6 +122,13 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+  firstPassword: (newPassword: string) =>
+    request<{ ok: true }>("/auth/first-password", {
+      method: "POST",
+      body: JSON.stringify({ newPassword }),
+    }),
+  authConfig: () =>
+    request<{ registrationEnabled: boolean }>("/auth/config"),
   me: () => request<MeResponse>("/me"),
   updateMyProfile: (body: { nickname?: string; autoSnapshots?: boolean }) =>
     request<MeResponse>("/me", {
@@ -416,6 +423,25 @@ export const api = {
 
   // admin
   adminListUsers: () => request<AdminUser[]>("/admin/users"),
+  adminCreateUser: (body: {
+    email: string;
+    nickname: string;
+    password?: string;
+  }) =>
+    request<{
+      id: string;
+      email: string;
+      nickname: string;
+      role: "user";
+      oneTimePassword: string;
+    }>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
+  adminGetSettings: () =>
+    request<{ registrationEnabled: boolean }>("/admin/settings"),
+  adminSetSettings: (body: { registrationEnabled: boolean }) =>
+    request<{ registrationEnabled: boolean }>("/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   adminDeleteUser: (id: string) =>
     request<void>(`/admin/users/${id}`, { method: "DELETE" }),
   adminSetUserRole: (id: string, role: UserRole) =>

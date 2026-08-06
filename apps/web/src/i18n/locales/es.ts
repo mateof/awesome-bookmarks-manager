@@ -50,6 +50,17 @@ const es = {
     noAccount: "Crear cuenta",
     signupWarning:
       "⚠️ Si pierdes la contraseña no podrás recuperar tus datos. Apúntala en un sitio seguro.",
+    registrationDisabled:
+      "El registro está desactivado. Pide a un administrador que te cree una cuenta.",
+  },
+  firstPassword: {
+    title: "Establece tu contraseña",
+    intro:
+      "Tu cuenta se creó con una contraseña de un solo uso. Elige una contraseña nueva para continuar.",
+    newPassword: "Nueva contraseña (mín 10)",
+    confirm: "Repite la contraseña",
+    mismatch: "Las contraseñas no coinciden",
+    submit: "Guardar y continuar",
   },
   layout: {
     appTitle: "AwesomeBookmarks",
@@ -370,6 +381,21 @@ const es = {
     },
     admin: {
       heading: "Usuarios",
+      registrationHeading: "Registro de usuarios",
+      registrationHint:
+        "Cuando está desactivado, nadie puede crear su propia cuenta; solo los administradores crean usuarios.",
+      registrationToggle: "Permitir registro público",
+      createUserHeading: "Crear usuario",
+      createUserHint:
+        "Se genera una contraseña de un solo uso que el usuario deberá cambiar en su primer inicio de sesión.",
+      email: "Email",
+      nickname: "Nickname",
+      optionalPassword: "Contraseña (opcional, si no se genera una)",
+      createUser: "Crear usuario",
+      userCreatedTitle: "Usuario {{email}} creado",
+      userCreatedHint:
+        "Comparte esta contraseña de un solo uso con el usuario. No podrás volver a verla.",
+      oneTimePassword: "Contraseña de un solo uso",
       noUsers: "Sin usuarios.",
       bookmarksFoldersCreated:
         "{{bookmarks}} bookmarks · {{folders}} carpetas · creado {{when}}",

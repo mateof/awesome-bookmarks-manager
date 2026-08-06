@@ -59,6 +59,11 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS bookmarks_user_url_hash_idx
       ON bookmarks(user_id, url_hash);
 
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -192,6 +197,7 @@ export function ensureSchema() {
   tryAddColumn("users", "role", "TEXT NOT NULL DEFAULT 'user'");
   tryAddColumn("users", "nickname", "TEXT");
   tryAddColumn("users", "auto_snapshots", "INTEGER NOT NULL DEFAULT 1");
+  tryAddColumn("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.

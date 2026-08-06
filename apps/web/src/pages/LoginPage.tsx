@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
@@ -12,6 +13,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig });
 
   if (user) return <Navigate to="/" replace />;
 
@@ -62,14 +64,16 @@ export function LoginPage() {
         >
           {busy ? t("auth.loginAction") : t("auth.login")}
         </button>
-        <div className="text-center text-sm">
-          <Link
-            to="/signup"
-            className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-          >
-            {t("auth.noAccount")}
-          </Link>
-        </div>
+        {config.data?.registrationEnabled !== false && (
+          <div className="text-center text-sm">
+            <Link
+              to="/signup"
+              className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+            >
+              {t("auth.noAccount")}
+            </Link>
+          </div>
+        )}
       </form>
     </div>
   );

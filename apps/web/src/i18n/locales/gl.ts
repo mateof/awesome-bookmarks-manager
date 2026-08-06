@@ -50,6 +50,17 @@ const gl = {
     noAccount: "Crear conta",
     signupWarning:
       "⚠️ Se perdes o contrasinal non poderás recuperar os teus datos. Apúntao nun sitio seguro.",
+    registrationDisabled:
+      "O rexistro está desactivado. Pídelle a un administrador que che cree unha conta.",
+  },
+  firstPassword: {
+    title: "Establece o teu contrasinal",
+    intro:
+      "A túa conta creouse cun contrasinal dun só uso. Escolle un contrasinal novo para continuar.",
+    newPassword: "Novo contrasinal (mín 10)",
+    confirm: "Repite o contrasinal",
+    mismatch: "Os contrasinais non coinciden",
+    submit: "Gardar e continuar",
   },
   layout: {
     appTitle: "AwesomeBookmarks",
@@ -372,6 +383,21 @@ const gl = {
     },
     admin: {
       heading: "Usuarios",
+      registrationHeading: "Rexistro de usuarios",
+      registrationHint:
+        "Cando está desactivado, ninguén pode crear a súa propia conta; só os administradores crean usuarios.",
+      registrationToggle: "Permitir rexistro público",
+      createUserHeading: "Crear usuario",
+      createUserHint:
+        "Xérase un contrasinal dun só uso que o usuario deberá cambiar no seu primeiro inicio de sesión.",
+      email: "Email",
+      nickname: "Nickname",
+      optionalPassword: "Contrasinal (opcional, xérase se está baleiro)",
+      createUser: "Crear usuario",
+      userCreatedTitle: "Usuario {{email}} creado",
+      userCreatedHint:
+        "Comparte este contrasinal dun só uso co usuario. Non poderás velo outra vez.",
+      oneTimePassword: "Contrasinal dun só uso",
       noUsers: "Sen usuarios.",
       bookmarksFoldersCreated:
         "{{bookmarks}} marcadores · {{folders}} cartafoles · creado {{when}}",
