@@ -198,6 +198,9 @@ export function ensureSchema() {
   tryAddColumn("users", "nickname", "TEXT");
   tryAddColumn("users", "auto_snapshots", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0");
+  tryAddColumn("users", "two_factor_enabled", "INTEGER NOT NULL DEFAULT 0");
+  tryAddColumn("users", "two_factor_secret_ct", "BLOB");
+  tryAddColumn("users", "two_factor_pending_ct", "BLOB");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.

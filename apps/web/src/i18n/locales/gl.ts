@@ -190,6 +190,24 @@ const gl = {
     viewRepo: "Ver en GitHub",
     report: "Informar dun problema ou suxestión",
   },
+  twofa: {
+    heading: "Verificación en dous pasos (2FA)",
+    intro:
+      "Engade un código temporal da túa app de autenticación ao iniciar sesión.",
+    enableButton: "Activar 2FA",
+    enable: "Activar",
+    enrollIntro:
+      "Escanea o QR con Google Authenticator, Microsoft Authenticator, Bitwarden, Authy… e escribe o código de 6 díxitos.",
+    manualEntry: "Non podes escanear? Introduce esta clave:",
+    codePlaceholder: "Código de 6 díxitos",
+    statusEnabled: "2FA activado.",
+    disableIntro: "Introduce un código actual para desactivalo.",
+    disable: "Desactivar 2FA",
+    disabledOk: "2FA desactivado.",
+    forcedTitle: "Configura a verificación en dous pasos",
+    forcedIntro: "O administrador esixe 2FA. Configúrao para continuar.",
+    loginPrompt: "Código de verificación",
+  },
   bookmark: {
     detailLink: "detalle →",
     openUrl: "Abrir URL",
@@ -421,6 +439,17 @@ const gl = {
       roleUser: "user",
       roleAdmin: "admin",
       delete: "Eliminar",
+      reset2fa: "Reset 2FA",
+      reset2faHint: "Desactivar o 2FA deste usuario (perdeu o seu autenticador).",
+      confirmReset2fa: "Desactivar o 2FA de {{email}}?",
+      twofaHeading: "Verificación en dous pasos (2FA)",
+      twofaHint:
+        "Forza o 2FA para todos e define en que rede se pode omitir.",
+      require2fa: "Esixir 2FA a todos os usuarios",
+      trustedNetworks: "Redes de confianza (CIDR)",
+      trustedNetworksHint:
+        "IPv4, separadas por comas. Desde estas redes pódese omitir o 2FA. Se usas proxy inverso, activa TRUSTED_PROXY.",
+      skip2faOnTrusted: "Non pedir 2FA desde unha rede de confianza",
     },
     logs: {
       heading: "Rexistros de jobs",

@@ -11,6 +11,8 @@ export function LoginPage() {
   const nav = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
+  const [needTotp, setNeedTotp] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig });
@@ -26,7 +28,17 @@ export function LoginPage() {
           setBusy(true);
           setErr(null);
           try {
-            await api.login(identifier, password);
+            const res = await api.login(
+              identifier,
+              password,
+              needTotp ? totp.trim() : undefined,
+            );
+            if ("twoFactorRequired" in res) {
+              // Account has 2FA: reveal the code field and wait for it.
+              setNeedTotp(true);
+              setBusy(false);
+              return;
+            }
             refresh();
             nav("/", { replace: true });
           } catch (e) {
@@ -56,6 +68,23 @@ export function LoginPage() {
           placeholder={t("auth.password")}
           className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
         />
+        {needTotp && (
+          <div className="space-y-1">
+            <label className="text-xs text-slate-500 dark:text-slate-400">
+              {t("twofa.loginPrompt")}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              value={totp}
+              onChange={(e) => setTotp(e.target.value)}
+              placeholder={t("twofa.codePlaceholder")}
+              className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+            />
+          </div>
+        )}
         {err && <div className="text-sm text-red-600">{err}</div>}
         <button
           type="submit"

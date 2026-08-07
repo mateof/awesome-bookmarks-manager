@@ -1,5 +1,6 @@
 import type {
   AdminUser,
+  AppSettings,
   Bookmark,
   CloudConnection,
   CreateBookmarkBody,
@@ -17,6 +18,8 @@ import type {
   SharedItem,
   ShareToGroupBody,
   Tag,
+  TwoFactorSetupResponse,
+  UpdateAppSettingsBody,
   UpdateBookmarkBody,
   UpdateFolderBody,
   UpdateGroupBody,
@@ -111,10 +114,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, nickname, password }),
     }),
-  login: (identifier: string, password: string) =>
-    request<MeResponse>("/auth/login", {
+  login: (identifier: string, password: string, totp?: string) =>
+    request<MeResponse | { twoFactorRequired: true }>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ identifier, password }),
+      body: JSON.stringify({ identifier, password, totp }),
+    }),
+  twoFactorSetup: () =>
+    request<TwoFactorSetupResponse>("/2fa/setup", { method: "POST" }),
+  twoFactorEnable: (code: string) =>
+    request<{ ok: true }>("/2fa/enable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  twoFactorDisable: (code: string) =>
+    request<{ ok: true }>("/2fa/disable", {
+      method: "POST",
+      body: JSON.stringify({ code }),
     }),
   logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
   changePassword: (currentPassword: string, newPassword: string) =>
@@ -433,13 +448,14 @@ export const api = {
       role: "user";
       oneTimePassword: string;
     }>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
-  adminGetSettings: () =>
-    request<{ registrationEnabled: boolean }>("/admin/settings"),
-  adminSetSettings: (body: { registrationEnabled: boolean }) =>
-    request<{ registrationEnabled: boolean }>("/admin/settings", {
+  adminGetSettings: () => request<AppSettings>("/admin/settings"),
+  adminSetSettings: (body: UpdateAppSettingsBody) =>
+    request<AppSettings>("/admin/settings", {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  adminResetUser2fa: (id: string) =>
+    request<{ ok: true }>(`/admin/users/${id}/reset-2fa`, { method: "POST" }),
   adminDeleteUser: (id: string) =>
     request<void>(`/admin/users/${id}`, { method: "DELETE" }),
   adminSetUserRole: (id: string, role: UserRole) =>

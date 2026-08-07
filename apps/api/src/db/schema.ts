@@ -27,6 +27,14 @@ export const users = sqliteTable(
     mustChangePassword: integer("must_change_password", { mode: "boolean" })
       .notNull()
       .default(false),
+    // TOTP two-factor. The secret is sealed with the user's DEK, so it is only
+    // readable right after a password login. `pending` holds an unconfirmed
+    // secret during enrollment until the first valid code flips `enabled`.
+    twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    twoFactorSecretCt: blob("two_factor_secret_ct", { mode: "buffer" }),
+    twoFactorPendingCt: blob("two_factor_pending_ct", { mode: "buffer" }),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },

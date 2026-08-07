@@ -1,12 +1,24 @@
-import type { AdminUser, CreateUserResponse } from "@awesome-bookmarks/shared";
+import type {
+  AdminUser,
+  AppSettings,
+  CreateUserResponse,
+  UpdateAppSettingsBody,
+} from "@awesome-bookmarks/shared";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { adminCreateUser as createUserCore } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
+import { clearTwoFactor } from "../auth/twofa.js";
 import { getDb } from "../db/client.js";
 import { bookmarks, folders, jobs, users } from "../db/schema.js";
 import {
   getRegistrationEnabled,
+  getRequire2fa,
+  getSkip2faOnTrusted,
+  getTrustedNetworks,
   setRegistrationEnabled,
+  setRequire2fa,
+  setSkip2faOnTrusted,
+  setTrustedNetworks,
 } from "../settings/service.js";
 import { deleteUserBlobs } from "../storage/blobs.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
@@ -68,18 +80,41 @@ export function listAllUsers(ctx: AuthedContext): AdminUser[] {
   }));
 }
 
-export function getSettings(ctx: AuthedContext): { registrationEnabled: boolean } {
+export function getSettings(ctx: AuthedContext): AppSettings {
   ensureAdmin(ctx);
-  return { registrationEnabled: getRegistrationEnabled() };
+  return {
+    registrationEnabled: getRegistrationEnabled(),
+    require2fa: getRequire2fa(),
+    trustedNetworks: getTrustedNetworks(),
+    skip2faOnTrusted: getSkip2faOnTrusted(),
+  };
 }
 
 export function updateSettings(
   ctx: AuthedContext,
-  input: { registrationEnabled: boolean },
-): { registrationEnabled: boolean } {
+  input: UpdateAppSettingsBody,
+): AppSettings {
   ensureAdmin(ctx);
-  setRegistrationEnabled(input.registrationEnabled);
-  return { registrationEnabled: input.registrationEnabled };
+  if (input.registrationEnabled !== undefined)
+    setRegistrationEnabled(input.registrationEnabled);
+  if (input.require2fa !== undefined) setRequire2fa(input.require2fa);
+  if (input.trustedNetworks !== undefined)
+    setTrustedNetworks(input.trustedNetworks);
+  if (input.skip2faOnTrusted !== undefined)
+    setSkip2faOnTrusted(input.skip2faOnTrusted);
+  return getSettings(ctx);
+}
+
+/** Admin recovery for a user locked out of their authenticator. */
+export function resetUserTwoFactor(ctx: AuthedContext, targetId: string) {
+  ensureAdmin(ctx);
+  const row = getDb()
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, targetId))
+    .get();
+  if (!row) throw NotFound("User not found");
+  clearTwoFactor(targetId);
 }
 
 export async function createUser(

@@ -12,7 +12,11 @@ import { eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getDb } from "../db/client.js";
 import { users } from "../db/schema.js";
-import { isRegistrationOpen } from "../settings/service.js";
+import {
+  getRequire2fa,
+  getSkip2faOnTrusted,
+  isRegistrationOpen,
+} from "../settings/service.js";
 import {
   BadRequest,
   Conflict,
@@ -21,8 +25,9 @@ import {
   NotFound,
   Unauthorized,
 } from "../util/errors.js";
-import { masterUnwrap, masterWrap } from "./encryption.js";
+import { masterUnwrap, masterWrap, openField } from "./encryption.js";
 import { keyCache } from "./key-cache.js";
+import { verifyTotp } from "./totp.js";
 
 /**
  * Core account creation shared by public signup and admin-provisioned users.
@@ -174,11 +179,25 @@ export async function setFirstPassword(userId: string, newPassword: string) {
   keyCache.put(userId, dek);
 }
 
+export type LoginResult =
+  | { ok: true; user: { id: string; email: string; nickname: string | null; role: string } }
+  | { ok: false; twoFactorRequired: true };
+
 /**
  * Login with either an email or a nickname. Lookup is case-insensitive on
  * both fields so the user doesn't have to remember casing.
+ *
+ * When the account has TOTP 2FA enabled we only finish the login (cache the
+ * DEK) once a valid code is supplied. `trusted` (a request from an admin-
+ * configured trusted network) can waive the second factor: for everyone when
+ * skip-on-trusted is on, and always for admins so they can never be locked out
+ * of their own LAN if they lose the authenticator.
  */
-export async function login(identifier: string, password: string) {
+export async function login(
+  identifier: string,
+  password: string,
+  opts: { totp?: string; trusted?: boolean } = {},
+): Promise<LoginResult> {
   const db = getDb();
   const lookup = identifier.trim();
   const row = db
@@ -198,12 +217,32 @@ export async function login(identifier: string, password: string) {
   const wrappedDek = masterUnwrap(row.id, Buffer.from(row.masterWrap));
   const kek = await deriveKEK(password, Buffer.from(row.kdfSalt));
   const dek = unwrapKey(kek, wrappedDek, `kek|${row.id}`);
+
+  const skip2fa =
+    (opts.trusted ?? false) &&
+    (getSkip2faOnTrusted() || row.role === "admin");
+  if (row.twoFactorEnabled && row.twoFactorSecretCt && !skip2fa) {
+    if (!opts.totp) return { ok: false, twoFactorRequired: true };
+    const secret = openField(
+      dek,
+      row.id,
+      "twofa.secret",
+      Buffer.from(row.twoFactorSecretCt),
+    );
+    if (!verifyTotp(secret, opts.totp)) {
+      throw Unauthorized("Código 2FA inválido");
+    }
+  }
+
   keyCache.put(row.id, dek);
   return {
-    id: row.id,
-    email: row.email,
-    nickname: row.nickname,
-    role: row.role,
+    ok: true,
+    user: {
+      id: row.id,
+      email: row.email,
+      nickname: row.nickname,
+      role: row.role,
+    },
   };
 }
 
@@ -295,11 +334,14 @@ export function getMe(userId: string) {
       role: users.role,
       autoSnapshots: users.autoSnapshots,
       mustChangePassword: users.mustChangePassword,
+      twoFactorEnabled: users.twoFactorEnabled,
       createdAt: users.createdAt,
     })
     .from(users)
     .where(eq(users.id, userId))
     .get();
   if (!row) throw NotFound("User not found");
-  return row;
+  // `mustSetup2fa` drives the forced-enrollment gate in the SPA when an admin
+  // has made 2FA mandatory and this account hasn't set it up yet.
+  return { ...row, mustSetup2fa: getRequire2fa() && !row.twoFactorEnabled };
 }

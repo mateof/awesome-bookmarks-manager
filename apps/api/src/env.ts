@@ -29,6 +29,14 @@ const Schema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // Only honour X-Forwarded-For for the client IP when the app sits behind a
+  // trusted reverse proxy. Off by default so a proxy can't be used to spoof a
+  // "trusted network" origin and skip 2FA.
+  TRUSTED_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
   KEY_CACHE_IDLE_MIN: z.coerce.number().int().default(30),
   KEY_CACHE_HARD_MIN: z.coerce.number().int().default(1440),
 

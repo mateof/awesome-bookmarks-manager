@@ -13,11 +13,12 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
 import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
@@ -318,39 +319,114 @@ function Security() {
     onError: (e) => setMsg(e instanceof ApiError ? e.message : t("common.error")),
   });
   return (
+    <div className="space-y-4">
+      <Card>
+        <SectionHeader
+          icon={<ShieldCheck className="h-5 w-5" />}
+          title={t("settings.security.heading")}
+        />
+        <div className="max-w-xs space-y-3">
+          <input
+            type="password"
+            placeholder={t("settings.security.currentPassword")}
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+            className={inputCls}
+          />
+          <input
+            type="password"
+            placeholder={t("settings.security.newPassword")}
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            autoComplete="new-password"
+            className={inputCls}
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => m.mutate()}
+              disabled={!current || !next || m.isPending}
+              className={btnPrimary}
+            >
+              {t("settings.security.changeButton")}
+            </button>
+            {msg && <span className="text-sm text-slate-500">{msg}</span>}
+          </div>
+        </div>
+      </Card>
+      <TwoFactorCard />
+    </div>
+  );
+}
+
+function TwoFactorCard() {
+  const { t } = useTranslation();
+  const { user, refresh } = useAuth();
+  const [enrolling, setEnrolling] = useState(false);
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const enabled = user?.twoFactorEnabled ?? false;
+  const disable = useMutation({
+    mutationFn: () => api.twoFactorDisable(code.trim()),
+    onSuccess: () => {
+      setCode("");
+      setMsg(t("twofa.disabledOk"));
+      refresh();
+    },
+    onError: (e) => setMsg(e instanceof ApiError ? e.message : t("common.error")),
+  });
+  return (
     <Card>
       <SectionHeader
         icon={<ShieldCheck className="h-5 w-5" />}
-        title={t("settings.security.heading")}
+        title={t("twofa.heading")}
       />
-      <div className="max-w-xs space-y-3">
-        <input
-          type="password"
-          placeholder={t("settings.security.currentPassword")}
-          value={current}
-          onChange={(e) => setCurrent(e.target.value)}
-          autoComplete="current-password"
-          className={inputCls}
-        />
-        <input
-          type="password"
-          placeholder={t("settings.security.newPassword")}
-          value={next}
-          onChange={(e) => setNext(e.target.value)}
-          autoComplete="new-password"
-          className={inputCls}
-        />
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => m.mutate()}
-            disabled={!current || !next || m.isPending}
-            className={btnPrimary}
-          >
-            {t("settings.security.changeButton")}
-          </button>
-          {msg && <span className="text-sm text-slate-500">{msg}</span>}
+      {enabled ? (
+        <div className="max-w-xs space-y-3">
+          <div className="text-sm font-medium text-green-600 dark:text-green-400">
+            {t("twofa.statusEnabled")}
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t("twofa.disableIntro")}
+          </p>
+          <input
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder={t("twofa.codePlaceholder")}
+            className={inputCls}
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => disable.mutate()}
+              disabled={code.trim().length < 6 || disable.isPending}
+              className={btnDanger}
+            >
+              {t("twofa.disable")}
+            </button>
+            {msg && <span className="text-sm text-slate-500">{msg}</span>}
+          </div>
         </div>
-      </div>
+      ) : enrolling ? (
+        <div className="max-w-xs">
+          <TwoFactorEnroll
+            onEnabled={() => {
+              setEnrolling(false);
+              refresh();
+            }}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {t("twofa.intro")}
+          </p>
+          <button onClick={() => setEnrolling(true)} className={btnPrimary}>
+            {t("twofa.enableButton")}
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
@@ -1021,6 +1097,10 @@ function Admin() {
       qc.invalidateQueries({ queryKey: ["auth-config"] });
     },
   });
+  const reset2fa = useMutation({
+    mutationFn: (id: string) => api.adminResetUser2fa(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
 
   // Create-user form.
   const [nu, setNu] = useState({ email: "", nickname: "", password: "" });
@@ -1064,6 +1144,8 @@ function Admin() {
           <span>{t("settings.admin.registrationToggle")}</span>
         </label>
       </Card>
+
+      <TwoFactorPolicyCard />
 
       <Card>
         <SectionHeader
@@ -1159,6 +1241,18 @@ function Admin() {
               <option value="admin">{t("settings.admin.roleAdmin")}</option>
             </select>
             <button
+              onClick={() => {
+                if (!confirm(t("settings.admin.confirmReset2fa", { email: u.email })))
+                  return;
+                reset2fa.mutate(u.id);
+              }}
+              disabled={reset2fa.isPending}
+              className={btnSecondary}
+              title={t("settings.admin.reset2faHint")}
+            >
+              {t("settings.admin.reset2fa")}
+            </button>
+            <button
               onClick={async () => {
                 if (!confirm(t("settings.admin.confirmDeleteUser", { email: u.email })))
                   return;
@@ -1178,6 +1272,93 @@ function Admin() {
         </div>
       </Card>
     </div>
+  );
+}
+
+function TwoFactorPolicyCard() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const settings = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: api.adminGetSettings,
+  });
+  const save = useMutation({
+    mutationFn: (body: {
+      require2fa?: boolean;
+      trustedNetworks?: string[];
+      skip2faOnTrusted?: boolean;
+    }) => api.adminSetSettings(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
+  });
+  const [networks, setNetworks] = useState("");
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (settings.data && !seeded) {
+      setNetworks(settings.data.trustedNetworks.join(", "));
+      setSeeded(true);
+    }
+  }, [settings.data, seeded]);
+
+  const require2fa = settings.data?.require2fa ?? false;
+  const skip = settings.data?.skip2faOnTrusted ?? false;
+  const parseNetworks = () =>
+    networks.split(",").map((s) => s.trim()).filter(Boolean);
+
+  return (
+    <Card>
+      <SectionHeader
+        icon={<ShieldCheck className="h-5 w-5" />}
+        title={t("settings.admin.twofaHeading")}
+        subtitle={t("settings.admin.twofaHint")}
+      />
+      <div className="space-y-4">
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-slate-700"
+            checked={require2fa}
+            disabled={save.isPending || settings.isLoading}
+            onChange={(e) => save.mutate({ require2fa: e.target.checked })}
+          />
+          <span>{t("settings.admin.require2fa")}</span>
+        </label>
+
+        <div className="space-y-1">
+          <div className="text-sm font-medium">
+            {t("settings.admin.trustedNetworks")}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t("settings.admin.trustedNetworksHint")}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={networks}
+              onChange={(e) => setNetworks(e.target.value)}
+              placeholder="192.168.0.0/16, 10.0.0.0/8"
+              className={`${inputCls} max-w-md flex-1`}
+            />
+            <button
+              className={btnSecondary}
+              disabled={save.isPending}
+              onClick={() => save.mutate({ trustedNetworks: parseNetworks() })}
+            >
+              {t("common.save")}
+            </button>
+          </div>
+        </div>
+
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-slate-700"
+            checked={skip}
+            disabled={save.isPending || settings.isLoading}
+            onChange={(e) => save.mutate({ skip2faOnTrusted: e.target.checked })}
+          />
+          <span>{t("settings.admin.skip2faOnTrusted")}</span>
+        </label>
+      </div>
+    </Card>
   );
 }
 

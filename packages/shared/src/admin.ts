@@ -18,11 +18,19 @@ export type UpdateUserRoleBody = z.infer<typeof UpdateUserRoleBodySchema>;
 
 export const AppSettingsSchema = z.object({
   registrationEnabled: z.boolean(),
+  require2fa: z.boolean(),
+  // Comma-free list of trusted IPv4 CIDRs (e.g. ["192.168.0.0/16"]).
+  trustedNetworks: z.array(z.string()),
+  skip2faOnTrusted: z.boolean(),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
+// All fields optional so the UI can PATCH one toggle at a time.
 export const UpdateAppSettingsBodySchema = z.object({
-  registrationEnabled: z.boolean(),
+  registrationEnabled: z.boolean().optional(),
+  require2fa: z.boolean().optional(),
+  trustedNetworks: z.array(z.string().trim().max(64)).max(32).optional(),
+  skip2faOnTrusted: z.boolean().optional(),
 });
 export type UpdateAppSettingsBody = z.infer<typeof UpdateAppSettingsBodySchema>;
 

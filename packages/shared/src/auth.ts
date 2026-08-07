@@ -32,8 +32,24 @@ export const LoginBodySchema = z.object({
   /** Either the email or the nickname. */
   identifier: z.string().min(1).max(254),
   password: z.string().min(1).max(1024),
+  /** Optional TOTP code; required only when the account has 2FA enabled. */
+  totp: z.string().trim().max(16).optional(),
 });
 export type LoginBody = z.infer<typeof LoginBodySchema>;
+
+/** 6-digit TOTP code for enabling/disabling 2FA. */
+export const TotpCodeSchema = z.object({
+  code: z.string().trim().min(6).max(16),
+});
+export type TotpCodeBody = z.infer<typeof TotpCodeSchema>;
+
+export const TwoFactorSetupResponseSchema = z.object({
+  secret: z.string(),
+  otpauthUri: z.string(),
+});
+export type TwoFactorSetupResponse = z.infer<
+  typeof TwoFactorSetupResponseSchema
+>;
 
 export const UpdateProfileBodySchema = z.object({
   nickname: NicknameSchema.optional(),
@@ -67,6 +83,8 @@ export const MeResponseSchema = z.object({
   role: UserRoleSchema,
   autoSnapshots: z.boolean(),
   mustChangePassword: z.boolean(),
+  twoFactorEnabled: z.boolean(),
+  mustSetup2fa: z.boolean(),
   createdAt: z.string(),
 });
 export type MeResponse = z.infer<typeof MeResponseSchema>;

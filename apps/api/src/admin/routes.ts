@@ -13,6 +13,7 @@ import {
   getSettings,
   listAllJobs,
   listAllUsers,
+  resetUserTwoFactor,
   setUserRole,
   updateSettings,
 } from "./service.js";
@@ -76,6 +77,14 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const { id } = IdParam.parse(req.params);
     const body = UpdateUserRoleBodySchema.parse(req.body);
     setUserRole(ctx, id, body.role);
+    return { ok: true };
+  });
+
+  // Recovery: wipe a user's 2FA (e.g. lost authenticator).
+  app.post("/admin/users/:id/reset-2fa", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    resetUserTwoFactor(ctx, id);
     return { ok: true };
   });
 };

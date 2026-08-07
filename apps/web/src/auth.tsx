@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { ApiError, api } from "./api.js";
+import { Force2FASetup } from "./components/Force2FASetup.js";
 import { ForcePasswordChange } from "./components/ForcePasswordChange.js";
 
 interface AuthState {
@@ -12,6 +13,8 @@ interface AuthState {
     role: "user" | "admin";
     autoSnapshots: boolean;
     mustChangePassword: boolean;
+    twoFactorEnabled: boolean;
+    mustSetup2fa: boolean;
   } | null;
   loading: boolean;
   refresh: () => void;
@@ -72,6 +75,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             role: me.data.role,
             autoSnapshots: me.data.autoSnapshots,
             mustChangePassword: me.data.mustChangePassword,
+            twoFactorEnabled: me.data.twoFactorEnabled,
+            mustSetup2fa: me.data.mustSetup2fa,
           }
         : null,
       loading: me.isLoading,
@@ -96,5 +101,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   // Admin-provisioned account still on its one-time password: force a change
   // before anything else is reachable.
   if (user.mustChangePassword) return <ForcePasswordChange />;
+  // Admin made 2FA mandatory and this account hasn't enrolled yet.
+  if (user.mustSetup2fa) return <Force2FASetup />;
   return <>{children}</>;
 }

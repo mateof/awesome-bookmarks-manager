@@ -3,6 +3,7 @@ import {
   FirstPasswordBodySchema,
   LoginBodySchema,
   SignupBodySchema,
+  TotpCodeSchema,
   UpdateProfileBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
@@ -22,6 +23,12 @@ import {
   requireUserId,
   setSession,
 } from "./session.js";
+import { isTrustedNetwork } from "./trusted.js";
+import {
+  beginTwoFactorSetup,
+  disableTwoFactor,
+  enableTwoFactor,
+} from "./twofa.js";
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   // Public: lets the login/signup page know whether signup is open.
@@ -38,9 +45,34 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/auth/login", async (req, reply) => {
     const body = LoginBodySchema.parse(req.body);
-    const user = await loginService(body.identifier, body.password);
-    setSession(reply, user.id);
-    return user;
+    const result = await loginService(body.identifier, body.password, {
+      totp: body.totp,
+      trusted: isTrustedNetwork(req),
+    });
+    if (!result.ok) return { twoFactorRequired: true };
+    setSession(reply, result.user.id);
+    return result.user;
+  });
+
+  // TOTP two-factor. Setup returns the secret + otpauth URI for the QR;
+  // enable/disable require a valid 6-digit code from the authenticator.
+  app.post("/2fa/setup", async (req) => {
+    const ctx = requireAuth(req);
+    return beginTwoFactorSetup(ctx);
+  });
+
+  app.post("/2fa/enable", async (req) => {
+    const ctx = requireAuth(req);
+    const { code } = TotpCodeSchema.parse(req.body);
+    enableTwoFactor(ctx, code);
+    return { ok: true };
+  });
+
+  app.post("/2fa/disable", async (req) => {
+    const ctx = requireAuth(req);
+    const { code } = TotpCodeSchema.parse(req.body);
+    disableTwoFactor(ctx, code);
+    return { ok: true };
   });
 
   app.post("/auth/logout", async (_req, reply) => {
