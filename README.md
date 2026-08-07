@@ -257,7 +257,9 @@ decrypted snapshot of the folder subtree sealed with the server `MASTER_KEY`,
 so public/shared panels render without you being logged in. This is a
 deliberate, per-panel exposure of *shared* content — the rest of your vault
 stays zero-knowledge. Edit a folder afterwards? Hit **Regenerate** to refresh
-the snapshot. Set `PUBLIC_BASE_URL` so the copied URLs match your real host.
+the snapshot. The copyable panel URL is built from your browser's current
+origin, so it always matches how you reach the app — no `PUBLIC_BASE_URL`
+needed for panels (it still feeds the older share-links feature).
 
 ## First-time use
 

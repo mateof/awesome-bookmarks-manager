@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ApiError, api } from "../api.js";
+import { ApiError, api, panelPublicUrl } from "../api.js";
 import { Modal } from "../components/Modal.js";
 import { TemplateEditor } from "../components/TemplateEditor.js";
 import { TemplateSwatch } from "../components/TemplateSwatch.js";
@@ -111,13 +111,19 @@ function PanelsTab() {
               /panel/{p.slug} · {accessLabel(p.accessMode)} · {statusLabel(p.status)}
             </div>
           </div>
-          <a href={p.url} target="_blank" rel="noopener noreferrer" className={btn} title={t("panels.preview")}>
+          <a
+            href={panelPublicUrl(p.slug)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={btn}
+            title={t("panels.preview")}
+          >
             <ExternalLink className="h-4 w-4" />
           </a>
           <button
             className={btn}
             title={t("panels.copyUrl")}
-            onClick={() => void navigator.clipboard.writeText(p.url)}
+            onClick={() => void navigator.clipboard.writeText(panelPublicUrl(p.slug))}
           >
             <Copy className="h-4 w-4" />
           </button>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ApiError, api } from "../api.js";
+import { ApiError, api, panelPublicUrl } from "../api.js";
 import { Modal } from "./Modal.js";
 import { TemplateSwatch } from "./TemplateSwatch.js";
 
@@ -83,14 +83,15 @@ export function GeneratePanelDialog({
     (accessMode !== "password" || password.length > 0);
 
   if (created) {
+    const url = panelPublicUrl(created.slug);
     return (
       <Modal title={t("panels.createdTitle")} onClose={onClose} size="md">
         <p className="text-sm text-slate-500">{t("panels.createdHint")}</p>
         <div className="flex items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-800/50">
-          <code className="min-w-0 flex-1 truncate text-sm">{created.url}</code>
+          <code className="min-w-0 flex-1 truncate text-sm">{url}</code>
           <button
             onClick={() => {
-              void navigator.clipboard.writeText(created.url);
+              void navigator.clipboard.writeText(url);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
@@ -99,7 +100,7 @@ export function GeneratePanelDialog({
             {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
           </button>
           <a
-            href={created.url}
+            href={url}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700"

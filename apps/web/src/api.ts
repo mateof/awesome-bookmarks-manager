@@ -37,6 +37,14 @@ import type {
 
 const BASE = "/api";
 
+/**
+ * Public URL of a panel, built from the browser's own origin so it is always
+ * correct for however you reach the app (no PUBLIC_BASE_URL needed).
+ */
+export function panelPublicUrl(slug: string): string {
+  return `${window.location.origin}/panel/${slug}`;
+}
+
 async function iconError(res: Response): Promise<ApiError> {
   const text = await res.text();
   let msg = `Subida de icono fallida (HTTP ${res.status})`;
