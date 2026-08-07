@@ -19,6 +19,16 @@ const Schema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // Persist the (master-wrapped) decryption key inside the encrypted session
+  // cookie so a container restart / image update does not force a re-login.
+  // Off by default: turning it on means the server secrets (MASTER_KEY +
+  // SESSION_SECRET) can recover the DEK from a cookie without the password,
+  // a deliberate weakening of the zero-knowledge guarantee for convenience.
+  PERSIST_SESSION_KEY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
   KEY_CACHE_IDLE_MIN: z.coerce.number().int().default(30),
   KEY_CACHE_HARD_MIN: z.coerce.number().int().default(1440),
 

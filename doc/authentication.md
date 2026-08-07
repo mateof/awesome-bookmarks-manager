@@ -72,6 +72,20 @@ The bundled SPA uses an `httpOnly`, `SameSite=Lax` session cookie set at
 login. The public `/api/v1` endpoints accept that cookie too (so the web
 app could call them), but external clients should always use a Bearer token.
 
+### Surviving restarts (`PERSIST_SESSION_KEY`)
+
+The cookie lasts 30 days, but the DEK lives only in memory, so restarting the
+container (e.g. an image update) clears it and the next request returns
+`423` — the web app then asks for the password again. That is the strict,
+zero-knowledge default.
+
+Set `PERSIST_SESSION_KEY=true` to avoid it. On login the DEK is stored,
+wrapped with `MASTER_KEY`, inside the (already `SESSION_SECRET`-encrypted)
+cookie; after a restart the server unwraps it from the cookie and refills the
+cache without a password prompt. The trade-off: whoever holds both server
+secrets (`MASTER_KEY` + `SESSION_SECRET`) can then recover the DEK from a
+cookie without the password. Off by default.
+
 ## HTTPS
 
 Serve behind HTTPS in production and set `COOKIE_SECURE=true`. Bearer tokens

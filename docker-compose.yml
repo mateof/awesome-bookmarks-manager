@@ -25,6 +25,8 @@ services:
       DATA_DIR: /data
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:${API_PORT:-3001}}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:${API_PORT:-3001}}
+      # Set true to keep the session across restarts/updates (see .env.example).
+      PERSIST_SESSION_KEY: ${PERSIST_SESSION_KEY:-false}
     volumes:
       - ./data:/data
     ports:
