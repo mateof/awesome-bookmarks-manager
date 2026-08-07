@@ -923,7 +923,9 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          selected
+            ? "opacity-100"
+            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <KebabMenu items={p.folderKebab(sf)} />
@@ -1014,7 +1016,9 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       />
       <div
         className={`absolute right-2 top-2 transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          selected
+            ? "opacity-100"
+            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <KebabMenu items={p.folderKebab(sf)} />
@@ -1073,7 +1077,9 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          selected
+            ? "opacity-100"
+            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <KebabMenu items={p.folderKebab(sf)} />
@@ -1229,7 +1235,9 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       />
       <div
         className={`absolute right-2 top-2 transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          selected
+            ? "opacity-100"
+            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <KebabMenu items={p.bookmarkKebab(b)} />
@@ -1301,7 +1309,9 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          selected
+            ? "opacity-100"
+            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <KebabMenu items={p.bookmarkKebab(b)} />

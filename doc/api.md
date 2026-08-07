@@ -19,6 +19,48 @@ auth() { curl -s -H "Authorization: Bearer $TOKEN" "$@"; }
 
 ---
 
+## Getting started (mobile app / browser extension)
+
+1. **Create a token** — in the web app: **Settings → API → New token**. Copy
+   it (shown once). It has the same permissions as your account and decrypts
+   your data server-side, so treat it like a password. Revoke it any time from
+   the same screen.
+2. **Call the API** with `Authorization: Bearer <token>` against
+   `https://<your-host>/api/v1`.
+3. **CORS** — browser-based clients (an extension page, a PWA on another
+   origin) are subject to CORS; set `CORS_ORIGIN` on the server to your
+   client's origin (comma-separated for several). Native mobile apps and
+   server-side scripts are not affected.
+
+Minimal JavaScript client:
+
+```js
+const HOST = "https://your-host";
+const TOKEN = "…";
+const api = (path, init = {}) =>
+  fetch(`${HOST}/api/v1${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json",
+      ...init.headers,
+    },
+  }).then((r) => (r.status === 204 ? null : r.json()));
+
+const me = await api("/me");
+const recent = await api("/bookmarks?limit=50");
+await api("/bookmarks", {
+  method: "POST",
+  body: JSON.stringify({ url: "https://example.com", tagIds: [] }),
+});
+```
+
+The full model: fetch `/folders` and `/bookmarks` once, then build the tree
+client-side from `parentId` / `folderId`. Everything is UUID-keyed and cheap to
+cache locally.
+
+---
+
 ## Identity
 
 ### `GET /me`
@@ -195,6 +237,38 @@ this URL":
 Body: `{ "url": string, "title"?: string, "folderId"?: uuid|null, "tags"?: string[] }`.
 Note `tags` here are **names** (created if missing), unlike the `/api/v1`
 bookmark endpoints which take `tagIds`.
+
+---
+
+## Panels (public view)
+
+Read a published **panel** (a template-styled dashboard of a folder). Handy for
+a client that renders someone's shared board. These live under `/api/public`
+(not `/api/v1`) and don't need a token for public panels.
+
+### `GET /api/public/panel/:slug`
+Returns the panel when viewable, or a gate flag:
+
+```json
+{ "title": "My links", "template": { "layout": "grid", "theme": { … }, … },
+  "root": { "id": "…", "name": "…", "description": null,
+            "bookmarks": [ { "id": "…", "title": "…", "url": "…",
+                            "description": "<p>…</p>",
+                            "tags": [ { "name": "dev", "color": "#3b82f6" } ] } ],
+            "subfolders": [ … ] } }
+```
+
+Gate flags (no `root`): `{ "needsPassword": true }`,
+`{ "needsAuth": true }` (the viewer must log in — send the session cookie), or
+`{ "forbidden": true }`. `description` is sanitized rich-text HTML.
+
+### `POST /api/public/panel/:slug`
+Body `{ "password": string }` to unlock a password-protected panel; returns the
+same shape with `root` on success.
+
+> Panel/template **management** (create, edit, regenerate, delete) is only
+> available through the session-cookie API the web app uses, not via bearer
+> tokens.
 
 ---
 

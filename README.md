@@ -289,12 +289,16 @@ pnpm db:migrate       # apply migrations to ./data/db.sqlite
 
 ## Programmatic access (API & MCP)
 
-AwesomeBookmarks exposes a stable public REST API and ships an MCP server so
-an AI assistant can manage your bookmarks.
+AwesomeBookmarks exposes a stable, token-authenticated public REST API — build
+a mobile app, browser extension, or script against it — and ships an MCP server
+so an AI assistant can manage your bookmarks.
 
 - Create a token in **Settings → API**.
 - Public API base: `https://<host>/api/v1` with
   `Authorization: Bearer <token>`.
+- [doc/api.md](doc/api.md) has a getting-started guide for client developers
+  (token, CORS, a minimal fetch client) plus every endpoint and the public
+  panel-view endpoints.
 - MCP server: [apps/mcp](apps/mcp) — point Claude Desktop (or any MCP client)
   at it.
 
