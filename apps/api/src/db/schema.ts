@@ -80,6 +80,69 @@ export const webauthnCredentials = sqliteTable(
   }),
 );
 
+/**
+ * Panels: a named, template-styled, shareable view of a folder's subtree.
+ * `payloadCt` is a MASTER_KEY-sealed JSON snapshot of the decrypted subtree so
+ * a public/shared panel can be rendered without the owner being logged in.
+ */
+export const panels = sqliteTable(
+  "panels",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    folderId: text("folder_id").notNull(),
+    templateId: text("template_id"),
+    accessMode: text("access_mode").notNull().default("public"),
+    passwordHash: text("password_hash"),
+    payloadCt: blob("payload_ct", { mode: "buffer" }),
+    payloadStatus: text("payload_status").notNull().default("pending"),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("panels_slug_idx").on(t.slug),
+    userIdx: index("panels_user_idx").on(t.userId),
+  }),
+);
+
+/** Allow-list of viewers for a panel in "users" access mode. */
+export const panelAllowedUsers = sqliteTable(
+  "panel_allowed_users",
+  {
+    panelId: text("panel_id")
+      .notNull()
+      .references(() => panels.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.panelId, t.userId] }),
+  }),
+);
+
+/** User-defined panel templates (built-ins live in code). */
+export const panelTemplates = sqliteTable(
+  "panel_templates",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    config: text("config").notNull(), // JSON
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    userIdx: index("panel_templates_user_idx").on(t.userId),
+  }),
+);
+
 export const groups = sqliteTable(
   "groups",
   {

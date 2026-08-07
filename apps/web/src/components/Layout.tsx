@@ -11,6 +11,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FolderClosed,
+  LayoutDashboard,
   LogOut,
   Menu,
   Search,
@@ -195,6 +196,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }
         >
           <Tag className="h-4 w-4" /> {t("sidebar.tags")}
+        </NavLink>
+        <NavLink
+          to="/panels"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded px-2 py-1 text-sm ${
+              isActive
+                ? "bg-slate-200 dark:bg-slate-800"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`
+          }
+        >
+          <LayoutDashboard className="h-4 w-4" /> {t("sidebar.panels")}
         </NavLink>
         <NavLink
           to="/shared"

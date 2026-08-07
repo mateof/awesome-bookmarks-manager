@@ -6,6 +6,7 @@ import {
   FolderClosed,
   FolderInput,
   FolderPlus,
+  LayoutDashboard,
   Palette,
   PencilLine,
   Plus,
@@ -22,6 +23,7 @@ import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { IconPicker } from "../components/IconPicker.js";
+import { GeneratePanelDialog } from "../components/GeneratePanelDialog.js";
 import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
 import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
@@ -108,6 +110,7 @@ export function FolderPage() {
     folderIds: string[];
     bookmarkIds: string[];
   } | null>(null);
+  const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["folders"] });
@@ -373,6 +376,11 @@ export function FolderPage() {
       onClick: () => setMoveTarget({ folderIds: [f.id], bookmarkIds: [] }),
     },
     {
+      label: t("panels.generateKebab"),
+      icon: <LayoutDashboard className="h-4 w-4" />,
+      onClick: () => setPanelFolder(f),
+    },
+    {
       label: t("background.kebabItem"),
       icon: <Palette className="h-4 w-4" />,
       onClick: () => setAppearanceTarget({ kind: "folder", folder: f }),
@@ -623,6 +631,13 @@ export function FolderPage() {
             clearSelection();
             setMoveTarget(null);
           }}
+        />
+      )}
+      {panelFolder && (
+        <GeneratePanelDialog
+          folderId={panelFolder.id}
+          folderName={panelFolder.name}
+          onClose={() => setPanelFolder(null)}
         />
       )}
     </div>

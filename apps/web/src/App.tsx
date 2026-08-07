@@ -6,6 +6,8 @@ import { FolderPage } from "./pages/FolderPage.js";
 import { GroupsPage } from "./pages/GroupsPage.js";
 import { InvitePage } from "./pages/InvitePage.js";
 import { LoginPage } from "./pages/LoginPage.js";
+import { PanelsPage } from "./pages/PanelsPage.js";
+import { PublicPanelPage } from "./pages/PublicPanelPage.js";
 import { SearchPage } from "./pages/SearchPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SharedPage } from "./pages/SharedPage.js";
@@ -21,6 +23,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/share/:token" element={<SharePage />} />
+        <Route path="/panel/:slug" element={<PublicPanelPage />} />
         <Route path="/invite/:token" element={<InvitePage />} />
         <Route
           path="*"
@@ -36,6 +39,7 @@ export default function App() {
                   <Route path="/groups/:id" element={<GroupsPage />} />
                   <Route path="/shared" element={<SharedPage />} />
                   <Route path="/shared/:shareId" element={<SharedPage />} />
+                  <Route path="/panels" element={<PanelsPage />} />
                   <Route path="/tags" element={<TagsPage />} />
                   <Route path="/tag/:id" element={<TagFilterPage />} />
                   <Route path="/settings/*" element={<SettingsPage />} />

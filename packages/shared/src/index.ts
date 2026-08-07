@@ -9,3 +9,4 @@ export * from "./jobs.js";
 export * from "./extension.js";
 export * from "./groups.js";
 export * from "./admin.js";
+export * from "./panels.js";

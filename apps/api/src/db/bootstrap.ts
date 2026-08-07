@@ -81,6 +81,39 @@ export function ensureSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS webauthn_credential_idx
       ON webauthn_credentials(credential_id);
 
+    CREATE TABLE IF NOT EXISTS panels (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      folder_id TEXT NOT NULL,
+      template_id TEXT,
+      access_mode TEXT NOT NULL DEFAULT 'public',
+      password_hash TEXT,
+      payload_ct BLOB,
+      payload_status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS panels_slug_idx ON panels(slug);
+    CREATE INDEX IF NOT EXISTS panels_user_idx ON panels(user_id);
+
+    CREATE TABLE IF NOT EXISTS panel_allowed_users (
+      panel_id TEXT NOT NULL REFERENCES panels(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      PRIMARY KEY (panel_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS panel_templates (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      config TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS panel_templates_user_idx ON panel_templates(user_id);
+
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -13,13 +13,21 @@ import type {
   GroupInvitation,
   GroupMember,
   InviteMemberBody,
+  CreatePanelBody,
+  CreateTemplateBody,
   MeResponse,
+  PanelDetail,
+  PanelListItem,
+  PublicPanelResponse,
   Share,
   SharedItem,
   ShareToGroupBody,
   Tag,
+  TemplateItem,
   TwoFactorSetupResponse,
   UpdateAppSettingsBody,
+  UpdatePanelBody,
+  UpdateTemplateBody,
   UpdateBookmarkBody,
   UpdateFolderBody,
   UpdateGroupBody,
@@ -463,6 +471,48 @@ export const api = {
   listShared: () => request<SharedItem[]>("/shared"),
   getSharedContent: (shareId: string) =>
     request<unknown>(`/shared/${shareId}`),
+
+  // panels
+  listPanels: () => request<PanelListItem[]>("/panels"),
+  getPanel: (id: string) => request<PanelDetail>(`/panels/${id}`),
+  createPanel: (body: CreatePanelBody) =>
+    request<PanelDetail>("/panels", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updatePanel: (id: string, body: UpdatePanelBody) =>
+    request<PanelDetail>(`/panels/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deletePanel: (id: string) =>
+    request<void>(`/panels/${id}`, { method: "DELETE" }),
+  regeneratePanel: (id: string) =>
+    request<PanelDetail>(`/panels/${id}/regenerate`, { method: "POST" }),
+
+  // panel templates
+  listTemplates: () => request<TemplateItem[]>("/panel-templates"),
+  createTemplate: (body: CreateTemplateBody) =>
+    request<TemplateItem>("/panel-templates", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateTemplate: (id: string, body: UpdateTemplateBody) =>
+    request<TemplateItem>(`/panel-templates/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteTemplate: (id: string) =>
+    request<void>(`/panel-templates/${id}`, { method: "DELETE" }),
+
+  // public panel view
+  getPublicPanel: (slug: string) =>
+    request<PublicPanelResponse>(`/public/panel/${encodeURIComponent(slug)}`),
+  unlockPublicPanel: (slug: string, password: string) =>
+    request<PublicPanelResponse>(`/public/panel/${encodeURIComponent(slug)}`, {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 
   // admin
   adminListUsers: () => request<AdminUser[]>("/admin/users"),

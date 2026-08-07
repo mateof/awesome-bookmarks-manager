@@ -12,6 +12,7 @@ import { ZodError } from "zod";
 import { adminRoutes } from "./admin/routes.js";
 import { apiV1Routes } from "./apiv1/routes.js";
 import { authRoutes } from "./auth/routes.js";
+import { panelRoutes, publicPanelRoutes } from "./panels/routes.js";
 import { webauthnRoutes } from "./webauthn/routes.js";
 import { keyCache } from "./auth/key-cache.js";
 import { registerSession } from "./auth/session.js";
@@ -136,6 +137,8 @@ export async function buildServer() {
       await api.register(extensionRoutes);
       await api.register(adminRoutes);
       await api.register(jobRoutes);
+      await api.register(panelRoutes);
+      await api.register(publicPanelRoutes);
     },
     { prefix: "/api" },
   );
