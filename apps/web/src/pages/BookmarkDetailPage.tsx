@@ -51,7 +51,6 @@ export function BookmarkDetailPage() {
   });
   const [showEdit, setShowEdit] = useState(false);
   const [showShare, setShowShare] = useState(false);
-  const [view, setView] = useState<"reader" | "screenshot">("reader");
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
 
   if (!q.data) return <div className="text-slate-400">{t("common.loading")}</div>;
@@ -166,32 +165,8 @@ export function BookmarkDetailPage() {
           )}
           {b.hasSnapshot && (
             <div className="ml-auto flex gap-1">
-              <button
-                onClick={() => setView("reader")}
-                className={`rounded px-2 py-0.5 text-xs ${
-                  view === "reader"
-                    ? "bg-slate-200 dark:bg-slate-700"
-                    : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                {t("bookmark.viewHtml")}
-              </button>
-              <button
-                onClick={() => setView("screenshot")}
-                className={`rounded px-2 py-0.5 text-xs ${
-                  view === "screenshot"
-                    ? "bg-slate-200 dark:bg-slate-700"
-                    : "hover:bg-slate-100 dark:hover:bg-slate-800"
-                }`}
-              >
-                {t("bookmark.viewScreenshot")}
-              </button>
               <a
-                href={
-                  view === "reader"
-                    ? api.bookmarkSnapshotUrl(b.id)
-                    : api.bookmarkScreenshotUrl(b.id)
-                }
+                href={api.bookmarkSnapshotUrl(b.id)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={t("bookmark.openInTab")}
@@ -206,7 +181,6 @@ export function BookmarkDetailPage() {
           bookmarkId={b.id}
           status={b.snapshotStatus}
           hasSnapshot={b.hasSnapshot}
-          view={view}
         />
       </div>
 
@@ -232,12 +206,10 @@ function SnapshotViewer({
   bookmarkId,
   status,
   hasSnapshot,
-  view,
 }: {
   bookmarkId: string;
   status: string;
   hasSnapshot: boolean;
-  view: "reader" | "screenshot";
 }) {
   const { t } = useTranslation();
   const [iframeKey, setIframeKey] = useState(0);
@@ -262,16 +234,6 @@ function SnapshotViewer({
       <div className="rounded border border-slate-200 bg-white p-6 text-center text-sm text-slate-400 dark:border-slate-800 dark:bg-slate-900">
         {t("bookmark.noSnapshot")}
       </div>
-    );
-  }
-
-  if (view === "screenshot") {
-    return (
-      <img
-        src={api.bookmarkScreenshotUrl(bookmarkId)}
-        alt={t("bookmark.screenshotAlt")}
-        className="w-full rounded border border-slate-200 dark:border-slate-800"
-      />
     );
   }
 

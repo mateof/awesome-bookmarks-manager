@@ -39,28 +39,20 @@ RUN pnpm exec turbo run build \
 RUN pnpm --filter @awesome-bookmarks/api deploy --prod /out
 
 # --- Runtime ---
-# Plain Node + Debian's Chromium (~400 MB) instead of the Playwright base
-# image (which ships Chromium + Firefox + WebKit and weights ~1.5 GB).
-# The snapshot worker reads CHROMIUM_PATH (set below) and calls
-# `chromium.launch({ executablePath })` from playwright-core.
+# Plain Node, no browser. Snapshots are a Wallabag-style HTTP fetch plus a
+# Readability extraction (see apps/api/src/jobs/handlers/snapshot.ts), so the
+# image ships no Chromium and no fonts. That drops it from ~1.2 GB to a few
+# hundred MB. `ca-certificates` stays so undici can validate TLS.
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     API_PORT=3001 \
-    PUBLIC_DIR=/app/public \
-    CHROMIUM_PATH=/usr/bin/chromium
+    PUBLIC_DIR=/app/public
 
-# Chromium + minimal fonts so captured pages don't render with tofu boxes.
-# fonts-noto-cjk is 100 MB but Asian-text snapshots are otherwise unreadable.
 RUN apt-get update \
  && apt-get upgrade -y \
- && apt-get install -y --no-install-recommends \
-        chromium \
-        ca-certificates \
-        fonts-liberation \
-        fonts-noto-color-emoji \
-        fonts-noto-cjk \
+ && apt-get install -y --no-install-recommends ca-certificates \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 

@@ -6,11 +6,7 @@ import { runFaviconJob } from "./handlers/favicon.js";
 import { runGroupShareSealJob } from "./handlers/group_share_seal.js";
 import { runImportJob } from "./handlers/import.js";
 import { runShareSealJob } from "./handlers/share_seal.js";
-import {
-  closeBrowser,
-  markSnapshotError,
-  runSnapshotJob,
-} from "./handlers/snapshot.js";
+import { markSnapshotError, runSnapshotJob } from "./handlers/snapshot.js";
 import {
   type ClaimedJob,
   claimNext,
@@ -33,11 +29,10 @@ export function startWorker() {
   if (typeof pollTimer.unref === "function") pollTimer.unref();
 }
 
-export async function stopWorker() {
+export function stopWorker() {
   stopped = true;
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
-  await closeBrowser();
 }
 
 async function tick() {
@@ -55,46 +50,77 @@ async function tick() {
 
 /**
  * Errors that won't recover with a retry. We mark the job as `error` directly
- * to avoid wasting Playwright + queue capacity on URLs that simply aren't
- * reachable from the server (intranet without VPN, broken hosts, dead certs).
+ * to avoid wasting queue capacity on URLs that simply aren't reachable from
+ * the server (intranet without VPN, broken hosts, dead certs). Snapshots now
+ * fetch over undici, so these are Node/undici codes; the old Chromium `ERR_*`
+ * names are kept so jobs queued before the switch still resolve cleanly.
  */
 const TERMINAL_PATTERNS = [
+  // Node / undici
+  "ENOTFOUND",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "CERT_HAS_EXPIRED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "ERR_INVALID_URL",
+  "Unsupported content-type",
+  // Legacy Chromium
   "ERR_NAME_NOT_RESOLVED",
   "ERR_CONNECTION_REFUSED",
   "ERR_CONNECTION_RESET",
   "ERR_CONNECTION_CLOSED",
   "ERR_ADDRESS_UNREACHABLE",
-  "ERR_INVALID_URL",
   "ERR_BLOCKED_BY_CLIENT",
   "ERR_CERT_AUTHORITY_INVALID",
   "ERR_CERT_COMMON_NAME_INVALID",
   "ERR_CERT_DATE_INVALID",
   "ERR_SSL_PROTOCOL_ERROR",
-  "ENOTFOUND",
-  "ECONNREFUSED",
 ];
 
 function isTerminalError(msg: string): boolean {
   return TERMINAL_PATTERNS.some((p) => msg.includes(p));
 }
 
-/** Translate raw browser errors into something the user can act on. */
+/** Translate raw fetch errors into something the user can act on. */
 function friendlyMessage(raw: string): string {
   if (raw.includes("ERR_NAME_NOT_RESOLVED") || raw.includes("ENOTFOUND")) {
     return "Host no resoluble — ¿requiere VPN o es una URL interna?";
   }
+  if (raw.includes("EAI_AGAIN")) return "Fallo temporal de DNS";
   if (raw.includes("ERR_CONNECTION_REFUSED") || raw.includes("ECONNREFUSED")) {
     return "Conexión rechazada por el servidor";
   }
-  if (raw.includes("ERR_CONNECTION_RESET")) return "Conexión cerrada por el servidor";
-  if (raw.includes("ERR_ADDRESS_UNREACHABLE")) return "Dirección inaccesible";
-  if (raw.includes("ERR_CERT_")) return "Certificado TLS inválido";
-  if (raw.includes("ERR_SSL_PROTOCOL_ERROR")) return "Error de protocolo TLS";
-  if (raw.includes("ERR_INVALID_URL")) return "URL inválida";
-  if (raw.includes("Timeout") || raw.includes("timeout")) {
-    return "Timeout: la página tarda demasiado en cargar";
+  if (raw.includes("ERR_CONNECTION_RESET") || raw.includes("ECONNRESET")) {
+    return "Conexión cerrada por el servidor";
   }
-  // Take just the first line to avoid pasting Playwright's giant call log.
+  if (raw.includes("ERR_ADDRESS_UNREACHABLE") || raw.includes("EHOSTUNREACH") || raw.includes("ENETUNREACH")) {
+    return "Dirección inaccesible";
+  }
+  if (raw.includes("ERR_TLS_CERT_ALTNAME_INVALID")) {
+    return "El certificado no coincide con el host";
+  }
+  if (
+    raw.includes("ERR_CERT_") ||
+    raw.includes("CERT_") ||
+    raw.includes("SELF_SIGNED") ||
+    raw.includes("UNABLE_TO_VERIFY") ||
+    raw.includes("ERR_SSL_PROTOCOL_ERROR")
+  ) {
+    return "Certificado o protocolo TLS inválido";
+  }
+  if (raw.includes("ERR_INVALID_URL")) return "URL inválida";
+  if (raw.startsWith("HTTP ")) return `El servidor respondió ${raw}`;
+  if (raw.startsWith("Unsupported content-type")) {
+    return "La URL no devuelve HTML (¿es un PDF o una imagen?)";
+  }
+  if (raw.includes("UND_ERR") || raw.includes("Timeout") || raw.includes("timeout") || raw.includes("TIMEOUT")) {
+    return "Timeout: la página tarda demasiado en responder";
+  }
   const firstLine = raw.split("\n")[0]?.trim() ?? raw;
   return firstLine.slice(0, 240);
 }

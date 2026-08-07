@@ -277,8 +277,6 @@ export const api = {
   bookmarkIconUrl: (id: string) => `${BASE}/bookmarks/${id}/icon`,
   bookmarkBgImageUrl: (id: string) => `${BASE}/bookmarks/${id}/bg-image`,
   bookmarkSnapshotUrl: (id: string) => `${BASE}/bookmarks/${id}/snapshot.html`,
-  bookmarkScreenshotUrl: (id: string) =>
-    `${BASE}/bookmarks/${id}/snapshot.png`,
   uploadFolderIcon: async (id: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);

@@ -48,36 +48,6 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
       .send(html);
   });
 
-  app.get("/bookmarks/:id/snapshot.png", async (req, reply) => {
-    const ctx = requireAuth(req);
-    const { id } = IdParam.parse(req.params);
-    const row = getDb()
-      .select({
-        userId: bookmarks.userId,
-        path: bookmarks.snapshotScreenshotPath,
-      })
-      .from(bookmarks)
-      .where(
-        and(
-          eq(bookmarks.id, id),
-          eq(bookmarks.userId, ctx.userId),
-          isNull(bookmarks.deletedAt),
-        ),
-      )
-      .get();
-    if (!row || !row.path) throw NotFound("Screenshot not ready");
-    const sealed = await readBlob(row.path);
-    const png = aeadDecrypt(
-      ctx.dek,
-      sealed,
-      `${ctx.userId}|snapshot.screenshot`,
-    );
-    reply
-      .header("content-type", "image/png")
-      .header("cache-control", "private, max-age=300")
-      .send(png);
-  });
-
   app.get("/bookmarks/:id/icon", async (req, reply) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);

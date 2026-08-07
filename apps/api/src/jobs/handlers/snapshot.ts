@@ -1,47 +1,25 @@
-import { aeadEncrypt } from "@awesome-bookmarks/crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
-import { chromium, type Browser } from "playwright-core";
+import { request } from "undici";
 import { openField, sealField } from "../../auth/encryption.js";
 import { getDb } from "../../db/client.js";
 import { bookmarks } from "../../db/schema.js";
 import { upsertSnapshotIndex } from "../../search/service.js";
-import {
-  bookmarkBlobDir,
-  writeBlob,
-} from "../../storage/blobs.js";
+import { bookmarkBlobDir, writeBlob } from "../../storage/blobs.js";
 import { join } from "node:path";
 import { NotFound } from "../../util/errors.js";
 
-let browserSingleton: Browser | null = null;
-
-async function getBrowser(): Promise<Browser> {
-  if (browserSingleton) return browserSingleton;
-  // `CHROMIUM_PATH` lets the production image point Playwright at the
-  // system Chromium binary (Debian's `chromium` package) instead of
-  // shipping the full Playwright bundle of 3 browsers. In dev it's unset
-  // and Playwright falls back to whatever `playwright install chromium`
-  // dropped under `~/.cache/ms-playwright`.
-  const executablePath = process.env.CHROMIUM_PATH || undefined;
-  browserSingleton = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-dev-shm-usage"],
-    executablePath,
-  });
-  return browserSingleton;
-}
-
-export async function closeBrowser() {
-  if (browserSingleton) {
-    await browserSingleton.close();
-    browserSingleton = null;
-  }
-}
+/**
+ * Snapshots are "Wallabag style": a plain HTTP fetch plus a Readability
+ * extraction of the readable article. No headless browser, so the runtime
+ * image ships no Chromium (that was ~500 MB of the old image). The cost is
+ * that JS-rendered / SPA pages capture only their initial HTML, and there is
+ * no pixel screenshot anymore.
+ */
 
 interface SnapshotResult {
   html: string;
-  screenshot: Buffer;
   text: string;
   title?: string;
 }
@@ -49,64 +27,99 @@ interface SnapshotResult {
 const USER_AGENT =
   "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36 AwesomeBookmarks/0.1";
 
-const GOTO_TIMEOUT_MS = 15_000;
-const NETWORK_IDLE_TIMEOUT_MS = 3_000;
-const SCREENSHOT_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_HTML_BYTES = 5 * 1024 * 1024; // 5 MB is plenty for an article
 
-async function captureWithPlaywright(url: string): Promise<SnapshotResult> {
-  const browser = await getBrowser();
-  const ctx = await browser.newContext({
-    viewport: { width: 1280, height: 900 },
-    userAgent: USER_AGENT,
-  });
-  const page = await ctx.newPage();
-
-  // Block heavy / blocking resources to speed up page load and reduce hangs.
-  // Media (autoplay videos, audio) and fonts are the worst offenders for
-  // network-idle delays. Beacons keep firing forever on some sites.
-  await page.route("**/*", (route) => {
-    const t = route.request().resourceType();
-    if (t === "media" || t === "font") return route.abort();
-    return route.continue();
+async function fetchHtml(url: string): Promise<string> {
+  const res = await request(url, {
+    method: "GET",
+    headers: {
+      "user-agent": USER_AGENT,
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "accept-language": "*",
+    },
+    maxRedirections: 5,
+    headersTimeout: FETCH_TIMEOUT_MS,
+    bodyTimeout: FETCH_TIMEOUT_MS,
   });
 
-  try {
-    // Two-phase load: domcontentloaded is reliable; networkidle is best-effort.
-    await page.goto(url, {
-      waitUntil: "domcontentloaded",
-      timeout: GOTO_TIMEOUT_MS,
-    });
-    await page
-      .waitForLoadState("networkidle", { timeout: NETWORK_IDLE_TIMEOUT_MS })
-      .catch(() => {
-        /* many sites never go fully idle — proceed anyway */
-      });
-
-    const title = await page.title().catch(() => "");
-    const html = await page.content();
-
-    // Viewport-only screenshot — fullPage screenshots stall on infinite-scroll
-    // pages and produce huge images. Hard timeout in case Chromium hangs.
-    const screenshot = await page.screenshot({
-      fullPage: false,
-      type: "png",
-      timeout: SCREENSHOT_TIMEOUT_MS,
-    });
-
-    const dom = new JSDOM(html, { url });
-    const article = new Readability(dom.window.document).parse();
-    const text = (article?.textContent ?? extractFallbackText(html)).trim();
-
-    return { html, screenshot, text, title };
-  } finally {
-    await page.close().catch(() => {});
-    await ctx.close().catch(() => {});
+  const ctype = String(res.headers["content-type"] ?? "");
+  if (res.statusCode >= 400) {
+    res.body.destroy();
+    throw new Error(`HTTP ${res.statusCode}`);
   }
+  if (ctype && !/text\/html|application\/xhtml|application\/xml|text\/plain/i.test(ctype)) {
+    res.body.destroy();
+    throw new Error(`Unsupported content-type: ${ctype}`);
+  }
+
+  // Read with a hard size cap so a runaway response can't exhaust memory.
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of res.body) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    total += buf.length;
+    if (total > MAX_HTML_BYTES) {
+      res.body.destroy();
+      break;
+    }
+    chunks.push(buf);
+  }
+  const raw = Buffer.concat(chunks);
+
+  const charset = /charset=["']?([\w-]+)/i.exec(ctype)?.[1];
+  try {
+    return new TextDecoder(charset || "utf-8").decode(raw);
+  } catch {
+    return raw.toString("utf8");
+  }
+}
+
+/**
+ * Wrap Readability's clean article HTML in a minimal, self-contained reader
+ * document so the sandboxed iframe shows something legible (Readability's
+ * `.content` is an unstyled fragment). Follows the viewer's OS colour scheme.
+ */
+function readerDoc(title: string | undefined, contentHtml: string): string {
+  const safeTitle = (title ?? "").replace(/[<>&]/g, "");
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${safeTitle}</title><style>
+:root{color-scheme:light dark}
+body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1e293b;background:#fff}
+img{max-width:100%;height:auto}
+a{color:#2563eb}
+pre{white-space:pre-wrap;overflow-x:auto}
+h1,h2,h3{line-height:1.25}
+@media(prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0}a{color:#60a5fa}}
+</style></head><body>${contentHtml}</body></html>`;
 }
 
 function extractFallbackText(html: string): string {
   const dom = new JSDOM(html);
   return dom.window.document.body?.textContent?.trim() ?? "";
+}
+
+async function captureSnapshot(url: string): Promise<SnapshotResult> {
+  const rawHtml = await fetchHtml(url);
+  const dom = new JSDOM(rawHtml, { url });
+  const docTitle = dom.window.document.title || "";
+
+  // Readability mutates the document, so read the title first (done above).
+  let article: ReturnType<Readability["parse"]> = null;
+  try {
+    article = new Readability(dom.window.document).parse();
+  } catch {
+    article = null;
+  }
+
+  const articleHtml = article?.content?.trim();
+  const html = articleHtml
+    ? readerDoc(article?.title ?? docTitle, articleHtml)
+    : rawHtml;
+  const text = (article?.textContent ?? extractFallbackText(rawHtml)).trim();
+  const title =
+    (article?.title && article.title.trim()) || docTitle || undefined;
+
+  return { html, text, title };
 }
 
 interface SnapshotPayload {
@@ -140,23 +153,14 @@ export async function runSnapshotJob(
     .where(eq(bookmarks.id, bookmarkId))
     .run();
 
-  const result = await captureWithPlaywright(url);
+  const result = await captureSnapshot(url);
 
   const dir = bookmarkBlobDir(userId, bookmarkId);
 
   const sealedHtml = sealField(dek, userId, "snapshot.html", result.html);
-  const sealedScreenshot = aeadEncrypt(
-    dek,
-    result.screenshot,
-    `${userId}|snapshot.screenshot`,
-  );
   const sealedText = sealField(dek, userId, "snapshot.text", result.text);
 
   const htmlPath = await writeBlob(join(dir, "page.html.bin"), sealedHtml);
-  const screenshotPath = await writeBlob(
-    join(dir, "screenshot.png.bin"),
-    sealedScreenshot,
-  );
   const textPath = await writeBlob(join(dir, "text.bin"), sealedText);
 
   // If we captured a usable title and the bookmark still has the URL as title
@@ -180,7 +184,9 @@ export async function runSnapshotJob(
     .update(bookmarks)
     .set({
       snapshotHtmlPath: htmlPath,
-      snapshotScreenshotPath: screenshotPath,
+      // No browser means no pixel screenshot; clear any stale one from an
+      // earlier capture so the UI doesn't offer a mismatched image.
+      snapshotScreenshotPath: null,
       snapshotTextPath: textPath,
       ...(titleUpdate ?? {}),
       snapshotStatus: "ready",

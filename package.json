@@ -1,7 +1,7 @@
 {
   "name": "awesome-bookmarks",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=22.0.0"

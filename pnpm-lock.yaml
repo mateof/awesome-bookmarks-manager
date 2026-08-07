@@ -74,9 +74,6 @@ importers:
       node-html-parser:
         specifier: ^6.1.13
         version: 6.1.13
-      playwright-core:
-        specifier: 1.48.2
-        version: 1.48.2
       sanitize-html:
         specifier: ^2.13.1
         version: 2.17.3
@@ -3172,11 +3169,6 @@ packages:
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
-
-  playwright-core@1.48.2:
-    resolution: {integrity: sha512-sjjw+qrLFlriJo64du+EK0kJgZzoQPsabGF4lBvsid+3CNIZIYLgnMj9V6JY5VhM2Peh20DJWIVpVljLLnlawA==}
-    engines: {node: '>=18'}
-    hasBin: true
 
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
@@ -6595,8 +6587,6 @@ snapshots:
   pirates@4.0.7: {}
 
   pkce-challenge@5.0.1: {}
-
-  playwright-core@1.48.2: {}
 
   postcss-import@15.1.0(postcss@8.5.13):
     dependencies:

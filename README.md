@@ -12,14 +12,16 @@ one port.
   (Tiptap editor), custom icons, and tags.
 - **Tags** with color picker, autocomplete, in-line creation, and a
   dedicated `/tag/:id` view.
-- **Page snapshots** — every bookmark gets a full Chromium-rendered HTML copy
-  + screenshot + readable text, captured by a background worker and served
-  back as a sandboxed iframe / image in the bookmark detail.
+- **Page snapshots** (Wallabag-style) — a background worker fetches each
+  bookmark over HTTP and extracts the readable article (Mozilla Readability)
+  plus its text, served back as a sandboxed reader iframe in the detail view.
+  No headless browser, so the runtime image ships no Chromium; the trade-off
+  is no pixel screenshot and limited fidelity on JS-only / SPA pages.
 - **Full-text search** over snapshot contents (SQLite FTS5), with
   **Levenshtein fuzzy matching** on titles/URLs (typo-tolerant) and a
   GitHub-style chip to scope the search to the current folder.
-- **Five view modes** for folders/bookmarks: grid, compact list, large cards
-  (with snapshot thumbnails), detail table, icon mosaic. Persisted per device.
+- **Five view modes** for folders/bookmarks: grid, compact list, large cards,
+  detail table, icon mosaic. Persisted per device.
 - **Multi-select** on hover with checkboxes + 3-dot kebab menus for each
   card. Batch open-in-tabs, export, and delete.
 - **Export to HTML** in the standard Netscape Bookmark format — re-importable
@@ -136,7 +138,6 @@ Requirements:
 
 - **Node.js ≥ 22**
 - **pnpm ≥ 9** (`corepack enable && corepack prepare pnpm@9.12.0 --activate`)
-- **Chromium** for snapshots — installed on first run via Playwright
 
 ```bash
 git clone https://github.com/mateof/awesome-bookmarks-manager.git
@@ -150,9 +151,6 @@ cat > .env <<EOF
 MASTER_KEY=$(openssl rand -base64 32)
 SESSION_SECRET=$(openssl rand -base64 48)
 EOF
-
-# Install Playwright Chromium (~150MB, one-time)
-pnpm dlx playwright@1.48.0 install chromium
 
 # Run everything (api + web + extension watch)
 pnpm dev

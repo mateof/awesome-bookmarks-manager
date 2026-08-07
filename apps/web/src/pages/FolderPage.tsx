@@ -1206,24 +1206,6 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
     >
-      {b.hasSnapshot && (
-        <a
-          href={b.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block aspect-video bg-slate-100 dark:bg-slate-800"
-        >
-          <img
-            src={api.bookmarkScreenshotUrl(b.id)}
-            alt=""
-            loading="lazy"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = "none";
-            }}
-            className="h-full w-full object-cover object-top"
-          />
-        </a>
-      )}
       <HoverCheckbox
         selected={selected}
         onToggle={() => p.toggle(key)}
