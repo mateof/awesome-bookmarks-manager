@@ -72,6 +72,7 @@ export function ensureSchema() {
       counter INTEGER NOT NULL DEFAULT 0,
       transports TEXT,
       dek_wrap BLOB NOT NULL,
+      prfless INTEGER NOT NULL DEFAULT 0,
       label TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
       last_used_at TEXT
@@ -225,6 +226,8 @@ export function ensureSchema() {
   tryAddColumn("bookmarks", "image_blob_path", "TEXT");
   // Token-wrapped DEK envelope for headless API / MCP access.
   tryAddColumn("extension_tokens", "dek_wrap", "BLOB");
+  // Passkeys registered before the PRF-less fallback existed default to PRF.
+  tryAddColumn("webauthn_credentials", "prfless", "INTEGER NOT NULL DEFAULT 0");
 
   // Unique index on nickname — applied even if added later. Multiple NULLs are
   // allowed by SQLite UNIQUE constraints, so existing users without a

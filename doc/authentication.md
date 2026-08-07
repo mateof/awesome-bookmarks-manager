@@ -101,6 +101,12 @@ sends the secret over TLS so the server can unwrap the DEK, then discards it,
 same trust model as sending a password. A passkey login counts as full
 authentication and skips the TOTP step.
 
+Some authenticators (e.g. Bitwarden) don't implement PRF. They only work if
+you set `WEBAUTHN_ALLOW_PRFLESS=true`, in which case that passkey's DEK is
+sealed with `MASTER_KEY` alone. That is weaker: a leaked DB plus `MASTER_KEY`
+can then decrypt the account without the password. PRF-capable passkeys are
+unaffected and keep the stronger guarantee. Off by default.
+
 ## HTTPS
 
 Serve behind HTTPS in production and set `COOKIE_SECURE=true`. Bearer tokens

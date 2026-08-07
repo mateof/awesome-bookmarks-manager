@@ -43,6 +43,14 @@ const Schema = z.object({
   WEBAUTHN_RP_ID: z.string().optional(),
   WEBAUTHN_ORIGIN: z.string().optional(),
   WEBAUTHN_RP_NAME: z.string().default("AwesomeBookmarks"),
+  // Allow passkeys from authenticators that lack the PRF extension (e.g.
+  // Bitwarden). Such a passkey can't derive a key, so the DEK is sealed with
+  // MASTER_KEY alone: whoever holds the DB + MASTER_KEY can then decrypt that
+  // account without the password. Off by default; a deliberate downgrade.
+  WEBAUTHN_ALLOW_PRFLESS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 
   KEY_CACHE_IDLE_MIN: z.coerce.number().int().default(30),
   KEY_CACHE_HARD_MIN: z.coerce.number().int().default(1440),

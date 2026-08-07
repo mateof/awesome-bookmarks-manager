@@ -115,12 +115,19 @@ export async function verifyRegistration(
   if (!verification.verified || !verification.registrationInfo) {
     throw BadRequest("No se pudo verificar la passkey");
   }
+  const { credential } = verification.registrationInfo;
   const prf = Buffer.from(input.prfSecret, "base64url");
-  if (prf.length < 16) {
+  let dekWrap: Buffer;
+  let prfless = false;
+  if (prf.length >= 16) {
+    dekWrap = sealDek(ctx.userId, credential.id, ctx.dek, prf);
+  } else if (c.allowPrfless) {
+    // No PRF: seal the DEK with the master key alone (recoverable server-side).
+    dekWrap = masterWrap(ctx.userId, ctx.dek);
+    prfless = true;
+  } else {
     throw BadRequest("Este autenticador no soporta PRF (necesario para passkeys)");
   }
-  const { credential } = verification.registrationInfo;
-  const dekWrap = sealDek(ctx.userId, credential.id, ctx.dek, prf);
   getDb()
     .insert(webauthnCredentials)
     .values({
@@ -131,6 +138,7 @@ export async function verifyRegistration(
       counter: credential.counter,
       transports: credential.transports?.join(",") ?? null,
       dekWrap,
+      prfless,
       label: input.label?.trim().slice(0, 64) || "Passkey",
     })
     .run();
@@ -183,9 +191,15 @@ export async function verifyAuthentication(input: {
     })
     .where(eq(webauthnCredentials.id, row.id))
     .run();
-  const prf = Buffer.from(input.prfSecret, "base64url");
-  if (prf.length < 16) throw Unauthorized("Falta el secreto PRF de la passkey");
-  const dek = openDek(row.userId, row.credentialId, Buffer.from(row.dekWrap), prf);
+  let dek: Buffer;
+  if (row.prfless) {
+    // No PRF at registration: DEK sealed with the master key alone.
+    dek = masterUnwrap(row.userId, Buffer.from(row.dekWrap));
+  } else {
+    const prf = Buffer.from(input.prfSecret, "base64url");
+    if (prf.length < 16) throw Unauthorized("Falta el secreto PRF de la passkey");
+    dek = openDek(row.userId, row.credentialId, Buffer.from(row.dekWrap), prf);
+  }
   return { userId: row.userId, dek };
 }
 

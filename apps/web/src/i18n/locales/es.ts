@@ -222,6 +222,8 @@ const es = {
     noPasskeys: "No hay passkeys registradas.",
     passkeyNamePlaceholder: "Nombre (ej. Mi móvil)",
     addPasskey: "Añadir passkey",
+    prflessNote:
+      "Este servidor permite passkeys sin PRF (p. ej. Bitwarden). Esas passkeys ofrecen menos garantía: tus datos quedan recuperables con la clave del servidor.",
   },
   bookmark: {
     detailLink: "detalle →",

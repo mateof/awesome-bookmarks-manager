@@ -424,6 +424,11 @@ function PasskeysCard() {
         </p>
       ) : (
         <div className="space-y-3">
+          {cfg.data.allowPrfless && (
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              {t("twofa.prflessNote")}
+            </p>
+          )}
           <div className="space-y-2">
             {(creds.data ?? []).map((c) => (
               <div

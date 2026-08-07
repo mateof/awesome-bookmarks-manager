@@ -221,6 +221,8 @@ const en = {
     noPasskeys: "No passkeys registered.",
     passkeyNamePlaceholder: "Name (e.g. My phone)",
     addPasskey: "Add passkey",
+    prflessNote:
+      "This server allows PRF-less passkeys (e.g. Bitwarden). Those are weaker: your data becomes recoverable with the server key.",
   },
   bookmark: {
     detailLink: "detail →",

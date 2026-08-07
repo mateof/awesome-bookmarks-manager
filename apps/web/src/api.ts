@@ -135,7 +135,9 @@ export const api = {
 
   // passkeys (WebAuthn) — options/responses are opaque WebAuthn JSON
   webauthnConfig: () =>
-    request<{ enabled: boolean; rpId: string | null }>("/webauthn/config"),
+    request<{ enabled: boolean; rpId: string | null; allowPrfless: boolean }>(
+      "/webauthn/config",
+    ),
   webauthnRegisterOptions: () =>
     request<unknown>("/webauthn/register/options", { method: "POST" }),
   webauthnRegisterVerify: (body: {

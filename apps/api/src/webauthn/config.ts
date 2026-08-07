@@ -4,6 +4,8 @@ export interface WebAuthnConfig {
   rpID: string;
   rpName: string;
   origins: string[];
+  /** Accept passkeys without the PRF extension (DEK sealed with MASTER_KEY). */
+  allowPrfless: boolean;
 }
 
 /**
@@ -22,5 +24,10 @@ export function webauthnConfig(): WebAuthnConfig | null {
     .map((s) => s.trim())
     .filter(Boolean);
   if (origins.length === 0) return null;
-  return { rpID, rpName: env.WEBAUTHN_RP_NAME, origins };
+  return {
+    rpID,
+    rpName: env.WEBAUTHN_RP_NAME,
+    origins,
+    allowPrfless: env.WEBAUTHN_ALLOW_PRFLESS,
+  };
 }

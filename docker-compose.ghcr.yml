@@ -38,6 +38,8 @@ services:
       # domain, not an IP. Left empty here so passkeys stay off by default.
       WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
       WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-}
+      # Set true to allow PRF-less passkeys (e.g. Bitwarden). Weaker: see .env.example.
+      WEBAUTHN_ALLOW_PRFLESS: ${WEBAUTHN_ALLOW_PRFLESS:-false}
     volumes:
       - ./data:/data
     ports:

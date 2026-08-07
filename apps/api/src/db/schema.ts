@@ -67,6 +67,9 @@ export const webauthnCredentials = sqliteTable(
     counter: integer("counter").notNull().default(0),
     transports: text("transports"), // CSV
     dekWrap: blob("dek_wrap", { mode: "buffer" }).notNull(),
+    // When true the credential has no PRF: dekWrap is masterWrap(dek) only,
+    // recoverable with MASTER_KEY (weaker). See WEBAUTHN_ALLOW_PRFLESS.
+    prfless: integer("prfless", { mode: "boolean" }).notNull().default(false),
     label: text("label").notNull(),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     lastUsedAt: text("last_used_at"),

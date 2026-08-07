@@ -30,7 +30,11 @@ export const webauthnRoutes: FastifyPluginAsync = async (app) => {
   // Public: lets the SPA show/hide the passkey UI.
   app.get("/webauthn/config", async () => {
     const c = webauthnConfig();
-    return { enabled: !!c, rpId: c?.rpID ?? null };
+    return {
+      enabled: !!c,
+      rpId: c?.rpID ?? null,
+      allowPrfless: c?.allowPrfless ?? false,
+    };
   });
 
   app.post("/webauthn/register/options", async (req) => {

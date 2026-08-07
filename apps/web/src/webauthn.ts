@@ -68,7 +68,15 @@ export async function registerPasskey(label: string): Promise<void> {
     // right after creating so we can wrap the DEK.
     prf = await evaluatePrf(cred.rawId, options.rp?.id);
   }
-  if (!prf) throw new Error("PRF_UNSUPPORTED");
+  // No PRF (e.g. Bitwarden): only allowed if the server permits PRF-less
+  // passkeys; otherwise fail with a clear, actionable message.
+  let prfSecret = "";
+  if (prf) {
+    prfSecret = bufToB64url(prf);
+  } else {
+    const cfg = await api.webauthnConfig();
+    if (!cfg.allowPrfless) throw new Error("PRF_UNSUPPORTED");
+  }
 
   const att = cred.response as AuthenticatorAttestationResponse;
   await api.webauthnRegisterVerify({
@@ -84,7 +92,7 @@ export async function registerPasskey(label: string): Promise<void> {
       clientExtensionResults: {},
       type: "public-key",
     },
-    prfSecret: bufToB64url(prf),
+    prfSecret,
     label,
   });
 }
@@ -125,8 +133,9 @@ export async function loginWithPasskey(): Promise<MeResponse> {
     publicKey,
   })) as PublicKeyCredential | null;
   if (!cred) throw new Error("No se obtuvo la passkey");
+  // Send the PRF secret if the authenticator produced one; PRF-less
+  // credentials are unwrapped server-side with the master key instead.
   const prf = readPrf(cred);
-  if (!prf) throw new Error("PRF_UNSUPPORTED");
 
   const asr = cred.response as AuthenticatorAssertionResponse;
   return api.webauthnLoginVerify({
@@ -143,6 +152,6 @@ export async function loginWithPasskey(): Promise<MeResponse> {
       clientExtensionResults: {},
       type: "public-key",
     },
-    prfSecret: bufToB64url(prf),
+    prfSecret: prf ? bufToB64url(prf) : "",
   });
 }
