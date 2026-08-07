@@ -40,6 +40,8 @@ export const TemplateConfigSchema = z.object({
   card: TemplateCardSchema,
   font: z.string().max(200).optional(),
   header: z.enum(["banner", "minimal", "hidden"]).optional(),
+  /** Show the tag filter bar in the panel (default true). */
+  tagFilter: z.boolean().optional(),
 });
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
 

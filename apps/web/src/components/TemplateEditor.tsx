@@ -30,6 +30,7 @@ const BASE: TemplateConfig = {
     showTags: true,
   },
   header: "banner",
+  tagFilter: true,
 };
 
 const input =
@@ -141,6 +142,16 @@ export function TemplateEditor({
                 {label}
               </label>
             ))}
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={config.tagFilter !== false}
+                onChange={(e) =>
+                  setConfig((c) => ({ ...c, tagFilter: e.target.checked }))
+                }
+              />
+              {t("panels.tagFilter")}
+            </label>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">

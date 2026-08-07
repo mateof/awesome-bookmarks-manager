@@ -19,6 +19,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
     name: "Cuadrícula",
     config: {
       layout: "grid",
+      tagFilter: true,
       columns: 4,
       theme: {
         bg: "linear-gradient(160deg,#f8fafc 0%,#eef2ff 100%)",
@@ -44,6 +45,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
     name: "Bento",
     config: {
       layout: "bento",
+      tagFilter: true,
       theme: {
         bg: "radial-gradient(1200px 600px at 10% -10%,#1e293b 0%,#0b1020 55%)",
         surface: "rgba(19,26,46,0.85)",
@@ -68,6 +70,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
     name: "Terminal",
     config: {
       layout: "terminal",
+      tagFilter: false,
       theme: {
         bg: "#05060a",
         surface: "#080d0a",
@@ -93,6 +96,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
     name: "Lista minimal",
     config: {
       layout: "list",
+      tagFilter: true,
       theme: {
         bg: "#ffffff",
         surface: "#ffffff",
@@ -107,7 +111,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
         showIcon: true,
         showDescription: true,
         showUrl: true,
-        showTags: false,
+        showTags: true,
       },
       font: "'Inter',ui-sans-serif,system-ui,sans-serif",
       header: "minimal",
@@ -118,6 +122,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
     name: "Dashboard",
     config: {
       layout: "dashboard",
+      tagFilter: true,
       columns: 3,
       theme: {
         bg: "linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#db2777 100%)",
@@ -133,7 +138,7 @@ export const DEFAULT_TEMPLATES: { id: string; name: string; config: TemplateConf
         showIcon: true,
         showDescription: false,
         showUrl: false,
-        showTags: false,
+        showTags: true,
       },
       header: "banner",
     },

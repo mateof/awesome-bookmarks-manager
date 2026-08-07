@@ -137,6 +137,7 @@ const es = {
     templateName: "Nombre",
     layout: "Distribución",
     columns: "Columnas",
+    tagFilter: "Filtro de tags",
   },
   tags: {
     pageTitle: "Tags",

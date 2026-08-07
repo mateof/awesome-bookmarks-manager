@@ -38,6 +38,16 @@ one port.
 - **Groups** — invite people by email, share folders or bookmarks with the
   group; group members see them in a "Shared with me" section.
 - **Public share links** with optional password and expiration.
+- **Panels** — turn any folder into a shareable, template-styled dashboard
+  (homepage-style) at `/panel/{slug}`. Navigable subfolders, clickable tag
+  chips and a live tag filter, five built-in templates (Grid, Bento, Terminal,
+  Minimal, Dashboard) plus a template editor with JSON import/export. Each
+  panel can be public, password-protected, or shared with specific users.
+- **Two-factor authentication (TOTP)** — optional per user, enforceable for
+  everyone by the admin, with a trusted-network bypass for the LAN.
+- **Passkeys (WebAuthn)** — optional passwordless login (needs a domain over
+  HTTPS); PRF-based DEK unlock, with an opt-in PRF-less mode for authenticators
+  like Bitwarden.
 - **Cloud backups** to Google Drive, OneDrive, or Synology (WebDAV) — manual
   or scheduled.
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
@@ -109,10 +119,27 @@ MS_CLIENT_ID=
 MS_CLIENT_SECRET=
 MS_REDIRECT_URI=https://your.domain/api/cloud/connect/onedrive/callback
 
+# Public base URL — used to build share/panel links (set it to how you
+# actually reach the app, including scheme and port).
+PUBLIC_BASE_URL=https://bookmarks.example.com
+
+# Keep the session across restarts/updates without re-entering the password
+# (weaker: server secrets can then recover the key). Off by default.
+PERSIST_SESSION_KEY=false
+
+# Passkeys (WebAuthn). Needs a domain, not an IP, over HTTPS.
+WEBAUTHN_RP_ID=bookmarks.example.com
+WEBAUTHN_ORIGIN=https://bookmarks.example.com
+WEBAUTHN_ALLOW_PRFLESS=false   # true to allow Bitwarden (weaker, see docs)
+
+# Only honour X-Forwarded-For behind a trusted reverse proxy (needed for the
+# 2FA trusted-network bypass to see the real client IP).
+TRUSTED_PROXY=false
+
 # Tuning
 KEY_CACHE_IDLE_MIN=30        # how long a user's data key stays cached
 KEY_CACHE_HARD_MIN=1440      # absolute upper bound
-SNAPSHOT_CONCURRENCY=2       # parallel Playwright captures
+SNAPSHOT_CONCURRENCY=2       # parallel snapshot fetches
 ```
 
 ## Quickstart — build locally
@@ -192,6 +219,45 @@ generate the token from the web UI in Settings).
 Use the export button in any folder header, the kebab menu on a single
 item, or the batch toolbar after multi-selecting. The output is a standard
 Netscape Bookmark HTML file, re-importable by every major browser.
+
+## Panels — shareable dashboards
+
+Turn any folder into a polished, standalone dashboard of its bookmarks
+(think Homer / Dashy / Flame), reachable at `/panel/{slug}`.
+
+**Create one:** open a folder, use the ⋮ menu on a folder card → **Generate
+panel**. Pick a name (which becomes the URL slug), a **template**, and an
+**access mode**. You get a shareable URL back.
+
+**What a viewer sees:** the folder's bookmarks laid out per the template, with
+favicons, descriptions and **tag chips**. Subfolders are **navigable** in
+place (nothing else in your account is exposed). A **tag filter bar** lets the
+viewer filter across the whole panel by tag (AND/OR), and clicking any tag chip
+on a card filters by it — switching to a flat "results" view.
+
+**Access modes** (you choose per panel):
+
+| Mode | Who can see it |
+|------|----------------|
+| Public | Anyone with the link |
+| Password | Anyone with the link **and** the password |
+| Users | Only the specific accounts you list by email (they must log in) |
+
+**Templates** are JSON configs (layout, theme colours, card options, tag
+filter) — safe to render on public pages and easy to move around. Manage
+everything from the **Panels** entry in the sidebar:
+
+- *Panels* tab: search, preview, copy URL, **regenerate**, edit, delete.
+- *Templates* tab: five built-ins (Grid, Bento, Terminal, Minimal list,
+  Dashboard), a visual **editor**, **duplicate** a built-in, and
+  **import / export** templates as `.json` files.
+
+**How it works / crypto note:** creating or regenerating a panel materialises a
+decrypted snapshot of the folder subtree sealed with the server `MASTER_KEY`,
+so public/shared panels render without you being logged in. This is a
+deliberate, per-panel exposure of *shared* content — the rest of your vault
+stays zero-knowledge. Edit a folder afterwards? Hit **Regenerate** to refresh
+the snapshot. Set `PUBLIC_BASE_URL` so the copied URLs match your real host.
 
 ## First-time use
 

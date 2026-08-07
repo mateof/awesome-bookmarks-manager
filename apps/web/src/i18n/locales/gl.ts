@@ -137,6 +137,7 @@ const gl = {
     templateName: "Nome",
     layout: "Distribución",
     columns: "Columnas",
+    tagFilter: "Filtro de etiquetas",
   },
   tags: {
     pageTitle: "Etiquetas",

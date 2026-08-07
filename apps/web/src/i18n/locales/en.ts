@@ -137,6 +137,7 @@ const en = {
     templateName: "Name",
     layout: "Layout",
     columns: "Columns",
+    tagFilter: "Tag filter",
   },
   tags: {
     pageTitle: "Tags",
