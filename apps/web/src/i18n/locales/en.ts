@@ -183,6 +183,13 @@ const en = {
     cancel: "Cancel",
     moving: "Moving…",
   },
+  footer: {
+    madeWithPrefix: "Made with",
+    by: "by",
+    star: "Give it a star",
+    viewRepo: "View on GitHub",
+    report: "Report an issue or suggestion",
+  },
   bookmark: {
     detailLink: "detail →",
     openUrl: "Open URL",

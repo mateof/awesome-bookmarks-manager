@@ -31,6 +31,7 @@ import { useAuth } from "../auth.js";
 import { useActiveFolderId } from "../hooks.js";
 import { BookmarksBar } from "./BookmarksBar.js";
 import { FolderTree } from "./FolderTree.js";
+import { Footer } from "./Footer.js";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -342,7 +343,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <main className="flex-1 overflow-auto p-3 sm:p-6">{children}</main>
+        <main className="flex flex-1 flex-col overflow-auto p-3 sm:p-6">
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </main>
       </div>
     </div>
     </DndContext>

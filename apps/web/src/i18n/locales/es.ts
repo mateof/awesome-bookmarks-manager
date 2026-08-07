@@ -183,6 +183,13 @@ const es = {
     cancel: "Cancelar",
     moving: "Moviendo…",
   },
+  footer: {
+    madeWithPrefix: "Hecho con",
+    by: "por",
+    star: "Dale una estrella",
+    viewRepo: "Ver en GitHub",
+    report: "Reportar incidencia o sugerencia",
+  },
   bookmark: {
     detailLink: "detalle →",
     openUrl: "Abrir URL",

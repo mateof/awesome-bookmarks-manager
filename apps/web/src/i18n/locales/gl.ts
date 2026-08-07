@@ -183,6 +183,13 @@ const gl = {
     cancel: "Cancelar",
     moving: "Movendo…",
   },
+  footer: {
+    madeWithPrefix: "Feito con",
+    by: "por",
+    star: "Dálle unha estrela",
+    viewRepo: "Ver en GitHub",
+    report: "Informar dun problema ou suxestión",
+  },
   bookmark: {
     detailLink: "detalle →",
     openUrl: "Abrir URL",
