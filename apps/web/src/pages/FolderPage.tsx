@@ -4,6 +4,7 @@ import {
   Download,
   ExternalLink,
   FolderClosed,
+  FolderInput,
   FolderPlus,
   Palette,
   PencilLine,
@@ -23,6 +24,7 @@ import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { IconPicker } from "../components/IconPicker.js";
 import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
 import { Modal } from "../components/Modal.js";
+import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { RichTextView } from "../components/RichTextView.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
@@ -102,6 +104,10 @@ export function FolderPage() {
   const [selection, setSelection] = useState<Set<SelectionKey>>(
     () => new Set(),
   );
+  const [moveTarget, setMoveTarget] = useState<{
+    folderIds: string[];
+    bookmarkIds: string[];
+  } | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["folders"] });
@@ -322,11 +328,49 @@ export function FolderPage() {
     if (failures.length > 0) alert(failures.join("\n"));
   };
 
+  // Move folders/bookmarks into `dest` (null = root). Position 0 mirrors the
+  // drag-to-nest path so both entry points behave the same.
+  const moveItems = async (
+    ids: { folderIds: string[]; bookmarkIds: string[] },
+    dest: string | null,
+  ) => {
+    const failures: string[] = [];
+    await Promise.all([
+      ...ids.folderIds.map((id) =>
+        api.moveFolder(id, dest, 0).catch((e) => {
+          failures.push(
+            t("folder.folderBatchError", {
+              id,
+              message: e instanceof Error ? e.message : t("common.error"),
+            }),
+          );
+        }),
+      ),
+      ...ids.bookmarkIds.map((id) =>
+        api.moveBookmark(id, dest, 0).catch((e) => {
+          failures.push(
+            t("folder.bookmarkBatchError", {
+              id,
+              message: e instanceof Error ? e.message : t("common.error"),
+            }),
+          );
+        }),
+      ),
+    ]);
+    invalidate();
+    if (failures.length > 0) alert(failures.join("\n"));
+  };
+
   const folderKebab = (f: Folder): KebabItem[] => [
     {
       label: t("folder.editFolderKebab"),
       icon: <PencilLine className="h-4 w-4" />,
       onClick: () => setEditingFolder(f),
+    },
+    {
+      label: t("folder.moveKebab"),
+      icon: <FolderInput className="h-4 w-4" />,
+      onClick: () => setMoveTarget({ folderIds: [f.id], bookmarkIds: [] }),
     },
     {
       label: t("background.kebabItem"),
@@ -351,6 +395,11 @@ export function FolderPage() {
       label: t("folder.editBookmarkKebab"),
       icon: <PencilLine className="h-4 w-4" />,
       onClick: () => setEditingBookmark(b),
+    },
+    {
+      label: t("folder.moveKebab"),
+      icon: <FolderInput className="h-4 w-4" />,
+      onClick: () => setMoveTarget({ folderIds: [], bookmarkIds: [b.id] }),
     },
     {
       label: t("background.kebabItem"),
@@ -468,6 +517,17 @@ export function FolderPage() {
             <ExternalLink className="h-4 w-4" /> {t("folder.selectionOpenTabs")}
           </button>
           <button
+            onClick={() =>
+              setMoveTarget({
+                folderIds: selectedFolderIds,
+                bookmarkIds: selectedBookmarkIds,
+              })
+            }
+            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <FolderInput className="h-4 w-4" /> {t("folder.selectionMove")}
+          </button>
+          <button
             onClick={exportSelection}
             className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
@@ -550,6 +610,19 @@ export function FolderPage() {
           target={appearanceTarget}
           onClose={() => setAppearanceTarget(null)}
           onSaved={invalidate}
+        />
+      )}
+      {moveTarget && (
+        <MoveToDialog
+          folders={folders.data ?? []}
+          movingFolderIds={moveTarget.folderIds}
+          count={moveTarget.folderIds.length + moveTarget.bookmarkIds.length}
+          onClose={() => setMoveTarget(null)}
+          onConfirm={async (dest) => {
+            await moveItems(moveTarget, dest);
+            clearSelection();
+            setMoveTarget(null);
+          }}
         />
       )}
     </div>
@@ -745,7 +818,7 @@ function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
  */
 function FolderNestZone({ sf, size }: { sf: Folder; size: string }) {
   const { t } = useTranslation();
-  const nest = useNestDrop(sf.id);
+  const nest = useNestDrop(sf.id, "card");
   return (
     <span
       ref={nest.ref}

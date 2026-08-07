@@ -128,6 +128,7 @@ const es = {
     shareWithGroup: "Compartir con grupo",
     editFolderKebab: "Editar carpeta",
     editBookmarkKebab: "Editar bookmark",
+    moveKebab: "Mover a…",
     deleteFolderKebab: "Eliminar carpeta",
     exportFolderKebab: "Exportar carpeta",
     exportBookmarkKebab: "Exportar bookmark",
@@ -145,6 +146,7 @@ const es = {
     selectionOpenTabsTitle:
       "Abrir todos los enlaces de la selección (recursivo en carpetas)",
     selectionExport: "Exportar",
+    selectionMove: "Mover a",
     selectionDelete: "Eliminar",
     selectionCancel: "Cancelar",
     confirmTooManyTabs: "Vas a abrir {{count}} pestañas. ¿Continuar?",
@@ -171,6 +173,15 @@ const es = {
     fieldFolderName: "Nombre",
     fieldDescription: "Notas, contraseñas, instrucciones…",
     errorGenericSave: "Error al guardar",
+  },
+  moveDialog: {
+    title: "Mover a carpeta",
+    description_one: "Elige el destino para {{count}} elemento.",
+    description_other: "Elige el destino para {{count}} elementos.",
+    root: "Inicio (raíz)",
+    confirm: "Mover aquí",
+    cancel: "Cancelar",
+    moving: "Moviendo…",
   },
   bookmark: {
     detailLink: "detalle →",

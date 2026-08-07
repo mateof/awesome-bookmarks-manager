@@ -17,7 +17,7 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
   const roots = folders.filter((f) => f.parentId === null);
   const activeId = useActiveFolderId();
   // "Home" is a drop target for the root (move a folder/bookmark to top level).
-  const rootDrop = useNestDrop(null);
+  const rootDrop = useNestDrop(null, "side");
 
   // Auto-expand the path from root to the active folder so the highlight
   // is always visible even if the user manually collapsed parents earlier.
@@ -74,7 +74,7 @@ function Node({
   useEffect(() => {
     if (onPath) setOpen(true);
   }, [onPath]);
-  const drop = useNestDrop(folder.id);
+  const drop = useNestDrop(folder.id, "side");
 
   const children = folders.filter((f) => f.parentId === folder.id);
   const isActive = activeId === folder.id;

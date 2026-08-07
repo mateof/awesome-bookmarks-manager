@@ -128,6 +128,7 @@ const en = {
     shareWithGroup: "Share with group",
     editFolderKebab: "Edit folder",
     editBookmarkKebab: "Edit bookmark",
+    moveKebab: "Move to…",
     deleteFolderKebab: "Delete folder",
     exportFolderKebab: "Export folder",
     exportBookmarkKebab: "Export bookmark",
@@ -145,6 +146,7 @@ const en = {
     selectionOpenTabsTitle:
       "Open all links in the selection (recursive for folders)",
     selectionExport: "Export",
+    selectionMove: "Move to",
     selectionDelete: "Delete",
     selectionCancel: "Cancel",
     confirmTooManyTabs: "You are about to open {{count}} tabs. Continue?",
@@ -171,6 +173,15 @@ const en = {
     fieldFolderName: "Name",
     fieldDescription: "Notes, passwords, instructions…",
     errorGenericSave: "Error saving",
+  },
+  moveDialog: {
+    title: "Move to folder",
+    description_one: "Choose the destination for {{count}} item.",
+    description_other: "Choose the destination for {{count}} items.",
+    root: "Home (root)",
+    confirm: "Move here",
+    cancel: "Cancel",
+    moving: "Moving…",
   },
   bookmark: {
     detailLink: "detail →",

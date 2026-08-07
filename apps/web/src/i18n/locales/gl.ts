@@ -128,6 +128,7 @@ const gl = {
     shareWithGroup: "Compartir con grupo",
     editFolderKebab: "Editar cartafol",
     editBookmarkKebab: "Editar marcador",
+    moveKebab: "Mover a…",
     deleteFolderKebab: "Eliminar cartafol",
     exportFolderKebab: "Exportar cartafol",
     exportBookmarkKebab: "Exportar marcador",
@@ -145,6 +146,7 @@ const gl = {
     selectionOpenTabsTitle:
       "Abrir todos os enlaces da selección (recursivo nos cartafoles)",
     selectionExport: "Exportar",
+    selectionMove: "Mover a",
     selectionDelete: "Eliminar",
     selectionCancel: "Cancelar",
     confirmTooManyTabs: "Vas abrir {{count}} lapelas. Continuar?",
@@ -171,6 +173,15 @@ const gl = {
     fieldFolderName: "Nome",
     fieldDescription: "Notas, contrasinais, instrucións…",
     errorGenericSave: "Erro ao gardar",
+  },
+  moveDialog: {
+    title: "Mover a cartafol",
+    description_one: "Escolle o destino para {{count}} elemento.",
+    description_other: "Escolle o destino para {{count}} elementos.",
+    root: "Inicio (raíz)",
+    confirm: "Mover aquí",
+    cancel: "Cancelar",
+    moving: "Movendo…",
   },
   bookmark: {
     detailLink: "detalle →",
