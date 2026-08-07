@@ -86,6 +86,21 @@ cache without a password prompt. The trade-off: whoever holds both server
 secrets (`MASTER_KEY` + `SESSION_SECRET`) can then recover the DEK from a
 cookie without the password. Off by default.
 
+### Passkeys (WebAuthn)
+
+Optional passwordless login. Disabled unless `WEBAUTHN_RP_ID` (a domain) and
+`WEBAUTHN_ORIGIN` (its https URL) are set; WebAuthn forbids IP-address RP IDs,
+so this needs a real hostname over HTTPS (a bare `https://<ip>:<port>` will not
+work). Enrollment happens in Settings > Security while logged in.
+
+Because the app decrypts data server-side, a passkey must be able to unlock the
+DEK. We use the WebAuthn **PRF** extension: the credential derives a stable
+per-credential secret client-side, which wraps a copy of the DEK (that envelope
+is also sealed with `MASTER_KEY`). On login the browser evaluates the PRF and
+sends the secret over TLS so the server can unwrap the DEK, then discards it,
+same trust model as sending a password. A passkey login counts as full
+authentication and skips the TOTP step.
+
 ## HTTPS
 
 Serve behind HTTPS in production and set `COOKIE_SECURE=true`. Bearer tokens

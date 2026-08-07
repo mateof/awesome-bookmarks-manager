@@ -30,6 +30,10 @@ services:
       # Set true only behind a trusted reverse proxy (needed for the 2FA
       # trusted-network bypass to read the real client IP).
       TRUSTED_PROXY: ${TRUSTED_PROXY:-false}
+      # Passkeys: set RP ID (domain) + origin (https URL) to enable. Needs a
+      # domain, not an IP. Left empty here so passkeys stay off by default.
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-}
     volumes:
       - ./data:/data
     ports:

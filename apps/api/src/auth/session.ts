@@ -14,6 +14,8 @@ declare module "@fastify/secure-session" {
     // Lets a request rehydrate the in-memory key cache after a restart without
     // asking for the password again.
     dekWrap: string;
+    // In-flight WebAuthn challenge (base64url) for a register/login ceremony.
+    waChallenge: string;
   }
 }
 

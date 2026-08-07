@@ -4,6 +4,7 @@ import {
   Cloud as CloudIcon,
   Copy,
   Download,
+  Fingerprint,
   HelpCircle,
   KeyRound,
   Plus,
@@ -18,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { registerPasskey, passkeysSupported } from "../webauthn.js";
 import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
 import { Modal } from "../components/Modal.js";
@@ -355,7 +357,115 @@ function Security() {
         </div>
       </Card>
       <TwoFactorCard />
+      <PasskeysCard />
     </div>
+  );
+}
+
+function PasskeysCard() {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const cfg = useQuery({
+    queryKey: ["webauthn-config"],
+    queryFn: api.webauthnConfig,
+  });
+  const enabled = cfg.data?.enabled === true;
+  const creds = useQuery({
+    queryKey: ["webauthn-creds"],
+    queryFn: api.webauthnCredentials,
+    enabled: enabled && passkeysSupported(),
+  });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [label, setLabel] = useState("");
+  const del = useMutation({
+    mutationFn: (id: string) => api.webauthnDeleteCredential(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["webauthn-creds"] }),
+  });
+
+  if (!cfg.data) return null;
+
+  const add = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await registerPasskey(label.trim() || "Passkey");
+      setLabel("");
+      qc.invalidateQueries({ queryKey: ["webauthn-creds"] });
+    } catch (e) {
+      setErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : t("common.error"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <SectionHeader
+        icon={<Fingerprint className="h-5 w-5" />}
+        title={t("twofa.passkeysHeading")}
+        subtitle={t("twofa.passkeysHint")}
+      />
+      {!enabled ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {t("twofa.passkeysDisabled")}
+        </p>
+      ) : !passkeysSupported() ? (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {t("twofa.passkeysUnsupported")}
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            {(creds.data ?? []).map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{c.label}</div>
+                  <div className="text-xs text-slate-500">
+                    {t("twofa.passkeyCreated", { when: c.createdAt.slice(0, 10) })}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm(t("twofa.passkeyConfirmDelete"))) del.mutate(c.id);
+                  }}
+                  className={btnDanger}
+                >
+                  {t("settings.admin.delete")}
+                </button>
+              </div>
+            ))}
+            {(creds.data ?? []).length === 0 && (
+              <div className="text-sm text-slate-400">
+                {t("twofa.noPasskeys")}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder={t("twofa.passkeyNamePlaceholder")}
+              className={`${inputCls} max-w-xs`}
+            />
+            <button onClick={add} disabled={busy} className={btnPrimary}>
+              <Fingerprint className="h-4 w-4" />{" "}
+              {busy ? t("common.saving") : t("twofa.addPasskey")}
+            </button>
+          </div>
+          {err && <div className="text-sm text-red-600">{err}</div>}
+        </div>
+      )}
+    </Card>
   );
 }
 

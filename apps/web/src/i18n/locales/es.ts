@@ -207,6 +207,19 @@ const es = {
     forcedTitle: "Configura la verificación en dos pasos",
     forcedIntro: "El administrador exige 2FA. Configúralo para continuar.",
     loginPrompt: "Código de verificación",
+    loginWithPasskey: "Entrar con passkey",
+    passkeyFailed: "No se pudo usar la passkey.",
+    passkeysHeading: "Passkeys",
+    passkeysHint:
+      "Entra sin contraseña con tu huella, cara o PIN del dispositivo.",
+    passkeysDisabled:
+      "Las passkeys no están habilitadas en este servidor (requieren un dominio con HTTPS).",
+    passkeysUnsupported: "Tu navegador no soporta passkeys.",
+    passkeyCreated: "Creada el {{when}}",
+    passkeyConfirmDelete: "¿Eliminar esta passkey?",
+    noPasskeys: "No hay passkeys registradas.",
+    passkeyNamePlaceholder: "Nombre (ej. Mi móvil)",
+    addPasskey: "Añadir passkey",
   },
   bookmark: {
     detailLink: "detalle →",

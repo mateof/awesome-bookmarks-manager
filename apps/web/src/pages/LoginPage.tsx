@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { Fingerprint } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { loginWithPasskey, passkeysSupported } from "../webauthn.js";
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -16,6 +18,25 @@ export function LoginPage() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig });
+  const waConfig = useQuery({
+    queryKey: ["webauthn-config"],
+    queryFn: api.webauthnConfig,
+  });
+  const showPasskey = waConfig.data?.enabled === true && passkeysSupported();
+
+  const doPasskey = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await loginWithPasskey();
+      refresh();
+      nav("/", { replace: true });
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : t("twofa.passkeyFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   if (user) return <Navigate to="/" replace />;
 
@@ -93,6 +114,16 @@ export function LoginPage() {
         >
           {busy ? t("auth.loginAction") : t("auth.login")}
         </button>
+        {showPasskey && (
+          <button
+            type="button"
+            onClick={doPasskey}
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded border border-slate-300 py-2 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <Fingerprint className="h-4 w-4" /> {t("twofa.loginWithPasskey")}
+          </button>
+        )}
         {config.data?.registrationEnabled !== false && (
           <div className="text-center text-sm">
             <Link

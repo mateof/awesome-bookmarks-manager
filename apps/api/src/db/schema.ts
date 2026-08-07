@@ -50,6 +50,33 @@ export const appSettings = sqliteTable("app_settings", {
   value: text("value").notNull(),
 });
 
+/**
+ * Passkeys (WebAuthn). `dekWrap` holds this user's DEK sealed by a key derived
+ * from the credential's WebAuthn PRF output, so a passkey can unlock the vault
+ * without the password. Only the credential (plus MASTER_KEY) can produce it.
+ */
+export const webauthnCredentials = sqliteTable(
+  "webauthn_credentials",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialId: text("credential_id").notNull(), // base64url
+    publicKey: blob("public_key", { mode: "buffer" }).notNull(),
+    counter: integer("counter").notNull().default(0),
+    transports: text("transports"), // CSV
+    dekWrap: blob("dek_wrap", { mode: "buffer" }).notNull(),
+    label: text("label").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    lastUsedAt: text("last_used_at"),
+  },
+  (t) => ({
+    userIdx: index("webauthn_user_idx").on(t.userId),
+    credIdx: uniqueIndex("webauthn_credential_idx").on(t.credentialId),
+  }),
+);
+
 export const groups = sqliteTable(
   "groups",
   {

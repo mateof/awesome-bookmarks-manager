@@ -37,6 +37,13 @@ const Schema = z.object({
     .default("false")
     .transform((v) => v === "true"),
 
+  // Passkeys (WebAuthn). Disabled unless both RP ID and origin are set.
+  // RP ID must be a domain (NOT an IP); origin is the https URL the app is
+  // served from. Multiple origins can be comma-separated.
+  WEBAUTHN_RP_ID: z.string().optional(),
+  WEBAUTHN_ORIGIN: z.string().optional(),
+  WEBAUTHN_RP_NAME: z.string().default("AwesomeBookmarks"),
+
   KEY_CACHE_IDLE_MIN: z.coerce.number().int().default(30),
   KEY_CACHE_HARD_MIN: z.coerce.number().int().default(1440),
 

@@ -207,6 +207,19 @@ const gl = {
     forcedTitle: "Configura a verificación en dous pasos",
     forcedIntro: "O administrador esixe 2FA. Configúrao para continuar.",
     loginPrompt: "Código de verificación",
+    loginWithPasskey: "Entrar cunha passkey",
+    passkeyFailed: "Non se puido usar a passkey.",
+    passkeysHeading: "Passkeys",
+    passkeysHint:
+      "Entra sen contrasinal coa túa pegada, cara ou PIN do dispositivo.",
+    passkeysDisabled:
+      "As passkeys non están habilitadas neste servidor (precisan un dominio con HTTPS).",
+    passkeysUnsupported: "O teu navegador non soporta passkeys.",
+    passkeyCreated: "Creada o {{when}}",
+    passkeyConfirmDelete: "Eliminar esta passkey?",
+    noPasskeys: "Non hai passkeys rexistradas.",
+    passkeyNamePlaceholder: "Nome (ex. O meu móbil)",
+    addPasskey: "Engadir passkey",
   },
   bookmark: {
     detailLink: "detalle →",

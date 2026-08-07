@@ -64,6 +64,22 @@ export function ensureSchema() {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS webauthn_credentials (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      credential_id TEXT NOT NULL,
+      public_key BLOB NOT NULL,
+      counter INTEGER NOT NULL DEFAULT 0,
+      transports TEXT,
+      dek_wrap BLOB NOT NULL,
+      label TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      last_used_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS webauthn_user_idx ON webauthn_credentials(user_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS webauthn_credential_idx
+      ON webauthn_credentials(credential_id);
+
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

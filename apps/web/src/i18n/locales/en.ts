@@ -206,6 +206,19 @@ const en = {
     forcedTitle: "Set up two-factor authentication",
     forcedIntro: "Your administrator requires 2FA. Set it up to continue.",
     loginPrompt: "Verification code",
+    loginWithPasskey: "Sign in with a passkey",
+    passkeyFailed: "Could not use the passkey.",
+    passkeysHeading: "Passkeys",
+    passkeysHint:
+      "Sign in without a password using your fingerprint, face or device PIN.",
+    passkeysDisabled:
+      "Passkeys are not enabled on this server (they need a domain over HTTPS).",
+    passkeysUnsupported: "Your browser does not support passkeys.",
+    passkeyCreated: "Created on {{when}}",
+    passkeyConfirmDelete: "Remove this passkey?",
+    noPasskeys: "No passkeys registered.",
+    passkeyNamePlaceholder: "Name (e.g. My phone)",
+    addPasskey: "Add passkey",
   },
   bookmark: {
     detailLink: "detail →",

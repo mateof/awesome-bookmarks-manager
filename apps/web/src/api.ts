@@ -132,6 +132,34 @@ export const api = {
       body: JSON.stringify({ code }),
     }),
   logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
+
+  // passkeys (WebAuthn) — options/responses are opaque WebAuthn JSON
+  webauthnConfig: () =>
+    request<{ enabled: boolean; rpId: string | null }>("/webauthn/config"),
+  webauthnRegisterOptions: () =>
+    request<unknown>("/webauthn/register/options", { method: "POST" }),
+  webauthnRegisterVerify: (body: {
+    response: unknown;
+    prfSecret: string;
+    label: string;
+  }) =>
+    request<{ ok: true }>("/webauthn/register/verify", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  webauthnLoginOptions: () =>
+    request<unknown>("/webauthn/login/options", { method: "POST" }),
+  webauthnLoginVerify: (body: { response: unknown; prfSecret: string }) =>
+    request<MeResponse>("/webauthn/login/verify", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  webauthnCredentials: () =>
+    request<
+      { id: string; label: string; createdAt: string; lastUsedAt: string | null }[]
+    >("/webauthn/credentials"),
+  webauthnDeleteCredential: (id: string) =>
+    request<void>(`/webauthn/credentials/${id}`, { method: "DELETE" }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<{ ok: true }>("/auth/change-password", {
       method: "POST",
