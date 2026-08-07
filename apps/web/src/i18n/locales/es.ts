@@ -448,6 +448,10 @@ const es = {
       trustedNetworksHint:
         "IPv4, separadas por comas. Desde estas redes se puede omitir el 2FA. Si usas proxy inverso, activa TRUSTED_PROXY.",
       skip2faOnTrusted: "No pedir 2FA desde una red de confianza",
+      passwordTooShort: "La contraseña debe tener al menos 10 caracteres.",
+      detectedIp: "Tu IP vista por el servidor: {{ip}}.",
+      ipTrusted: "De confianza.",
+      ipNotTrusted: "No es de confianza (revisa los CIDR o el proxy).",
     },
     logs: {
       heading: "Logs de jobs",

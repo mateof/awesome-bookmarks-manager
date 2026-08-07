@@ -447,6 +447,10 @@ const en = {
       trustedNetworksHint:
         "IPv4, comma-separated. 2FA can be skipped from these networks. Behind a reverse proxy, set TRUSTED_PROXY.",
       skip2faOnTrusted: "Don't ask for 2FA from a trusted network",
+      passwordTooShort: "Password must be at least 10 characters.",
+      detectedIp: "Your IP as seen by the server: {{ip}}.",
+      ipTrusted: "Trusted.",
+      ipNotTrusted: "Not trusted (check the CIDRs or your proxy).",
     },
     logs: {
       heading: "Job logs",

@@ -1174,11 +1174,19 @@ function Admin() {
             className={`${inputCls} sm:col-span-2`}
           />
         </div>
+        {nu.password.trim().length > 0 && nu.password.trim().length < 10 && (
+          <div className="mt-1 text-sm text-amber-600 dark:text-amber-500">
+            {t("settings.admin.passwordTooShort")}
+          </div>
+        )}
         <div className="mt-3 flex items-center gap-3">
           <button
             onClick={() => create.mutate()}
             disabled={
-              !nu.email.trim() || nu.nickname.trim().length < 3 || create.isPending
+              !nu.email.trim() ||
+              nu.nickname.trim().length < 3 ||
+              (nu.password.trim().length > 0 && nu.password.trim().length < 10) ||
+              create.isPending
             }
             className={btnPrimary}
           >
@@ -1288,7 +1296,14 @@ function TwoFactorPolicyCard() {
       trustedNetworks?: string[];
       skip2faOnTrusted?: boolean;
     }) => api.adminSetSettings(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-settings"] });
+      qc.invalidateQueries({ queryKey: ["admin-whoami"] });
+    },
+  });
+  const whoami = useQuery({
+    queryKey: ["admin-whoami"],
+    queryFn: api.adminWhoami,
   });
   const [networks, setNetworks] = useState("");
   const [seeded, setSeeded] = useState(false);
@@ -1345,6 +1360,20 @@ function TwoFactorPolicyCard() {
               {t("common.save")}
             </button>
           </div>
+          {whoami.data && (
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t("settings.admin.detectedIp", { ip: whoami.data.ip })}{" "}
+              {whoami.data.trusted ? (
+                <span className="font-medium text-green-600 dark:text-green-400">
+                  {t("settings.admin.ipTrusted")}
+                </span>
+              ) : (
+                <span className="font-medium text-amber-600 dark:text-amber-500">
+                  {t("settings.admin.ipNotTrusted")}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         <label className="flex items-center gap-3 text-sm">

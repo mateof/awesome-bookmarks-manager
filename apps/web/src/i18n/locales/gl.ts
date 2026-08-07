@@ -450,6 +450,10 @@ const gl = {
       trustedNetworksHint:
         "IPv4, separadas por comas. Desde estas redes pódese omitir o 2FA. Se usas proxy inverso, activa TRUSTED_PROXY.",
       skip2faOnTrusted: "Non pedir 2FA desde unha rede de confianza",
+      passwordTooShort: "O contrasinal debe ter polo menos 10 caracteres.",
+      detectedIp: "A túa IP vista polo servidor: {{ip}}.",
+      ipTrusted: "De confianza.",
+      ipNotTrusted: "Non é de confianza (revisa os CIDR ou o proxy).",
     },
     logs: {
       heading: "Rexistros de jobs",

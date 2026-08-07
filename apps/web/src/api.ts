@@ -449,6 +449,8 @@ export const api = {
       oneTimePassword: string;
     }>("/admin/users", { method: "POST", body: JSON.stringify(body) }),
   adminGetSettings: () => request<AppSettings>("/admin/settings"),
+  adminWhoami: () =>
+    request<{ ip: string; trusted: boolean }>("/admin/whoami"),
   adminSetSettings: (body: UpdateAppSettingsBody) =>
     request<AppSettings>("/admin/settings", {
       method: "PATCH",

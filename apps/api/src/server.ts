@@ -87,9 +87,14 @@ export async function buildServer() {
       return;
     }
     if (err instanceof ZodError) {
+      // Surface the actual reason (e.g. "Password must be at least 10
+      // characters") instead of a generic "Invalid request" so the UI can
+      // show something the user can act on.
+      const message =
+        err.issues.map((i) => i.message).join(". ") || "Invalid request";
       reply
         .code(400)
-        .send({ error: "Invalid request", code: "validation", details: err.issues });
+        .send({ error: message, code: "validation", details: err.issues });
       return;
     }
     req.log.error(err);

@@ -6,10 +6,12 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { clientIp, isTrustedNetwork } from "../auth/trusted.js";
 import {
   createUser,
   deleteJobsByStatus,
   deleteUser,
+  ensureAdmin,
   getSettings,
   listAllJobs,
   listAllUsers,
@@ -30,6 +32,16 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const body = UpdateAppSettingsBodySchema.parse(req.body);
     return updateSettings(ctx, body);
+  });
+
+  // Diagnostic: the client IP as the server sees it and whether it currently
+  // counts as a trusted network. Lets the admin configure the CIDRs correctly
+  // (and spot the reverse-proxy / Docker-NAT case where every request looks
+  // like it comes from the gateway).
+  app.get("/admin/whoami", async (req) => {
+    const ctx = requireAuth(req);
+    ensureAdmin(ctx);
+    return { ip: clientIp(req), trusted: isTrustedNetwork(req) };
   });
 
   app.get("/admin/users", async (req) => {
