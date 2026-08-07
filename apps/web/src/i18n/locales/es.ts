@@ -209,6 +209,8 @@ const es = {
     loginPrompt: "Código de verificación",
     loginWithPasskey: "Entrar con passkey",
     passkeyFailed: "No se pudo usar la passkey.",
+    prfUnsupported:
+      "Este autenticador no soporta PRF, necesario para desbloquear tus datos sin contraseña. Usa el biométrico del dispositivo (Touch ID, Windows Hello, Android), iCloud Keychain o 1Password. Bitwarden aún no lo soporta.",
     passkeysHeading: "Passkeys",
     passkeysHint:
       "Entra sin contraseña con tu huella, cara o PIN del dispositivo.",

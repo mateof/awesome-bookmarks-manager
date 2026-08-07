@@ -32,7 +32,13 @@ export function LoginPage() {
       refresh();
       nav("/", { replace: true });
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : t("twofa.passkeyFailed"));
+      setErr(
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error && e.message === "PRF_UNSUPPORTED"
+            ? t("twofa.prfUnsupported")
+            : t("twofa.passkeyFailed"),
+      );
     } finally {
       setBusy(false);
     }

@@ -396,9 +396,11 @@ function PasskeysCard() {
       setErr(
         e instanceof ApiError
           ? e.message
-          : e instanceof Error
-            ? e.message
-            : t("common.error"),
+          : e instanceof Error && e.message === "PRF_UNSUPPORTED"
+            ? t("twofa.prfUnsupported")
+            : e instanceof Error
+              ? e.message
+              : t("common.error"),
       );
     } finally {
       setBusy(false);

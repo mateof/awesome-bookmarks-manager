@@ -68,7 +68,7 @@ export async function registerPasskey(label: string): Promise<void> {
     // right after creating so we can wrap the DEK.
     prf = await evaluatePrf(cred.rawId, options.rp?.id);
   }
-  if (!prf) throw new Error("Este autenticador no soporta PRF");
+  if (!prf) throw new Error("PRF_UNSUPPORTED");
 
   const att = cred.response as AuthenticatorAttestationResponse;
   await api.webauthnRegisterVerify({
@@ -126,7 +126,7 @@ export async function loginWithPasskey(): Promise<MeResponse> {
   })) as PublicKeyCredential | null;
   if (!cred) throw new Error("No se obtuvo la passkey");
   const prf = readPrf(cred);
-  if (!prf) throw new Error("Este autenticador no soporta PRF");
+  if (!prf) throw new Error("PRF_UNSUPPORTED");
 
   const asr = cred.response as AuthenticatorAssertionResponse;
   return api.webauthnLoginVerify({

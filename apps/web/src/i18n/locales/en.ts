@@ -208,6 +208,8 @@ const en = {
     loginPrompt: "Verification code",
     loginWithPasskey: "Sign in with a passkey",
     passkeyFailed: "Could not use the passkey.",
+    prfUnsupported:
+      "This authenticator doesn't support PRF, which is needed to unlock your data without a password. Use the device biometric (Touch ID, Windows Hello, Android), iCloud Keychain or 1Password. Bitwarden doesn't support it yet.",
     passkeysHeading: "Passkeys",
     passkeysHint:
       "Sign in without a password using your fingerprint, face or device PIN.",

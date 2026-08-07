@@ -209,6 +209,8 @@ const gl = {
     loginPrompt: "Código de verificación",
     loginWithPasskey: "Entrar cunha passkey",
     passkeyFailed: "Non se puido usar a passkey.",
+    prfUnsupported:
+      "Este autenticador non soporta PRF, necesario para desbloquear os teus datos sen contrasinal. Usa o biométrico do dispositivo (Touch ID, Windows Hello, Android), iCloud Keychain ou 1Password. Bitwarden aínda non o soporta.",
     passkeysHeading: "Passkeys",
     passkeysHint:
       "Entra sen contrasinal coa túa pegada, cara ou PIN do dispositivo.",
