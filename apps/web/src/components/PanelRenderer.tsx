@@ -751,22 +751,71 @@ function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template
       document.body.style.overflow = prev;
     };
   }, []);
+
+  // Swipe-down-to-dismiss: only starts a drag when the sheet is scrolled to
+  // the top and the gesture is downward, so inner scrolling still works.
+  const [dragY, setDragY] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const touch = useRef<{ y: number; x: number; scroll: number; axis: "none" | "v" | "h" } | null>(null);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const tp = e.touches[0];
+    if (!tp) return;
+    touch.current = { y: tp.clientY, x: tp.clientX, scroll: scrollRef.current?.scrollTop ?? 0, axis: "none" };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s = touch.current;
+    const tp = e.touches[0];
+    if (!s || !tp) return;
+    const dy = tp.clientY - s.y;
+    const dx = tp.clientX - s.x;
+    if (s.axis === "none") {
+      if (Math.abs(dy) < 8 && Math.abs(dx) < 8) return;
+      s.axis = Math.abs(dy) > Math.abs(dx) ? "v" : "h";
+    }
+    if (s.axis === "v" && dy > 0 && s.scroll <= 0) {
+      if (!dragging) setDragging(true);
+      setDragY(dy);
+    }
+  };
+  const onTouchEnd = () => {
+    const s = touch.current;
+    touch.current = null;
+    if (!s) return;
+    setDragging(false);
+    if (dragY > 110) {
+      setDragY(window.innerHeight); // slide out, then unmount
+      window.setTimeout(onClose, 200);
+    } else {
+      setDragY(0);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
       className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4"
-      style={{ background: "rgba(0,0,0,0.55)" }}
+      style={{ background: `rgba(0,0,0,${dragging ? Math.max(0.2, 0.55 - dragY / 800) : 0.55})` }}
     >
       <div
+        ref={scrollRef}
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full flex-col overflow-y-auto overscroll-contain sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        className="flex w-full flex-col overflow-y-auto overscroll-contain rounded-t-2xl sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
         style={{
           background: t.surface,
           color: t.text,
           border: `1px solid ${t.border}`,
           padding: "1.25rem",
+          transform: dragY ? `translateY(${dragY}px)` : undefined,
+          transition: dragging ? "none" : "transform .25s ease",
         }}
       >
+        <div className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full sm:hidden" style={{ background: t.border }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, flex: 1, minWidth: 0 }}>{b.title}</h3>
           <a href={b.url} target="_blank" rel="noopener noreferrer" style={{ color: t.accent, display: "inline-flex" }} title="Abrir">
