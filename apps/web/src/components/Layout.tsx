@@ -10,7 +10,6 @@ import {
 } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  FolderClosed,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -24,15 +23,15 @@ import {
 import type { DragData, NestData } from "../dnd.js";
 import { LanguageToggle } from "./LanguageToggle.js";
 import { ThemeToggle } from "./ThemeToggle.js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.js";
-import { useActiveFolderId } from "../hooks.js";
 import { BookmarksBar } from "./BookmarksBar.js";
 import { FolderTree } from "./FolderTree.js";
 import { Footer } from "./Footer.js";
+import { Spotlight } from "./Spotlight.js";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -136,21 +135,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
       qc.invalidateQueries({ queryKey: ["folders"] });
     }
   };
-  const [q, setQ] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const activeFolderId = useActiveFolderId();
-  const [scopeOn, setScopeOn] = useState(true);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
 
   // Close drawer on route change
   useEffect(() => {
     setSidebarOpen(false);
   }, [loc.pathname]);
 
-  // Reset scope toggle when the active folder context changes — defaults
-  // to "scoped" if we're inside a folder, "all" if we're at root.
+  // Cmd/Ctrl+K opens the Spotlight search from anywhere.
   useEffect(() => {
-    setScopeOn(activeFolderId !== null);
-  }, [activeFolderId]);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSpotlightOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const folders = useQuery({
     queryKey: ["folders"],
@@ -160,12 +163,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     queryKey: ["bookmarks", "all"],
     queryFn: () => api.listBookmarks({}),
   });
-
-  const activeFolderName = useMemo(() => {
-    if (!activeFolderId) return null;
-    return folders.data?.find((f) => f.id === activeFolderId)?.name ?? null;
-  }, [activeFolderId, folders.data]);
-  const scopeActive = scopeOn && activeFolderId !== null;
 
   const sidebarContent = (
     <nav className="space-y-3">
@@ -244,70 +241,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Link to="/" className="shrink-0 text-base font-semibold sm:text-lg">
             {t("layout.appTitle")}
           </Link>
-          <form
-            className="ml-auto flex min-w-0 items-center gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!q.trim()) return;
-              const params = new URLSearchParams({ q: q.trim() });
-              if (scopeActive && activeFolderId)
-                params.set("folderId", activeFolderId);
-              nav(`/search?${params.toString()}`);
-            }}
+          <button
+            type="button"
+            onClick={() => setSpotlightOpen(true)}
+            className="ml-auto flex min-w-0 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-400 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
+            aria-label={t("layout.searchPlaceholder")}
           >
-            <Search className="h-4 w-4 shrink-0 text-slate-400" />
-            <div className="flex min-w-0 items-stretch overflow-hidden rounded border border-slate-300 bg-white text-sm focus-within:border-slate-500 dark:border-slate-700 dark:bg-slate-800">
-              {scopeActive && (
-                <span className="flex shrink-0 items-center gap-1 border-r border-slate-300 bg-slate-100 px-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                  <FolderClosed className="h-3 w-3" />
-                  <span className="max-w-[8rem] truncate">
-                    {activeFolderName ?? t("layout.folderFallback")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setScopeOn(false)}
-                    aria-label={t("layout.scopeRemove")}
-                    className="rounded p-0.5 hover:bg-slate-200 dark:hover:bg-slate-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              )}
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === "Backspace" &&
-                    q.length === 0 &&
-                    scopeActive
-                  ) {
-                    e.preventDefault();
-                    setScopeOn(false);
-                  }
-                }}
-                placeholder={
-                  scopeActive
-                    ? t("layout.searchInFolderPlaceholder")
-                    : t("layout.searchPlaceholder")
-                }
-                className="w-full min-w-0 bg-transparent px-3 py-1 focus:outline-none sm:w-64"
-              />
-            </div>
-            {!scopeActive && activeFolderId && (
-              <button
-                type="button"
-                onClick={() => setScopeOn(true)}
-                title={t("layout.scopeToFolderTitle", {
-                  folder: activeFolderName ?? t("layout.folderFallback"),
-                })}
-                aria-label={t("layout.scopeToFolderAria")}
-                className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-              >
-                <FolderClosed className="h-4 w-4" />
-              </button>
-            )}
-          </form>
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="hidden truncate sm:inline sm:w-40 md:w-56">
+              {t("layout.searchPlaceholder")}
+            </span>
+            <kbd className="ml-1 hidden rounded border border-slate-300 px-1.5 text-[10px] text-slate-400 lg:inline dark:border-slate-600">
+              ⌘K
+            </kbd>
+          </button>
           {/* Desktop-only controls; on mobile they live in the full-screen menu */}
           <div className="hidden shrink-0 items-center gap-1 lg:flex">
             <LanguageToggle />
@@ -390,6 +337,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Footer />
         </main>
       </div>
+      {spotlightOpen && <Spotlight onClose={() => setSpotlightOpen(false)} />}
     </div>
     </DndContext>
   );

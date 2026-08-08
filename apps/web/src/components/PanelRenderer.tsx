@@ -6,14 +6,16 @@ import type {
 import DOMPurify from "dompurify";
 import {
   ChevronRight,
+  CornerDownLeft,
   ExternalLink,
   Filter,
   Folder as FolderIcon,
   Home,
   Info,
+  Search,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 /**
@@ -31,6 +33,7 @@ export function PanelRenderer({
 }) {
   const [sp, setSp] = useSearchParams();
   const [descBookmark, setDescBookmark] = useState<PanelBookmark | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const path = useMemo(
     () => (sp.get("p") ?? "").split("/").filter(Boolean),
@@ -114,6 +117,28 @@ export function PanelRenderer({
           />
         )}
 
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            width: "100%",
+            padding: "0.6rem 0.9rem",
+            marginBottom: "1rem",
+            borderRadius: "0.75rem",
+            background: t.surface,
+            border: `1px solid ${t.border}`,
+            color: t.muted,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 14,
+          }}
+        >
+          <Search size={16} /> Buscar en el panel…
+        </button>
+
         <Breadcrumb
           root={root}
           path={path}
@@ -162,6 +187,138 @@ export function PanelRenderer({
       {descBookmark && (
         <DescriptionModal b={descBookmark} template={template} onClose={() => setDescBookmark(null)} />
       )}
+      {searchOpen && (
+        <PanelSearch root={root} template={template} onClose={() => setSearchOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+function PanelSearch({
+  root,
+  template,
+  onClose,
+}: {
+  root: PanelFolder;
+  template: TemplateConfig;
+  onClose: () => void;
+}) {
+  const t = template.theme;
+  const all = useMemo(() => flatten(root), [root]);
+  const [q, setQ] = useState("");
+  const [sel, setSel] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const results = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return all.slice(0, 30);
+    return all
+      .filter(
+        (b) =>
+          b.title.toLowerCase().includes(query) ||
+          b.url.toLowerCase().includes(query) ||
+          (b.description ? stripHtml(b.description).toLowerCase().includes(query) : false),
+      )
+      .slice(0, 40);
+  }, [q, all]);
+
+  useEffect(() => setSel(0), [q]);
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSel((s) => Math.min(s + 1, Math.max(results.length - 1, 0)));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSel((s) => Math.max(s - 1, 0));
+      } else if (e.key === "Enter") {
+        const r = results[sel];
+        if (r) {
+          window.open(r.url, "_blank", "noopener,noreferrer");
+          onClose();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [results, sel]);
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-idx="${sel}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [sel]);
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-start justify-center p-3 backdrop-blur-sm motion-safe:animate-[spotFade_.12s_ease-out] sm:p-4"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="mt-[8vh] w-full max-w-xl overflow-hidden motion-safe:animate-[spotPop_.14s_ease-out] sm:rounded-2xl"
+        style={{ background: t.surface, color: t.text, border: `1px solid ${t.border}` }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 1rem", borderBottom: `1px solid ${t.border}` }}>
+          <Search size={18} style={{ color: t.muted, flexShrink: 0 }} />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar en el panel…"
+            style={{ width: "100%", background: "transparent", color: t.text, border: "none", outline: "none", padding: "0.9rem 0", fontSize: 16, fontFamily: "inherit" }}
+          />
+          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: t.muted, display: "inline-flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+        <div ref={listRef} className="overscroll-contain" style={{ maxHeight: "60vh", overflowY: "auto", padding: 8 }}>
+          {results.length === 0 ? (
+            <div style={{ padding: "2rem", textAlign: "center", color: t.muted, fontSize: 14 }}>Sin resultados.</div>
+          ) : (
+            results.map((b, i) => (
+              <button
+                key={b.id}
+                data-idx={i}
+                onMouseMove={() => setSel(i)}
+                onClick={() => {
+                  window.open(b.url, "_blank", "noopener,noreferrer");
+                  onClose();
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "0.55rem 0.7rem",
+                  borderRadius: 10,
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  color: t.text,
+                  background: i === sel ? `${t.accent}22` : "transparent",
+                }}
+              >
+                <Favicon url={b.url} accent={t.accent} size={20} />
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: "block", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</span>
+                  <span style={{ display: "block", fontSize: 12, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
+                </span>
+                {i === sel && <CornerDownLeft size={14} style={{ color: t.muted, flexShrink: 0 }} />}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -213,19 +370,22 @@ function stripHtml(html: string): string {
 
 function gridStyle(template: TemplateConfig, kind: "folders" | "bookmarks"): React.CSSProperties {
   if (template.layout === "bento") {
+    // `min(100%, …)` collapses to a single full-width column on narrow
+    // screens; no forced row height so cards hug their content (no giant
+    // empty boxes on mobile). The column spans still add visual variety.
     return {
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-      gridAutoRows: "minmax(96px, auto)",
+      gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
       gridAutoFlow: "dense",
-      gap: 14,
+      gap: 12,
     };
   }
   const cols = kind === "folders" ? Math.min(template.columns ?? 4, 6) : template.columns ?? 4;
+  const base = Math.floor(1040 / cols);
   return {
     display: "grid",
-    gridTemplateColumns: `repeat(auto-fill, minmax(${Math.floor(1040 / cols)}px, 1fr))`,
-    gap: 14,
+    gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${base}px), 1fr))`,
+    gap: 12,
   };
 }
 

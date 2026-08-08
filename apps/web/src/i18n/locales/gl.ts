@@ -96,6 +96,11 @@ const gl = {
     shared: "Compartidos",
     panels: "Paneis",
   },
+  spotlight: {
+    placeholder: "Buscar cartafoles e marcadores…",
+    hint: "Escribe para buscar nos teus cartafoles e marcadores.",
+    noResults: "Sen resultados.",
+  },
   panels: {
     heading: "Paneis",
     generateKebab: "Xerar panel",

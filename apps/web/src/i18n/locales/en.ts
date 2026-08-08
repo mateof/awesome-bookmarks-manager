@@ -96,6 +96,11 @@ const en = {
     shared: "Shared",
     panels: "Panels",
   },
+  spotlight: {
+    placeholder: "Search folders and bookmarks…",
+    hint: "Type to search your folders and bookmarks.",
+    noResults: "No results.",
+  },
   panels: {
     heading: "Panels",
     generateKebab: "Generate panel",

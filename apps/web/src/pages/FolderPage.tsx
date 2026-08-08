@@ -444,63 +444,62 @@ export function FolderPage() {
         </h1>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <ViewModeToggle />
-          {folderId && items.length > 0 && (
-            <button
-              onClick={() => openAllInTabs(false)}
-              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-              title={t("folder.openDirectTitle")}
-            >
-              <TabletSmartphone className="h-4 w-4" /> {t("folder.openDirect")}
-            </button>
-          )}
-          {folderId && (
-            <button
-              onClick={() => openAllInTabs(true)}
-              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-              title={t("folder.openAllTitle")}
-            >
-              <ExternalLink className="h-4 w-4" /> {t("folder.openAll")}
-            </button>
-          )}
-          <button
-            onClick={exportCurrentFolder}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            title={t("folder.exportButtonTitle")}
-          >
-            <Download className="h-4 w-4" /> {t("folder.exportButton")}
-          </button>
-          {folder && (
-            <>
-              <button
-                onClick={() => setShowEditFolder(true)}
-                className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-              >
-                <PencilLine className="h-4 w-4" /> {t("folder.editFolder")}
-              </button>
-              <button
-                onClick={() => setShowShareFolder(true)}
-                className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-              >
-                <Share2 className="h-4 w-4" /> {t("folder.shareWithGroup")}
-              </button>
-              <KebabMenu
-                items={[
-                  {
-                    label: t("folder.deleteFolderKebab"),
-                    icon: <Trash2 className="h-4 w-4" />,
-                    danger: true,
-                    onClick: () => void deleteFolder(folder),
-                  },
-                ]}
-              />
-            </>
-          )}
-          <button
-            onClick={() => setShowAddFolder(true)}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <FolderPlus className="h-4 w-4" /> {t("folder.addFolder")}
-          </button>
+          <KebabMenu
+            items={[
+              ...(folderId && items.length > 0
+                ? [
+                    {
+                      label: t("folder.openDirect"),
+                      icon: <TabletSmartphone className="h-4 w-4" />,
+                      onClick: () => openAllInTabs(false),
+                    },
+                  ]
+                : []),
+              ...(folderId
+                ? [
+                    {
+                      label: t("folder.openAll"),
+                      icon: <ExternalLink className="h-4 w-4" />,
+                      onClick: () => openAllInTabs(true),
+                    },
+                  ]
+                : []),
+              {
+                label: t("folder.exportButton"),
+                icon: <Download className="h-4 w-4" />,
+                onClick: () => void exportCurrentFolder(),
+              },
+              ...(folder
+                ? [
+                    {
+                      label: t("folder.editFolder"),
+                      icon: <PencilLine className="h-4 w-4" />,
+                      onClick: () => setShowEditFolder(true),
+                    },
+                    {
+                      label: t("folder.shareWithGroup"),
+                      icon: <Share2 className="h-4 w-4" />,
+                      onClick: () => setShowShareFolder(true),
+                    },
+                  ]
+                : []),
+              {
+                label: t("folder.addFolder"),
+                icon: <FolderPlus className="h-4 w-4" />,
+                onClick: () => setShowAddFolder(true),
+              },
+              ...(folder
+                ? [
+                    {
+                      label: t("folder.deleteFolderKebab"),
+                      icon: <Trash2 className="h-4 w-4" />,
+                      danger: true,
+                      onClick: () => void deleteFolder(folder),
+                    },
+                  ]
+                : []),
+            ]}
+          />
           <button
             onClick={() => setShowAddBookmark(true)}
             className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"

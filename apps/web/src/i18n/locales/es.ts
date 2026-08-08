@@ -96,6 +96,11 @@ const es = {
     shared: "Compartidos",
     panels: "Paneles",
   },
+  spotlight: {
+    placeholder: "Buscar carpetas y bookmarks…",
+    hint: "Escribe para buscar en tus carpetas y bookmarks.",
+    noResults: "Sin resultados.",
+  },
   panels: {
     heading: "Paneles",
     generateKebab: "Generar panel",
