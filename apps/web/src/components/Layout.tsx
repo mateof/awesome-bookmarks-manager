@@ -231,21 +231,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
       collisionDetection={collisionDetection}
       onDragEnd={onDragEnd}
     >
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-x-hidden">
       <header className="border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
-            className="rounded p-1.5 lg:hidden"
+            className="shrink-0 rounded p-1.5 lg:hidden"
             onClick={() => setSidebarOpen((o) => !o)}
             aria-label={t("layout.menu")}
           >
             {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
-          <Link to="/" className="text-base font-semibold sm:text-lg">
+          <Link to="/" className="shrink-0 text-base font-semibold sm:text-lg">
             {t("layout.appTitle")}
           </Link>
           <form
-            className="ml-auto flex items-center gap-2"
+            className="ml-auto flex min-w-0 items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault();
               if (!q.trim()) return;
@@ -255,8 +255,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               nav(`/search?${params.toString()}`);
             }}
           >
-            <Search className="h-4 w-4 text-slate-400" />
-            <div className="flex items-stretch overflow-hidden rounded border border-slate-300 bg-white text-sm focus-within:border-slate-500 dark:border-slate-700 dark:bg-slate-800">
+            <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            <div className="flex min-w-0 items-stretch overflow-hidden rounded border border-slate-300 bg-white text-sm focus-within:border-slate-500 dark:border-slate-700 dark:bg-slate-800">
               {scopeActive && (
                 <span className="flex shrink-0 items-center gap-1 border-r border-slate-300 bg-slate-100 px-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-700 dark:text-slate-200">
                   <FolderClosed className="h-3 w-3" />
@@ -291,7 +291,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     ? t("layout.searchInFolderPlaceholder")
                     : t("layout.searchPlaceholder")
                 }
-                className="w-32 bg-transparent px-3 py-1 focus:outline-none sm:w-64"
+                className="w-full min-w-0 bg-transparent px-3 py-1 focus:outline-none sm:w-64"
               />
             </div>
             {!scopeActive && activeFolderId && (
@@ -308,26 +308,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </button>
             )}
           </form>
-          <LanguageToggle />
-          <ThemeToggle />
-          <Link
-            to="/settings"
-            className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
-            title={t("layout.settings")}
-          >
-            <Settings className="h-4 w-4" />
-          </Link>
-          <button
-            onClick={async () => {
-              await api.logout();
-              refresh();
-              nav("/login");
-            }}
-            className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
-            title={user?.email ?? t("auth.logout")}
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          {/* Desktop-only controls; on mobile they live in the full-screen menu */}
+          <div className="hidden shrink-0 items-center gap-1 lg:flex">
+            <LanguageToggle />
+            <ThemeToggle />
+            <Link
+              to="/settings"
+              className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
+              title={t("layout.settings")}
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+            <button
+              onClick={async () => {
+                await api.logout();
+                refresh();
+                nav("/login");
+              }}
+              className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
+              title={user?.email ?? t("auth.logout")}
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         {/* Bookmarks bar — overflow-x-auto to scroll on small screens */}
         <BookmarksBar
@@ -341,18 +344,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {sidebarContent}
         </aside>
 
-        {/* Mobile drawer */}
+        {/* Mobile full-screen menu — slides down from the top */}
         {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-20 bg-black/40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <aside
-              className="h-full w-72 max-w-[80vw] overflow-auto border-r border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="fixed inset-0 z-30 flex flex-col bg-white lg:hidden dark:bg-slate-900 motion-safe:animate-[sheetDown_.2s_ease-out]">
+            <div className="flex items-center gap-1 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <Link to="/" className="flex-1 truncate text-lg font-semibold">
+                {t("layout.appTitle")}
+              </Link>
+              <LanguageToggle />
+              <ThemeToggle />
+              <Link
+                to="/settings"
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                title={t("layout.settings")}
+              >
+                <Settings className="h-5 w-5" />
+              </Link>
+              <button
+                onClick={async () => {
+                  await api.logout();
+                  refresh();
+                  nav("/login");
+                }}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                title={user?.email ?? t("auth.logout")}
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label={t("layout.menu")}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 text-[15px] [&_a]:py-2">
               {sidebarContent}
-            </aside>
+            </div>
           </div>
         )}
 

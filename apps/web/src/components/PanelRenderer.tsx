@@ -13,7 +13,7 @@ import {
   Info,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 /**
@@ -585,26 +585,29 @@ function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template
     () => DOMPurify.sanitize(b.description ?? "", { ADD_ATTR: ["target", "rel"] }),
     [b.description],
   );
+  // Lock the page behind the modal so a drag on mobile doesn't scroll it.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+      className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4"
+      style={{ background: "rgba(0,0,0,0.55)" }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        className="flex w-full flex-col overflow-y-auto overscroll-contain sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
         style={{
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "85vh",
-          overflow: "auto",
           background: t.surface,
           color: t.text,
           border: `1px solid ${t.border}`,
-          borderTopLeftRadius: "1rem",
-          borderTopRightRadius: "1rem",
           padding: "1.25rem",
         }}
-        className="panel-desc sm:!rounded-2xl sm:mb-8"
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, flex: 1, minWidth: 0 }}>{b.title}</h3>
