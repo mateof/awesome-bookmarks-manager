@@ -673,15 +673,13 @@ function BookmarkCard({
   onDesc: (b: PanelBookmark) => void;
 }) {
   const t = template.theme;
-  const bento = template.layout === "bento";
-  const span = bento && index % 5 === 0 ? 2 : 1;
   const desc = b.description ? stripHtml(b.description) : "";
   return (
     <a
       href={b.url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ gridColumn: bento ? `span ${span}` : undefined, display: "flex", flexDirection: "column", gap: 8, padding: "1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, textDecoration: "none", boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none" }}
+      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8, padding: "1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, textDecoration: "none", boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none" }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {template.card.showIcon && <Favicon url={b.url} accent={t.accent} />}
