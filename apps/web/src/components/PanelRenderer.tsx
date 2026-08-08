@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { fuzzyScoreAny } from "../fuzzy.js";
 
 /**
  * Renders a panel (a folder subtree) in the shape defined by the template.
@@ -210,16 +211,20 @@ function PanelSearch({
   const listRef = useRef<HTMLDivElement>(null);
 
   const results = useMemo(() => {
-    const query = q.trim().toLowerCase();
+    const query = q.trim();
     if (!query) return all.slice(0, 30);
-    return all
-      .filter(
-        (b) =>
-          b.title.toLowerCase().includes(query) ||
-          b.url.toLowerCase().includes(query) ||
-          (b.description ? stripHtml(b.description).toLowerCase().includes(query) : false),
-      )
-      .slice(0, 40);
+    const scored: Array<{ b: PanelBookmark; s: number }> = [];
+    for (const b of all) {
+      const s = fuzzyScoreAny(
+        query,
+        b.title,
+        b.url,
+        b.description ? stripHtml(b.description) : "",
+      );
+      if (s !== null) scored.push({ b, s });
+    }
+    scored.sort((a, b) => a.s - b.s);
+    return scored.slice(0, 40).map((x) => x.b);
   }, [q, all]);
 
   useEffect(() => setSel(0), [q]);

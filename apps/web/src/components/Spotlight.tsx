@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
 
 type Result =
   | { kind: "folder"; id: string; title: string; sub: string }
@@ -27,7 +28,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
   const listRef = useRef<HTMLDivElement>(null);
 
   const results = useMemo<Result[]>(() => {
-    const query = q.trim().toLowerCase();
+    const query = q.trim();
     if (!query) return [];
     const fs = folders.data ?? [];
     const byId = new Map(fs.map((f) => [f.id, f]));
@@ -43,25 +44,20 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
       }
       return parts.join(" / ") || t("sidebar.home");
     };
-    const fRes: Result[] = fs
-      .filter((f) => f.name.toLowerCase().includes(query))
-      .slice(0, 6)
-      .map((f) => ({ kind: "folder", id: f.id, title: f.name, sub: pathOf(f.parentId) }));
-    const bRes: Result[] = (bookmarks.data ?? [])
-      .filter(
-        (b) =>
-          b.title.toLowerCase().includes(query) ||
-          b.url.toLowerCase().includes(query),
-      )
-      .slice(0, 14)
-      .map((b) => ({
-        kind: "bookmark",
-        id: b.id,
-        title: b.title,
-        url: b.url,
-        sub: pathOf(b.folderId),
-      }));
-    return [...fRes, ...bRes];
+    // Levenshtein-tolerant scoring: exact substring first, typos after.
+    const scored: Array<Result & { _s: number }> = [];
+    for (const f of fs) {
+      const s = fuzzyScore(query, f.name);
+      if (s !== null)
+        scored.push({ kind: "folder", id: f.id, title: f.name, sub: pathOf(f.parentId), _s: s });
+    }
+    for (const b of bookmarks.data ?? []) {
+      const s = fuzzyScoreAny(query, b.title, b.url);
+      if (s !== null)
+        scored.push({ kind: "bookmark", id: b.id, title: b.title, url: b.url, sub: pathOf(b.folderId), _s: s });
+    }
+    scored.sort((a, b) => a._s - b._s || (a.kind === "folder" ? -1 : 1));
+    return scored.slice(0, 25).map(({ _s, ...r }) => r);
   }, [q, folders.data, bookmarks.data, t]);
 
   useEffect(() => setSel(0), [q]);
