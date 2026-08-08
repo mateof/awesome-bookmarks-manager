@@ -24,6 +24,16 @@ body,
   }
 }
 
+/* Native-style bottom sheet (mobile kebab menus) sliding up from the bottom. */
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Spotlight search modal. */
 @keyframes spotFade {
   from {
