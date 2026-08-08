@@ -32,6 +32,7 @@ import { BookmarksBar } from "./BookmarksBar.js";
 import { FolderTree } from "./FolderTree.js";
 import { Footer } from "./Footer.js";
 import { Spotlight } from "./Spotlight.js";
+import { SwipeToClose } from "./SwipeToClose.js";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -291,9 +292,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {sidebarContent}
         </aside>
 
-        {/* Mobile full-screen menu — slides down from the top */}
+        {/* Mobile full-screen menu — slides down from the top; swipe left or tap X to close */}
         {sidebarOpen && (
-          <div className="fixed inset-0 z-30 flex flex-col bg-white lg:hidden dark:bg-slate-900 motion-safe:animate-[sheetDown_.2s_ease-out]">
+          <SwipeToClose
+            onClose={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-30 flex flex-col bg-white lg:hidden dark:bg-slate-900 motion-safe:animate-[sheetDown_.2s_ease-out]"
+          >
             <div className="flex items-center gap-1 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
               <Link to="/" className="flex-1 truncate text-lg font-semibold">
                 {t("layout.appTitle")}
@@ -329,7 +333,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex-1 overflow-auto p-4 text-[15px] [&_a]:py-2">
               {sidebarContent}
             </div>
-          </div>
+          </SwipeToClose>
         )}
 
         <main className="flex flex-1 flex-col overflow-auto p-3 sm:p-6">
