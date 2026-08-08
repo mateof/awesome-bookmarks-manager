@@ -875,7 +875,8 @@ function HoverCheckbox({
   const visibility =
     alwaysVisible || selected
       ? "opacity-100"
-      : "opacity-0 group-hover:opacity-100 focus:opacity-100";
+      : // Always shown on touch (no hover); hover-revealed on desktop.
+        "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100";
   return (
     <input
       type="checkbox"
