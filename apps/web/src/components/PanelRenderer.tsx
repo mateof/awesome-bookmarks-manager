@@ -614,11 +614,31 @@ function Favicon({ url, accent, size = 22 }: { url: string; accent: string; size
   return <img src={`${origin}/favicon.ico`} alt="" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />;
 }
 
-function Tags({ b, template, selected, onTagClick }: { b: PanelBookmark; template: TemplateConfig; selected: Set<string>; onTagClick: (name: string) => void }) {
+function Tags({
+  b,
+  template,
+  selected,
+  onTagClick,
+  scroll,
+}: {
+  b: PanelBookmark;
+  template: TemplateConfig;
+  selected: Set<string>;
+  onTagClick: (name: string) => void;
+  scroll?: boolean;
+}) {
   if (!template.card.showTags || b.tags.length === 0) return null;
+  const shown = b.tags.slice(0, 12);
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }}>
-      {b.tags.slice(0, 5).map((tag, i) => {
+    <div
+      className={scroll ? "no-scrollbar" : undefined}
+      style={
+        scroll
+          ? { display: "flex", flexWrap: "nowrap", gap: 4, marginTop: 6, overflowX: "auto", maxWidth: "100%" }
+          : { display: "flex", flexWrap: "wrap", gap: 4, marginTop: 6 }
+      }
+    >
+      {shown.map((tag, i) => {
         const on = selected.has(tag.name);
         return (
           <button
@@ -629,7 +649,7 @@ function Tags({ b, template, selected, onTagClick }: { b: PanelBookmark; templat
               e.stopPropagation();
               onTagClick(tag.name);
             }}
-            style={{ fontSize: 10, padding: "1px 7px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", background: on ? tag.color : `${tag.color}22`, color: on ? "#fff" : tag.color, border: `1px solid ${tag.color}${on ? "" : "55"}` }}
+            style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 10, padding: "1px 7px", borderRadius: 999, cursor: "pointer", fontFamily: "inherit", background: on ? tag.color : `${tag.color}22`, color: on ? "#fff" : tag.color, border: `1px solid ${tag.color}${on ? "" : "55"}` }}
           >
             {tag.name}
           </button>
@@ -692,7 +712,7 @@ function BookmarkCard({
       {template.card.showDescription && desc && (
         <span style={{ fontSize: 13, color: t.muted, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{desc}</span>
       )}
-      <Tags b={b} template={template} selected={selected} onTagClick={onTagClick} />
+      <Tags b={b} template={template} selected={selected} onTagClick={onTagClick} scroll />
     </a>
   );
 }
@@ -718,9 +738,9 @@ function BookmarkRow({
       href={b.url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: terminal ? "0.35rem 0.5rem" : "0.7rem 0.9rem", borderRadius: template.card.radius, background: terminal ? "transparent" : t.surface, border: terminal ? "none" : `1px solid ${t.border}`, color: t.text, textDecoration: "none" }}
+      style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: terminal ? "0.4rem 0.5rem" : "0.7rem 0.9rem", borderRadius: template.card.radius, background: terminal ? "transparent" : t.surface, border: terminal ? "none" : `1px solid ${t.border}`, color: t.text, textDecoration: "none" }}
     >
-      {terminal && <span style={{ color: t.accent }}>$</span>}
+      {terminal && <span style={{ color: t.accent, lineHeight: "1.4" }}>$</span>}
       {template.card.showIcon && !terminal && <Favicon url={b.url} accent={t.accent} size={20} />}
       <span style={{ minWidth: 0, flex: 1 }}>
         <span style={{ fontWeight: terminal ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{terminal ? `open ${b.title}` : b.title}</span>
@@ -730,9 +750,9 @@ function BookmarkRow({
         {template.card.showDescription && desc && !terminal && (
           <span style={{ fontSize: 13, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{desc}</span>
         )}
+        <Tags b={b} template={template} selected={selected} onTagClick={onTagClick} scroll />
       </span>
       <InfoButton b={b} template={template} onDesc={onDesc} />
-      <Tags b={b} template={template} selected={selected} onTagClick={onTagClick} />
     </a>
   );
 }

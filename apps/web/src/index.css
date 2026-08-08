@@ -12,6 +12,15 @@ body,
   height: 100%;
 }
 
+/* Horizontal strips (e.g. panel tag rows) that scroll without a visible bar. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Full-screen mobile menu sliding in from the top. */
 @keyframes sheetDown {
   from {
