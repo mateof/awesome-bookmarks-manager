@@ -9,8 +9,10 @@ one port.
 ## Documentation
 
 - **[Illustrated user guide](doc/guia-usuario.md)** — a visual walkthrough
-  (register, folders, bookmarks, sharing, panels, Chrome extension) with real
+  (register, folders, bookmarks, sharing, panels, browser extension) with real
   screenshots. In Spanish.
+- [Browser extension](doc/extension.md) — install on Chrome, Opera and Firefox,
+  configure it, pick a save folder and create folders from the popup. In Spanish.
 - [HTTP API & MCP](doc/README.md) — programmatic access for apps, scripts and AI.
 - [End-to-end tests](e2e/README.md) — the isolated Playwright suite that also
   generates the guide's screenshots.
@@ -208,13 +210,15 @@ rewrite) since the API mounts its routes under `/api`. Both bind to
 
 ```bash
 cd apps/extension
-pnpm build           # outputs to apps/extension/dist
+pnpm build   # outputs dist/ (Chrome/Opera) and dist-firefox/ (Firefox)
 ```
 
-Then in Chrome / Edge / Brave: open `chrome://extensions`, enable Developer
-Mode, click "Load unpacked", and select `apps/extension/dist`. Open the
-extension's options page once to enter your backend URL and a token (you can
-generate the token from the web UI in Settings).
+Load `dist/` in Chrome/Opera (`chrome://extensions` or `opera://extensions` →
+Developer Mode → Load unpacked) or `dist-firefox/manifest.json` in Firefox
+(`about:debugging` → Load Temporary Add-on). Then open the options page to enter
+your backend URL and a token (generated in the web UI, Settings → API). The
+popup lets you pick the save folder and create folders. Full per-browser install
+steps: [doc/extension.md](doc/extension.md).
 
 ### Importing bookmarks from your browser
 

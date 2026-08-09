@@ -6,8 +6,10 @@ apps, scripts and AI assistants.
 ## Contents
 
 - [guia-usuario.md](./guia-usuario.md) — illustrated end-user walkthrough
-  (register, folders, bookmarks, sharing, panels, Chrome extension) with real
+  (register, folders, bookmarks, sharing, panels, browser extension) with real
   screenshots. In Spanish.
+- [extension.md](./extension.md) — install the browser extension on Chrome,
+  Opera and Firefox, configure it, and use the folder picker. In Spanish.
 - [authentication.md](./authentication.md) — API tokens, the security model
   behind headless access, and how encryption still applies.
 - [api.md](./api.md) — the public REST API (`/api/v1`): every endpoint,

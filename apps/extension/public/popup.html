@@ -6,19 +6,43 @@
     <style>
       body { width: 320px; margin: 0; font-family: system-ui, sans-serif; }
       .wrap { padding: 12px; }
-      input, button, textarea { width: 100%; box-sizing: border-box; padding: 6px; margin-bottom: 6px; }
-      .url { font-size: 12px; color: #64748b; word-break: break-all; }
+      h3 { margin: 0 0 2px; font-size: 14px; }
+      input, button, select, textarea {
+        width: 100%; box-sizing: border-box; padding: 6px; margin-bottom: 6px;
+      }
+      .url { font-size: 12px; color: #64748b; word-break: break-all; margin-bottom: 8px; }
+      .lbl { display: block; font-size: 11px; color: #64748b; margin: 4px 0 2px; }
+      .row { display: flex; gap: 6px; }
+      .row input { flex: 1; }
+      .row button { width: auto; white-space: nowrap; }
+      .mini { font-size: 12px; }
+      .hint { font-size: 11px; color: #94a3b8; margin: -2px 0 6px; }
       .ok { color: #059669; font-size: 12px; }
       .err { color: #dc2626; font-size: 12px; }
       a { color: #2563eb; font-size: 12px; }
+      button#save-btn { background: #0f172a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h3 id="title-display">…</h3>
       <div class="url" id="url-display"></div>
+
       <input id="title-input" placeholder="Título" />
       <input id="tags-input" placeholder="Tags separadas por coma" />
+
+      <label class="lbl" for="folder-select">Guardar en</label>
+      <select id="folder-select"></select>
+      <a href="#" id="new-folder-toggle" class="mini">＋ Nueva carpeta</a>
+
+      <div id="new-folder-row" style="display: none">
+        <div class="hint" id="new-folder-hint"></div>
+        <div class="row">
+          <input id="new-folder-name" placeholder="Nombre de la carpeta" />
+          <button id="new-folder-create">Crear</button>
+        </div>
+      </div>
+
       <button id="save-btn">Guardar</button>
       <div id="status"></div>
       <a href="#" id="options-link">Configurar →</a>

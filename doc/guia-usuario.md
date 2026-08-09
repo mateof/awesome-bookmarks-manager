@@ -134,10 +134,11 @@ nada:
 
 ---
 
-## 7. Extensión de Chrome
+## 7. Extensión de navegador
 
-La extensión guarda la pestaña actual en tu instancia con un atajo. Se autentica
-con un **token** que generas tú.
+La extensión guarda la pestaña actual en tu instancia. Funciona en **Chrome**,
+**Opera** y **Firefox**; la instalación paso a paso para cada uno está en la
+[guía de la extensión](extension.md). Se autentica con un **token** que generas tú.
 
 **1) Crea el token** en *Ajustes → API*. Se muestra una sola vez, cópialo.
 
@@ -148,12 +149,15 @@ backend (incluyendo `/api`) y el token.
 
 ![Opciones de la extensión](images/20-extension-options.png)
 
-**3) Guarda pestañas.** El popup lee la pestaña activa (título y URL) y, al
-pulsar *Guardar*, la envía a tu biblioteca. También hay un atajo de teclado.
+**3) Guarda pestañas eligiendo la carpeta.** El popup lee la pestaña activa
+(título y URL). Puedes elegir en **Guardar en** la carpeta destino (o *Raíz*), y
+con **＋ Nueva carpeta** crear una carpeta dentro de la seleccionada (o en la
+raíz) sin salir del popup. También hay un atajo de teclado que usa la última
+carpeta usada.
 
-![Popup de la extensión](images/21-extension-popup.png)
+![Popup de la extensión con selector de carpeta](images/21-extension-popup.png)
 
-El bookmark aparece al instante en tu biblioteca, guardado desde la extensión:
+El bookmark aparece al instante en tu biblioteca, en la carpeta elegida:
 
 ![Bookmark guardado desde la extensión](images/22-extension-saved.png)
 

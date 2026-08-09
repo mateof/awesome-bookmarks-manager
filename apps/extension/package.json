@@ -1,6 +1,6 @@
 {
   "name": "@awesome-bookmarks/extension",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "echo 'no lint'",
     "test": "echo 'no tests'",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist dist-firefox"
   },
   "dependencies": {
     "@awesome-bookmarks/shared": "workspace:*"

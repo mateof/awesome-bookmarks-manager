@@ -45,6 +45,7 @@ playwright/.cache/
 
 # Browser extension build output
 apps/extension/dist/
+apps/extension/dist-firefox/
 
 # Docker overrides (developer-specific)
 docker-compose.override.yml

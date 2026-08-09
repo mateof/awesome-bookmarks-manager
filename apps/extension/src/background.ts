@@ -1,5 +1,5 @@
 import { quickAdd } from "./api.js";
-import { loadConfig } from "./storage.js";
+import { getLastFolderId, loadConfig } from "./storage.js";
 
 chrome.commands.onCommand.addListener(async (command) => {
   if (command !== "save-tab") return;
@@ -14,7 +14,11 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 
   try {
-    await quickAdd(cfg, { url: tab.url, title: tab.title ?? undefined });
+    await quickAdd(cfg, {
+      url: tab.url,
+      title: tab.title ?? undefined,
+      folderId: await getLastFolderId(),
+    });
     chrome.action.setBadgeText({ text: "✓", tabId: tab.id });
     chrome.action.setBadgeBackgroundColor({ color: "#059669", tabId: tab.id });
     setTimeout(() => chrome.action.setBadgeText({ text: "", tabId: tab.id }), 2000);

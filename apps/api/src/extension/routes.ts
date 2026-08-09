@@ -1,5 +1,6 @@
 import {
   CreateExtensionTokenBodySchema,
+  CreateFolderBodySchema,
   QuickAddBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
@@ -7,6 +8,7 @@ import { z } from "zod";
 import { requireApiAuth } from "../auth/api-auth.js";
 import { requireAuth } from "../auth/session.js";
 import { createBookmark } from "../bookmarks/service.js";
+import { createFolder, listFolders } from "../folders/service.js";
 import { createTag, listTags } from "../tags/service.js";
 import {
   createToken,
@@ -37,6 +39,28 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
     const { id } = IdParam.parse(req.params);
     revokeToken(ctx.userId, id);
     reply.code(204);
+  });
+
+  // Folder picker for the extension — token-authenticated. Returns a light
+  // list (id, parentId, name) so the popup can offer a "save into" dropdown
+  // and build the hierarchy client-side.
+  app.get("/ext/folders", async (req) => {
+    const ctx = requireApiAuth(req);
+    return listFolders(ctx).map((f) => ({
+      id: f.id,
+      parentId: f.parentId,
+      name: f.name,
+    }));
+  });
+
+  // Create a folder from the extension (under an existing folder, or at the
+  // root when parentId is null/omitted). Token-authenticated.
+  app.post("/ext/folders", async (req, reply) => {
+    const ctx = requireApiAuth(req);
+    const body = CreateFolderBodySchema.parse(req.body);
+    const folder = createFolder(ctx, body);
+    reply.code(201);
+    return { id: folder.id, parentId: folder.parentId, name: folder.name };
   });
 
   // Quick-add — token-authenticated. Tokens minted after headless DEK
