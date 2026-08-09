@@ -1008,28 +1008,28 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       style={{ ...drag.style, ...folderBgStyle(sf) }}
       className="group relative flex min-h-[8rem] cursor-pointer flex-col rounded border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
     >
-      <HoverCheckbox
-        selected={selected}
-        onToggle={() => p.toggle(key)}
-        label={selectFolderLabel(t, sf.name)}
-        className="absolute left-2 top-2"
-      />
-      <div
-        className={`absolute right-2 top-2 transition-opacity ${
-          selected
-            ? "opacity-100"
-            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        }`}
-      >
-        <KebabMenu items={p.folderKebab(sf)} />
-      </div>
       <div className="flex items-center gap-3">
+        <HoverCheckbox
+          selected={selected}
+          onToggle={() => p.toggle(key)}
+          label={selectFolderLabel(t, sf.name)}
+          className="shrink-0"
+        />
         <FolderNestZone sf={sf} size="h-10 w-10" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{sf.name}</div>
           <div className="text-xs text-slate-500">
             {t("folder.itemsCount", { count })}
           </div>
+        </div>
+        <div
+          className={`shrink-0 transition-opacity ${
+            selected
+              ? "opacity-100"
+              : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          }`}
+        >
+          <KebabMenu items={p.folderKebab(sf)} />
         </div>
       </div>
       {desc && (
@@ -1227,23 +1227,14 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
     >
-      <HoverCheckbox
-        selected={selected}
-        onToggle={() => p.toggle(key)}
-        label={selectBookmarkLabel(t, b.title)}
-        className="absolute left-2 top-2 rounded bg-white/80 backdrop-blur dark:bg-slate-900/80"
-      />
-      <div
-        className={`absolute right-2 top-2 transition-opacity ${
-          selected
-            ? "opacity-100"
-            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        }`}
-      >
-        <KebabMenu items={p.bookmarkKebab(b)} />
-      </div>
       <div className="flex flex-col gap-1 p-3">
         <div className="flex items-center gap-2">
+          <HoverCheckbox
+            selected={selected}
+            onToggle={() => p.toggle(key)}
+            label={selectBookmarkLabel(t, b.title)}
+            className="shrink-0"
+          />
           <BookmarkIcon b={b} size="h-5 w-5" />
           <Link
             to={`/bookmark/${b.id}`}
@@ -1260,6 +1251,15 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
           >
             <ExternalLink className="h-4 w-4" />
           </a>
+          <div
+            className={`shrink-0 transition-opacity ${
+              selected
+                ? "opacity-100"
+                : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            }`}
+          >
+            <KebabMenu items={p.bookmarkKebab(b)} />
+          </div>
         </div>
         <a
           href={b.url}
