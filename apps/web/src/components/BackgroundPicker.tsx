@@ -2,6 +2,11 @@ import { Globe, Image as ImageIcon, Link2, MonitorDown, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
+import {
+  DEFAULT_BACKGROUNDS,
+  svgDataUrl,
+  svgFile,
+} from "../lib/appearance.js";
 
 const PALETTE = [
   "#ef4444",
@@ -324,6 +329,30 @@ export function BackgroundPicker({
               {t("iconPicker.fetchUrlBrowser")}
             </button>
           </div>
+          <div className="space-y-1 border-t border-slate-200 pt-2 dark:border-slate-700">
+            <div className="text-xs font-medium text-slate-500">
+              {t("background.defaults")}
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {DEFAULT_BACKGROUNDS.map((bg) => (
+                <button
+                  key={bg.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void handleFile(svgFile(bg.svg, `${bg.id}.svg`))}
+                  title={t("background.useDefault")}
+                  className="h-9 overflow-hidden rounded border border-slate-200 transition hover:ring-2 hover:ring-slate-400 disabled:opacity-50 dark:border-slate-700"
+                >
+                  <img
+                    src={svgDataUrl(bg.svg)}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
           {msg && (
             <div className="text-xs text-slate-500" role="status">
               {msg}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Bookmark,
   ExternalLink,
   Image as ImageIcon,
   Maximize2,
@@ -15,6 +16,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
+import { EntityBanner } from "../components/EntityBanner.js";
 import { RichTextView } from "../components/RichTextView.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
@@ -58,9 +60,32 @@ export function BookmarkDetailPage() {
 
   const backTo = b.folderId ? `/folder/${b.folderId}` : "/";
 
+  const hasCover = !!(b.imageBlobPath || b.bgColor);
+
   return (
     <div className="space-y-3">
       <Breadcrumbs folderId={b.folderId} trailing={b.title} />
+      {hasCover && (
+        <EntityBanner
+          imageUrl={b.imageBlobPath ? api.bookmarkBgImageUrl(b.id) : null}
+          bgColor={b.bgColor}
+          title={b.title}
+          subtitle={b.url}
+          icon={
+            b.iconBlobPath ? (
+              <img
+                src={api.bookmarkIconUrl(b.id)}
+                alt=""
+                className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-md ring-2 ring-white/70"
+              />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/85 shadow-md ring-2 ring-white/70 dark:bg-slate-800">
+                <Bookmark className="h-7 w-7 text-slate-500" />
+              </div>
+            )
+          }
+        />
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <Link
           to={backTo}
@@ -69,16 +94,19 @@ export function BookmarkDetailPage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        {b.iconBlobPath ? (
-          <img
-            src={api.bookmarkIconUrl(b.id)}
-            alt=""
-            className="h-8 w-8 rounded object-cover"
-          />
-        ) : (
-          <ImageIcon className="h-6 w-6 text-slate-400" />
+        {!hasCover &&
+          (b.iconBlobPath ? (
+            <img
+              src={api.bookmarkIconUrl(b.id)}
+              alt=""
+              className="h-8 w-8 rounded object-cover"
+            />
+          ) : (
+            <ImageIcon className="h-6 w-6 text-slate-400" />
+          ))}
+        {!hasCover && (
+          <h1 className="truncate text-xl font-semibold">{b.title}</h1>
         )}
-        <h1 className="truncate text-xl font-semibold">{b.title}</h1>
         <div className="ml-auto flex flex-wrap gap-2">
           <a
             href={b.url}

@@ -13,6 +13,7 @@ import { folders } from "../db/schema.js";
 import { readBlob } from "../storage/blobs.js";
 import { storeFolderBgImage, storeFolderIcon } from "../storage/icons.js";
 import { BadRequest, NotFound } from "../util/errors.js";
+import { detectImageContentType } from "../util/image.js";
 import {
   createFolder,
   deleteFolder,
@@ -98,7 +99,7 @@ export const folderRoutes: FastifyPluginAsync = async (app) => {
     if (!row || !row.path) throw NotFound("Icon not set");
     const sealed = await readBlob(row.path);
     const png = aeadDecrypt(ctx.dek, sealed, `${ctx.userId}|folder.icon`);
-    reply.header("content-type", "image/*");
+    reply.header("content-type", detectImageContentType(png));
     reply.header("cache-control", "private, max-age=86400");
     return reply.send(png);
   });
@@ -139,7 +140,7 @@ export const folderRoutes: FastifyPluginAsync = async (app) => {
     if (!row || !row.path) throw NotFound("Background not set");
     const sealed = await readBlob(row.path);
     const bytes = aeadDecrypt(ctx.dek, sealed, `${ctx.userId}|folder.bg`);
-    reply.header("content-type", "image/*");
+    reply.header("content-type", detectImageContentType(bytes));
     reply.header("cache-control", "private, max-age=86400");
     return reply.send(bytes);
   });

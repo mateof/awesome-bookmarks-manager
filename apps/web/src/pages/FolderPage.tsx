@@ -22,6 +22,7 @@ import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
+import { EntityBanner } from "../components/EntityBanner.js";
 import { IconPicker } from "../components/IconPicker.js";
 import { GeneratePanelDialog } from "../components/GeneratePanelDialog.js";
 import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
@@ -427,87 +428,117 @@ export function FolderPage() {
     },
   ];
 
+  const hasCover = !!(folder && (folder.imageBlobPath || folder.bgColor));
+  const folderIconNode = folder?.iconBlobPath ? (
+    <img
+      src={api.folderIconUrl(folder.id)}
+      alt=""
+      className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-md ring-2 ring-white/70"
+    />
+  ) : (
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/85 shadow-md ring-2 ring-white/70 dark:bg-slate-800">
+      <FolderClosed className="h-7 w-7 text-slate-500" />
+    </div>
+  );
+  const headerControls = (
+    <>
+      <ViewModeToggle />
+      <KebabMenu
+        items={[
+          ...(folderId && items.length > 0
+            ? [
+                {
+                  label: t("folder.openDirect"),
+                  icon: <TabletSmartphone className="h-4 w-4" />,
+                  onClick: () => openAllInTabs(false),
+                },
+              ]
+            : []),
+          ...(folderId
+            ? [
+                {
+                  label: t("folder.openAll"),
+                  icon: <ExternalLink className="h-4 w-4" />,
+                  onClick: () => openAllInTabs(true),
+                },
+              ]
+            : []),
+          {
+            label: t("folder.exportButton"),
+            icon: <Download className="h-4 w-4" />,
+            onClick: () => void exportCurrentFolder(),
+          },
+          ...(folder
+            ? [
+                {
+                  label: t("folder.editFolder"),
+                  icon: <PencilLine className="h-4 w-4" />,
+                  onClick: () => setShowEditFolder(true),
+                },
+                {
+                  label: t("folder.shareWithGroup"),
+                  icon: <Share2 className="h-4 w-4" />,
+                  onClick: () => setShowShareFolder(true),
+                },
+              ]
+            : []),
+          {
+            label: t("folder.addFolder"),
+            icon: <FolderPlus className="h-4 w-4" />,
+            onClick: () => setShowAddFolder(true),
+          },
+          ...(folder
+            ? [
+                {
+                  label: t("folder.deleteFolderKebab"),
+                  icon: <Trash2 className="h-4 w-4" />,
+                  danger: true,
+                  onClick: () => void deleteFolder(folder),
+                },
+              ]
+            : []),
+        ]}
+      />
+      <button
+        onClick={() => setShowAddBookmark(true)}
+        className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
+      >
+        <Plus className="h-4 w-4" /> {t("folder.addBookmark")}
+      </button>
+    </>
+  );
+
   return (
     <div className="space-y-4">
       {folderId && <Breadcrumbs folderId={folderId} />}
 
-      <div className="flex flex-wrap items-center gap-3">
-        {folder?.iconBlobPath && (
-          <img
-            src={api.folderIconUrl(folder.id)}
-            alt=""
-            className="h-10 w-10 rounded object-cover"
-          />
-        )}
-        <h1 className="text-xl font-semibold">
-          {folder?.name ?? t("folder.rootTitle")}
-        </h1>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <ViewModeToggle />
-          <KebabMenu
-            items={[
-              ...(folderId && items.length > 0
-                ? [
-                    {
-                      label: t("folder.openDirect"),
-                      icon: <TabletSmartphone className="h-4 w-4" />,
-                      onClick: () => openAllInTabs(false),
-                    },
-                  ]
-                : []),
-              ...(folderId
-                ? [
-                    {
-                      label: t("folder.openAll"),
-                      icon: <ExternalLink className="h-4 w-4" />,
-                      onClick: () => openAllInTabs(true),
-                    },
-                  ]
-                : []),
-              {
-                label: t("folder.exportButton"),
-                icon: <Download className="h-4 w-4" />,
-                onClick: () => void exportCurrentFolder(),
-              },
-              ...(folder
-                ? [
-                    {
-                      label: t("folder.editFolder"),
-                      icon: <PencilLine className="h-4 w-4" />,
-                      onClick: () => setShowEditFolder(true),
-                    },
-                    {
-                      label: t("folder.shareWithGroup"),
-                      icon: <Share2 className="h-4 w-4" />,
-                      onClick: () => setShowShareFolder(true),
-                    },
-                  ]
-                : []),
-              {
-                label: t("folder.addFolder"),
-                icon: <FolderPlus className="h-4 w-4" />,
-                onClick: () => setShowAddFolder(true),
-              },
-              ...(folder
-                ? [
-                    {
-                      label: t("folder.deleteFolderKebab"),
-                      icon: <Trash2 className="h-4 w-4" />,
-                      danger: true,
-                      onClick: () => void deleteFolder(folder),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-          <button
-            onClick={() => setShowAddBookmark(true)}
-            className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
-          >
-            <Plus className="h-4 w-4" /> {t("folder.addBookmark")}
-          </button>
+      {hasCover ? (
+        <EntityBanner
+          imageUrl={
+            folder!.imageBlobPath ? api.folderBgImageUrl(folder!.id) : null
+          }
+          bgColor={folder!.bgColor}
+          icon={folderIconNode}
+          title={folder!.name}
+          actions={headerControls}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          {folder?.iconBlobPath && (
+            <img
+              src={api.folderIconUrl(folder.id)}
+              alt=""
+              className="h-10 w-10 rounded object-cover"
+            />
+          )}
+          <h1 className="text-xl font-semibold">
+            {folder?.name ?? t("folder.rootTitle")}
+          </h1>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {headerControls}
+          </div>
         </div>
-      </div>
+      )}
 
       {folder?.description && <RichTextView html={folder.description} />}
 

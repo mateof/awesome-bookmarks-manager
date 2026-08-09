@@ -18,6 +18,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 5. [Publicar un panel](#5-publicar-un-panel)
 6. [Panel protegido con contraseña](#6-panel-protegido-con-contraseña)
 7. [Extensión de Chrome](#7-extensión-de-chrome)
+8. [Apariencia: iconos, fondos y banner](#8-apariencia-iconos-fondos-y-banner)
 
 ---
 
@@ -162,6 +163,24 @@ El bookmark aparece al instante en tu biblioteca, en la carpeta elegida:
 ![Bookmark guardado desde la extensión](images/22-extension-saved.png)
 
 ---
+
+## 8. Apariencia: iconos, fondos y banner
+
+Cada carpeta y cada bookmark puede tener un **icono** y un **fondo** propios.
+Al editar (o desde *Apariencia* en el menú de tres puntos):
+
+- **Iconos**: además de subir una imagen o traer el favicon, hay una
+  **biblioteca** con cientos de iconos (buscador y categorías) y una fila de los
+  más comunes. Eliges el color del icono y listo.
+- **Fondos**: una paleta de color con opacidad, subir/pegar una imagen, y una
+  rejilla de **20 fondos por defecto** (gradientes, patrones y estilos varios).
+
+![Selectores de icono y fondo](images/24-appearance-dialog.png)
+
+Cuando una carpeta o un bookmark tiene fondo o imagen, al abrirlo se muestra un
+**banner** de cabecera (estilo siyuan) con el icono y el título encima:
+
+![Banner de cabecera de una carpeta](images/23-folder-banner.png)
 
 ## Cómo se regeneran estas capturas
 

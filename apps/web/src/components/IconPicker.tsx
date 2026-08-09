@@ -1,7 +1,15 @@
-import { Globe, Image as ImageIcon, Link2, MonitorDown, X } from "lucide-react";
+import {
+  Globe,
+  Image as ImageIcon,
+  LayoutGrid,
+  Link2,
+  MonitorDown,
+  X,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
+import { IconLibraryPicker } from "./IconLibraryPicker.js";
 
 interface Props {
   currentUrl: string | null;
@@ -29,6 +37,7 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl);
   const [msg, setMsg] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
+  const [showLib, setShowLib] = useState(false);
 
   const handleFile = async (file: File) => {
     setBusy(true);
@@ -221,6 +230,13 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
             >
               {previewUrl ? t("iconPicker.change") : t("iconPicker.upload")}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowLib((v) => !v)}
+              className="flex items-center gap-0.5 text-blue-600 hover:underline"
+            >
+              <LayoutGrid className="h-3 w-3" /> {t("iconLib.library")}
+            </button>
             {previewUrl && onClear && (
               <button
                 type="button"
@@ -304,6 +320,12 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
           {busy ? t("iconPicker.downloading") : t("iconPicker.fetchUrlBrowser")}
         </button>
       </div>
+
+      {showLib && (
+        <div className="rounded border border-slate-200 p-2 dark:border-slate-700">
+          <IconLibraryPicker onPick={handleFile} busy={busy} />
+        </div>
+      )}
 
       {msg && (
         <div className="text-xs text-slate-500" role="status">
