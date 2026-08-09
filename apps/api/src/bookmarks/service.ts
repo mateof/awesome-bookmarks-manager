@@ -10,6 +10,18 @@ import { enqueue } from "../jobs/queue.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { urlHash } from "../util/url.js";
+import { type BookmarkSnapshot, recordVersion } from "../versions/service.js";
+
+function bookmarkSnapshot(b: Bookmark): BookmarkSnapshot {
+  return {
+    title: b.title,
+    url: b.url,
+    description: b.description,
+    bgColor: b.bgColor ?? null,
+    folderId: b.folderId,
+    tagIds: b.tagIds,
+  };
+}
 
 interface BookmarkRow {
   id: string;
@@ -315,7 +327,9 @@ export function createBookmark(
     });
   }
 
-  return getBookmark(ctx, id);
+  const saved = getBookmark(ctx, id);
+  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  return saved;
 }
 
 export function updateBookmark(
@@ -403,7 +417,9 @@ export function updateBookmark(
     });
   }
 
-  return getBookmark(ctx, id);
+  const saved = getBookmark(ctx, id);
+  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  return saved;
 }
 
 /**

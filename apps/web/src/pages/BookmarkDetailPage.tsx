@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Bookmark,
   ExternalLink,
+  History,
   Image as ImageIcon,
   Maximize2,
   PencilLine,
@@ -15,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
+import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
 import { RichTextView } from "../components/RichTextView.js";
@@ -52,6 +54,7 @@ export function BookmarkDetailPage() {
     },
   });
   const [showEdit, setShowEdit] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
 
@@ -136,6 +139,12 @@ export function BookmarkDetailPage() {
             className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             <PencilLine className="h-4 w-4" /> {t("common.edit")}
+          </button>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <History className="h-4 w-4" /> {t("versions.title")}
           </button>
           <button
             onClick={() => setShowShare(true)}
@@ -224,6 +233,17 @@ export function BookmarkDetailPage() {
           sourceType="bookmark"
           sourceId={b.id}
           onClose={() => setShowShare(false)}
+        />
+      )}
+      {showHistory && (
+        <VersionHistory
+          entityType="bookmark"
+          entityId={b.id}
+          onClose={() => setShowHistory(false)}
+          onChanged={() => {
+            qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
+            qc.invalidateQueries({ queryKey: ["bookmarks"] });
+          }}
         />
       )}
     </div>

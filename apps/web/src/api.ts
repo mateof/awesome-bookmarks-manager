@@ -79,6 +79,36 @@ export function isConflict(e: unknown): boolean {
   return e instanceof ApiError && e.status === 409;
 }
 
+export type VersionEntity = "folder" | "bookmark";
+export interface VersionMeta {
+  id: string;
+  entityType: VersionEntity;
+  entityId: string;
+  rev: number;
+  actorId: string;
+  createdAt: string;
+}
+export interface FolderSnapshot {
+  name: string;
+  description: string | null;
+  bgColor: string | null;
+  tagIds: string[];
+}
+export interface BookmarkSnapshot {
+  title: string;
+  url: string;
+  description: string | null;
+  bgColor: string | null;
+  folderId: string | null;
+  tagIds: string[];
+}
+export interface VersionDetail extends VersionMeta {
+  snapshot: FolderSnapshot | BookmarkSnapshot;
+}
+export interface ActivityEntry extends VersionMeta {
+  label: string;
+}
+
 /**
  * When any request returns 401 (session expired / missing cookie) or 423
  * (KeyUnavailable — DEK evicted from cache), broadcast a window event so
@@ -490,6 +520,28 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+
+  // version history
+  listVersions: (entityType: VersionEntity, id: string) =>
+    request<VersionMeta[]>(`/${entityType}s/${id}/versions`),
+  getVersion: (versionId: string) =>
+    request<VersionDetail>(`/versions/${versionId}`),
+  restoreVersion: (entityType: VersionEntity, id: string, versionId: string) =>
+    request<unknown>(`/${entityType}s/${id}/versions/${versionId}/restore`, {
+      method: "POST",
+    }),
+  forkVersion: (
+    entityType: VersionEntity,
+    id: string,
+    versionId: string,
+    body: { name?: string; title?: string },
+  ) =>
+    request<{ id: string }>(
+      `/${entityType}s/${id}/versions/${versionId}/fork`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  folderActivity: (id: string) =>
+    request<ActivityEntry[]>(`/folders/${id}/activity`),
 
   // panels
   listPanels: () => request<PanelListItem[]>("/panels"),

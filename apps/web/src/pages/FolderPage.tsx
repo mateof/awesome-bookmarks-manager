@@ -6,6 +6,7 @@ import {
   FolderClosed,
   FolderInput,
   FolderPlus,
+  History,
   LayoutDashboard,
   Palette,
   PencilLine,
@@ -24,6 +25,7 @@ import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
 import { IconPicker } from "../components/IconPicker.js";
+import { VersionHistory } from "../components/VersionHistory.js";
 import { GeneratePanelDialog } from "../components/GeneratePanelDialog.js";
 import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
 import { Modal } from "../components/Modal.js";
@@ -97,6 +99,7 @@ export function FolderPage() {
   const [showAddFolder, setShowAddFolder] = useState(false);
   const [showEditFolder, setShowEditFolder] = useState(false);
   const [showShareFolder, setShowShareFolder] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
   const [appearanceTarget, setAppearanceTarget] = useState<
@@ -480,6 +483,11 @@ export function FolderPage() {
                   icon: <Share2 className="h-4 w-4" />,
                   onClick: () => setShowShareFolder(true),
                 },
+                {
+                  label: t("versions.title"),
+                  icon: <History className="h-4 w-4" />,
+                  onClick: () => setShowHistory(true),
+                },
               ]
             : []),
           {
@@ -626,6 +634,14 @@ export function FolderPage() {
           sourceType="folder"
           sourceId={folder.id}
           onClose={() => setShowShareFolder(false)}
+        />
+      )}
+      {showHistory && folder && (
+        <VersionHistory
+          entityType="folder"
+          entityId={folder.id}
+          onClose={() => setShowHistory(false)}
+          onChanged={invalidate}
         />
       )}
       {editingFolder && (

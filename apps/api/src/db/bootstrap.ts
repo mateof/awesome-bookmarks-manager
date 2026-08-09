@@ -243,6 +243,19 @@ export function ensureSchema() {
       updated_at TEXT NOT NULL DEFAULT (current_timestamp)
     );
     CREATE INDEX IF NOT EXISTS group_shares_group_idx ON group_shares(group_id);
+
+    CREATE TABLE IF NOT EXISTS entity_versions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      rev INTEGER NOT NULL,
+      actor_id TEXT NOT NULL,
+      payload_ct BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS entity_versions_entity_idx
+      ON entity_versions(user_id, entity_type, entity_id, created_at);
   `);
 
   // Best-effort additions to existing tables. SQLite has no

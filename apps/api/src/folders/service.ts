@@ -7,6 +7,16 @@ import { getDb, getSqlite } from "../db/client.js";
 import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
+import { type FolderSnapshot, recordVersion } from "../versions/service.js";
+
+function folderSnapshot(f: Folder): FolderSnapshot {
+  return {
+    name: f.name,
+    description: f.description,
+    bgColor: f.bgColor ?? null,
+    tagIds: f.tagIds,
+  };
+}
 
 interface FolderRow {
   id: string;
@@ -211,7 +221,9 @@ export function createFolder(
       .run();
   }
 
-  return getFolder(ctx, id);
+  const created = getFolder(ctx, id);
+  recordVersion(ctx, "folder", id, created.rev, folderSnapshot(created));
+  return created;
 }
 
 export function updateFolder(
@@ -272,7 +284,9 @@ export function updateFolder(
   });
   tx();
 
-  return getFolder(ctx, id);
+  const updated = getFolder(ctx, id);
+  recordVersion(ctx, "folder", id, updated.rev, folderSnapshot(updated));
+  return updated;
 }
 
 /**
@@ -330,13 +344,11 @@ export function moveFolder(
     .run();
 }
 
-export function deleteFolder(ctx: AuthedContext, id: string) {
-  assertFolderOwnedAndAlive(ctx, id);
-  const now = new Date().toISOString();
-
-  // Collect the whole subtree so descendants are removed with their parent
-  // instead of being orphaned (rows still visible but pointing at a dead
-  // folder). Done in-memory from the user's alive folders (cheap, sync).
+/** All alive folder ids in the subtree rooted at rootId (including itself). */
+export function subtreeFolderIds(
+  ctx: AuthedContext,
+  rootId: string,
+): string[] {
   const all = getDb()
     .select({ id: folders.id, parentId: folders.parentId })
     .from(folders)
@@ -349,13 +361,21 @@ export function deleteFolder(ctx: AuthedContext, id: string) {
     list.push(f.id);
     childrenOf.set(f.parentId, list);
   }
-  const subtree: string[] = [];
-  const queue = [id];
+  const out: string[] = [];
+  const queue = [rootId];
   while (queue.length) {
     const cur = queue.shift()!;
-    subtree.push(cur);
+    out.push(cur);
     for (const child of childrenOf.get(cur) ?? []) queue.push(child);
   }
+  return out;
+}
+
+export function deleteFolder(ctx: AuthedContext, id: string) {
+  assertFolderOwnedAndAlive(ctx, id);
+  const now = new Date().toISOString();
+  // Remove the whole subtree so descendants aren't orphaned.
+  const subtree = subtreeFolderIds(ctx, id);
 
   const tx = getSqlite().transaction(() => {
     getDb()

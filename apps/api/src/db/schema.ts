@@ -419,3 +419,32 @@ export const extensionTokens = sqliteTable(
     hashIdx: uniqueIndex("extension_tokens_hash_idx").on(t.tokenHash),
   }),
 );
+
+export const entityVersions = sqliteTable(
+  "entity_versions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // "folder" | "bookmark"
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    // The entity rev this version captures.
+    rev: integer("rev").notNull(),
+    // Who made the change (owner for personal content).
+    actorId: text("actor_id").notNull(),
+    // Sealed JSON snapshot of the editable fields at this version (user DEK,
+    // AAD "<userId>|version.payload").
+    payloadCt: blob("payload_ct", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    entityIdx: index("entity_versions_entity_idx").on(
+      t.userId,
+      t.entityType,
+      t.entityId,
+      t.createdAt,
+    ),
+  }),
+);
