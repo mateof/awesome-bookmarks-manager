@@ -264,6 +264,11 @@ export function ensureSchema() {
   tryAddColumn("users", "role", "TEXT NOT NULL DEFAULT 'user'");
   tryAddColumn("users", "nickname", "TEXT");
   tryAddColumn("users", "auto_snapshots", "INTEGER NOT NULL DEFAULT 1");
+  tryAddColumn(
+    "users",
+    "auto_accept_invitations",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
   tryAddColumn("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("users", "two_factor_enabled", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("users", "two_factor_secret_ct", "BLOB");

@@ -29,15 +29,18 @@ function GroupsList() {
     queryKey: ["invitations"],
     queryFn: api.listMyInvitations,
   });
+  const nav = useNavigate();
+  const [accepted, setAccepted] = useState(false);
   const accept = useMutation({
     mutationFn: (token: string) => api.acceptInvitation(token),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invitations"] });
       qc.invalidateQueries({ queryKey: ["groups"] });
+      qc.invalidateQueries({ queryKey: ["shared"] });
+      setAccepted(true);
     },
   });
   const [showCreate, setShowCreate] = useState(false);
-  const nav = useNavigate();
 
   return (
     <div className="space-y-4">
@@ -50,6 +53,18 @@ function GroupsList() {
           <Plus className="h-4 w-4" /> {t("groups.newGroup")}
         </button>
       </div>
+
+      {accepted && (
+        <div className="flex items-center gap-2 rounded border border-emerald-300 bg-emerald-50 p-3 text-sm dark:border-emerald-800 dark:bg-emerald-900/30">
+          <span className="flex-1">{t("groups.acceptedOpen")}</span>
+          <button
+            onClick={() => nav("/shared")}
+            className="rounded bg-slate-900 px-3 py-1 text-white dark:bg-slate-100 dark:text-slate-900"
+          >
+            {t("notifications.openShared")}
+          </button>
+        </div>
+      )}
 
       {(invitations.data?.length ?? 0) > 0 && (
         <section className="space-y-2">
@@ -190,7 +205,11 @@ function GroupDetail({ id }: { id: string }) {
     queryFn: () => api.listGroupShares(id),
   });
   const [showInvite, setShowInvite] = useState(false);
-  const [lastInviteLink, setLastInviteLink] = useState<string | null>(null);
+  const [lastInvite, setLastInvite] = useState<{
+    link: string;
+    autoAccepted: boolean;
+    email: string;
+  } | null>(null);
 
   if (!group.data) return <div className="text-slate-400">{t("common.loading")}</div>;
   const g = group.data;
@@ -319,27 +338,45 @@ function GroupDetail({ id }: { id: string }) {
         <InviteDialog
           groupId={id}
           onClose={() => setShowInvite(false)}
-          onInvited={(link) => setLastInviteLink(link)}
+          onInvited={setLastInvite}
         />
       )}
-      {lastInviteLink && (
+      {lastInvite && (
         <Modal
-          title={t("groups.inviteCreatedTitle")}
-          onClose={() => setLastInviteLink(null)}
+          title={
+            lastInvite.autoAccepted
+              ? t("groups.autoJoinedTitle")
+              : t("groups.inviteCreatedTitle")
+          }
+          onClose={() => setLastInvite(null)}
         >
           <div className="space-y-2">
-            <p className="text-sm">{t("groups.inviteCreatedHint")}</p>
-            <div className="flex items-center gap-2 rounded border border-slate-300 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
-              <code className="flex-1 truncate text-xs">{lastInviteLink}</code>
-              <button
-                onClick={() => navigator.clipboard.writeText(lastInviteLink)}
-                title={t("groups.copyTitle")}
-                className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
-              >
-                <Copy className="h-3 w-3" />
-              </button>
-            </div>
-            <p className="text-xs text-slate-500">{t("groups.inviteOnlyOnce")}</p>
+            {lastInvite.autoAccepted ? (
+              <p className="text-sm">
+                {t("groups.autoJoined", { email: lastInvite.email })}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm">{t("groups.inviteSentHint")}</p>
+                <div className="flex items-center gap-2 rounded border border-slate-300 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
+                  <code className="flex-1 truncate text-xs">
+                    {lastInvite.link}
+                  </code>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard.writeText(lastInvite.link)
+                    }
+                    title={t("groups.copyTitle")}
+                    className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {t("groups.inviteOnlyOnce")}
+                </p>
+              </>
+            )}
           </div>
         </Modal>
       )}
@@ -354,7 +391,11 @@ function InviteDialog({
 }: {
   groupId: string;
   onClose: () => void;
-  onInvited: (link: string) => void;
+  onInvited: (r: {
+    link: string;
+    autoAccepted: boolean;
+    email: string;
+  }) => void;
 }) {
   const { t } = useTranslation();
   const [email, setEmail] = useState("");
@@ -364,8 +405,11 @@ function InviteDialog({
     mutationFn: () =>
       api.inviteMember(groupId, { email, expiresInDays: days }),
     onSuccess: (inv) => {
-      const link = `${window.location.origin}/invite/${inv.token}`;
-      onInvited(link);
+      onInvited({
+        link: `${window.location.origin}/invite/${inv.token}`,
+        autoAccepted: inv.autoAccepted,
+        email: inv.email,
+      });
       onClose();
     },
     onError: (e) => setErr(e instanceof ApiError ? e.message : t("common.error")),
@@ -375,11 +419,11 @@ function InviteDialog({
       <div className="space-y-2">
         <input
           autoFocus
-          type="email"
+          type="text"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={t("groups.fieldEmail")}
+          placeholder={t("groups.fieldEmailOrNick")}
           className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
         />
         <label className="block text-xs text-slate-500">

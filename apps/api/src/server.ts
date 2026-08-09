@@ -20,6 +20,7 @@ import { bookmarkRoutes } from "./bookmarks/routes.js";
 import { snapshotRoutes } from "./bookmarks/snapshot-routes.js";
 import { cloudRoutes } from "./cloud/routes.js";
 import { groupRoutes } from "./groups/routes.js";
+import { notificationRoutes } from "./notifications/routes.js";
 import { ensureSchema } from "./db/bootstrap.js";
 import { closeDb, getDb } from "./db/client.js";
 import { getEnv } from "./env.js";
@@ -136,6 +137,7 @@ export async function buildServer() {
       await api.register(cloudRoutes);
       await api.register(shareRoutes);
       await api.register(groupRoutes);
+      await api.register(notificationRoutes);
       await api.register(extensionRoutes);
       await api.register(adminRoutes);
       await api.register(jobRoutes);

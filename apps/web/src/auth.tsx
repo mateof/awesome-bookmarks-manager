@@ -12,6 +12,7 @@ interface AuthState {
     nickname: string | null;
     role: "user" | "admin";
     autoSnapshots: boolean;
+    autoAcceptInvitations: boolean;
     mustChangePassword: boolean;
     twoFactorEnabled: boolean;
     mustSetup2fa: boolean;
@@ -74,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             nickname: me.data.nickname,
             role: me.data.role,
             autoSnapshots: me.data.autoSnapshots,
+            autoAcceptInvitations: me.data.autoAcceptInvitations,
             mustChangePassword: me.data.mustChangePassword,
             twoFactorEnabled: me.data.twoFactorEnabled,
             mustSetup2fa: me.data.mustSetup2fa,

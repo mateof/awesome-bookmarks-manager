@@ -304,6 +304,24 @@ export function getAutoSnapshots(userId: string): boolean {
   return row?.autoSnapshots ?? true;
 }
 
+export function setAutoAcceptInvitations(userId: string, value: boolean) {
+  getDb()
+    .update(users)
+    .set({ autoAcceptInvitations: value, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, userId))
+    .run();
+  return { autoAcceptInvitations: value };
+}
+
+export function getAutoAcceptInvitations(userId: string): boolean {
+  const row = getDb()
+    .select({ v: users.autoAcceptInvitations })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+  return row?.v ?? false;
+}
+
 export function setNickname(userId: string, nickname: string) {
   const db = getDb();
   const me = db.select().from(users).where(eq(users.id, userId)).get();
@@ -333,6 +351,7 @@ export function getMe(userId: string) {
       nickname: users.nickname,
       role: users.role,
       autoSnapshots: users.autoSnapshots,
+      autoAcceptInvitations: users.autoAcceptInvitations,
       mustChangePassword: users.mustChangePassword,
       twoFactorEnabled: users.twoFactorEnabled,
       createdAt: users.createdAt,

@@ -126,7 +126,7 @@ test("04 · compartir una carpeta con otro usuario", async ({ browser }) => {
   await pageA.waitForURL(/\/groups\//);
   await pageA.getByRole("button", { name: "Invitar" }).click();
   await expect(pageA.getByRole("heading", { name: "Invitar al grupo" })).toBeVisible();
-  await pageA.getByPlaceholder("email", { exact: true }).fill(alan.email);
+  await pageA.getByPlaceholder("email o nickname").fill(alan.email);
   await pageA.getByRole("button", { name: "Generar invitación" }).click();
   await expect(
     pageA.getByRole("heading", { name: "Invitación creada" }),

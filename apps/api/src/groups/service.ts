@@ -1,5 +1,5 @@
 import type { Group, GroupMember, SharedItem } from "@awesome-bookmarks/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
@@ -12,6 +12,7 @@ import {
   users,
 } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
+import { pushNotification } from "../notifications/service.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
 import { generateGroupDek, wrapGroupDek } from "./encryption.js";
 
@@ -222,6 +223,8 @@ export interface CreatedInvitation {
   token: string;
   email: string;
   expiresAt: string | null;
+  /** True when the invitee had auto-accept on and joined immediately. */
+  autoAccepted: boolean;
 }
 
 export function inviteMember(
@@ -230,23 +233,82 @@ export function inviteMember(
   input: { email: string; expiresInDays: number },
 ): CreatedInvitation {
   ensureOwnerOrAdmin(ctx, groupId);
+
+  // Accept an email or a nickname; resolve to an existing account if any.
+  const raw = input.email.trim();
+  const target = getDb()
+    .select({
+      id: users.id,
+      email: users.email,
+      autoAccept: users.autoAcceptInvitations,
+    })
+    .from(users)
+    .where(or(eq(users.email, raw.toLowerCase()), eq(users.nickname, raw)))
+    .get();
+  const inviteEmail = (target?.email ?? raw).toLowerCase();
+
+  const group = getDb()
+    .select({ name: groups.name })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .get();
+  const groupName = group?.name ?? "";
+  const inviter = getDb()
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, ctx.userId))
+    .get();
+
   const id = uuidv4();
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(
     Date.now() + input.expiresInDays * 86_400_000,
   ).toISOString();
+
+  // Auto-join when the invitee opted in from their settings.
+  if (target && target.autoAccept) {
+    const db = getDb();
+    db.transaction(() => {
+      db.insert(groupInvitations)
+        .values({
+          id,
+          groupId,
+          email: inviteEmail,
+          token,
+          invitedBy: ctx.userId,
+          expiresAt,
+          acceptedAt: new Date().toISOString(),
+        })
+        .run();
+      db.insert(groupMembers)
+        .values({ groupId, userId: target.id, role: "member" })
+        .onConflictDoNothing()
+        .run();
+    });
+    pushNotification(target.id, { type: "joined", groupId, groupName });
+    return { id, token, email: inviteEmail, expiresAt, autoAccepted: true };
+  }
+
   getDb()
     .insert(groupInvitations)
     .values({
       id,
       groupId,
-      email: input.email.toLowerCase(),
+      email: inviteEmail,
       token,
       invitedBy: ctx.userId,
       expiresAt,
     })
     .run();
-  return { id, token, email: input.email, expiresAt };
+  if (target) {
+    pushNotification(target.id, {
+      type: "invitation",
+      groupId,
+      groupName,
+      invitedByEmail: inviter?.email,
+    });
+  }
+  return { id, token, email: inviteEmail, expiresAt, autoAccepted: false };
 }
 
 export function listMyInvitations(ctx: AuthedContext) {

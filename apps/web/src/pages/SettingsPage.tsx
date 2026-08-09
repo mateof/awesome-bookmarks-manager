@@ -228,6 +228,11 @@ function Profile() {
     mutationFn: (value: boolean) => api.updateMyProfile({ autoSnapshots: value }),
     onSuccess: () => refresh(),
   });
+  const toggleAutoAccept = useMutation({
+    mutationFn: (value: boolean) =>
+      api.updateMyProfile({ autoAcceptInvitations: value }),
+    onSuccess: () => refresh(),
+  });
   return (
     <div className="space-y-6">
       <Card>
@@ -294,6 +299,28 @@ function Profile() {
             {t("settings.profile.autoSnapshotsLabel")}
             <span className="mt-0.5 block text-xs text-slate-500">
               {t("settings.profile.autoSnapshotsHint")}
+            </span>
+          </span>
+        </label>
+      </Card>
+
+      <Card>
+        <SectionHeader
+          icon={<User className="h-5 w-5" />}
+          title={t("settings.profile.autoAcceptHeading")}
+        />
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-slate-700"
+            checked={user?.autoAcceptInvitations ?? false}
+            onChange={(e) => toggleAutoAccept.mutate(e.target.checked)}
+            disabled={toggleAutoAccept.isPending}
+          />
+          <span>
+            {t("settings.profile.autoAcceptLabel")}
+            <span className="mt-0.5 block text-xs text-slate-500">
+              {t("settings.profile.autoAcceptHint")}
             </span>
           </span>
         </label>

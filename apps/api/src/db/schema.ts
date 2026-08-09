@@ -22,6 +22,12 @@ export const users = sqliteTable(
     autoSnapshots: integer("auto_snapshots", { mode: "boolean" })
       .notNull()
       .default(true),
+    // Join groups without an explicit accept when invited.
+    autoAcceptInvitations: integer("auto_accept_invitations", {
+      mode: "boolean",
+    })
+      .notNull()
+      .default(false),
     // Set when an admin creates the account with a one-time password: the
     // user must set a new password before they can use the app.
     mustChangePassword: integer("must_change_password", { mode: "boolean" })

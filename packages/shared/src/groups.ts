@@ -51,7 +51,8 @@ export const UpdateGroupBodySchema = z.object({
 export type UpdateGroupBody = z.infer<typeof UpdateGroupBodySchema>;
 
 export const InviteMemberBodySchema = z.object({
-  email: z.string().email(),
+  // Email or nickname of the invitee; resolved to an account server-side.
+  email: z.string().min(1).max(254),
   expiresInDays: z.coerce.number().int().min(1).max(365).default(30),
 });
 export type InviteMemberBody = z.infer<typeof InviteMemberBodySchema>;

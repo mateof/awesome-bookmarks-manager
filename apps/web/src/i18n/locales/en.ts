@@ -336,6 +336,11 @@ const en = {
     generating: "Generating…",
     inviteCreatedTitle: "Invitation created",
     inviteCreatedHint: "Share this link with the invitee:",
+    inviteSentHint: "Invitation sent. You can also share this link:",
+    autoJoinedTitle: "Joined the group",
+    autoJoined: "{{email}} joined the group automatically.",
+    fieldEmailOrNick: "email or nickname",
+    acceptedOpen: "You joined the group. You can open the shared content.",
     inviteOnlyOnce:
       "It can only be used once and only by the email address specified.",
     fieldEmail: "email",
@@ -420,6 +425,10 @@ const en = {
       nicknameLabel: "Nickname (you can also use it to log in)",
       saveNickname: "Save nickname",
       nicknameSaved: "Nickname saved",
+      autoAcceptHeading: "Group invitations",
+      autoAcceptLabel: "Accept invitations automatically",
+      autoAcceptHint:
+        "When someone invites you to a group, you join without having to accept.",
       autoSnapshotsHeading: "Automatic snapshots",
       autoSnapshotsLabel:
         "Automatically generate snapshots and icons when adding/importing bookmarks.",
@@ -765,6 +774,12 @@ const en = {
       travel: "Travel",
       life: "Life",
     },
+  },
+  notifications: {
+    invited: "You were invited to {{group}}",
+    joined: "You joined {{group}}",
+    viewInvites: "View invitations",
+    openShared: "Open shared",
   },
   versions: {
     title: "History",

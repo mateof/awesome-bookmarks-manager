@@ -54,6 +54,7 @@ export type TwoFactorSetupResponse = z.infer<
 export const UpdateProfileBodySchema = z.object({
   nickname: NicknameSchema.optional(),
   autoSnapshots: z.boolean().optional(),
+  autoAcceptInvitations: z.boolean().optional(),
 });
 export type UpdateProfileBody = z.infer<typeof UpdateProfileBodySchema>;
 
@@ -82,6 +83,7 @@ export const MeResponseSchema = z.object({
   nickname: z.string().nullable(),
   role: UserRoleSchema,
   autoSnapshots: z.boolean(),
+  autoAcceptInvitations: z.boolean(),
   mustChangePassword: z.boolean(),
   twoFactorEnabled: z.boolean(),
   mustSetup2fa: z.boolean(),

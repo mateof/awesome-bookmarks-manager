@@ -27,6 +27,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { Notifications } from "./Notifications.js";
 import { useAuth } from "../auth.js";
 import { BookmarksBar } from "./BookmarksBar.js";
 import { FolderTree } from "./FolderTree.js";
@@ -164,6 +165,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
     queryKey: ["bookmarks", "all"],
     queryFn: () => api.listBookmarks({}),
   });
+  const invitations = useQuery({
+    queryKey: ["invitations"],
+    queryFn: api.listMyInvitations,
+  });
+  const pendingInvites = invitations.data?.length ?? 0;
 
   const sidebarContent = (
     <nav className="space-y-3">
@@ -182,6 +188,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }
         >
           <Users className="h-4 w-4" /> {t("sidebar.groups")}
+          {pendingInvites > 0 && (
+            <span className="ml-auto rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+              {pendingInvites}
+            </span>
+          )}
         </NavLink>
         <NavLink
           to="/tags"
@@ -342,6 +353,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       {spotlightOpen && <Spotlight onClose={() => setSpotlightOpen(false)} />}
+      <Notifications />
     </div>
     </DndContext>
   );

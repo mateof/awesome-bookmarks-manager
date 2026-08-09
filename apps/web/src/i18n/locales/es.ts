@@ -337,6 +337,11 @@ const es = {
     generating: "Generando…",
     inviteCreatedTitle: "Invitación creada",
     inviteCreatedHint: "Comparte este enlace con la persona invitada:",
+    inviteSentHint: "Invitación enviada. También puedes compartir este enlace:",
+    autoJoinedTitle: "Se ha unido al grupo",
+    autoJoined: "{{email}} se ha unido automáticamente al grupo.",
+    fieldEmailOrNick: "email o nickname",
+    acceptedOpen: "Te has unido al grupo. Puedes abrir el contenido compartido.",
     inviteOnlyOnce:
       "Solo se puede usar una vez y solo por la dirección de email indicada.",
     fieldEmail: "email",
@@ -421,6 +426,10 @@ const es = {
       nicknameLabel: "Nickname (puedes usarlo también para iniciar sesión)",
       saveNickname: "Guardar nickname",
       nicknameSaved: "Nickname guardado",
+      autoAcceptHeading: "Invitaciones a grupos",
+      autoAcceptLabel: "Aceptar invitaciones automáticamente",
+      autoAcceptHint:
+        "Cuando alguien te invite a un grupo, te unirás sin tener que aceptar.",
       autoSnapshotsHeading: "Snapshots automáticos",
       autoSnapshotsLabel:
         "Generar automáticamente snapshots e iconos al añadir/importar bookmarks.",
@@ -766,6 +775,12 @@ const es = {
       travel: "Viajes",
       life: "Ocio",
     },
+  },
+  notifications: {
+    invited: "Te han invitado a {{group}}",
+    joined: "Te has unido a {{group}}",
+    viewInvites: "Ver invitaciones",
+    openShared: "Abrir compartidos",
   },
   versions: {
     title: "Historial",

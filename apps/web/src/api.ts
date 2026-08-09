@@ -227,7 +227,11 @@ export const api = {
   authConfig: () =>
     request<{ registrationEnabled: boolean }>("/auth/config"),
   me: () => request<MeResponse>("/me"),
-  updateMyProfile: (body: { nickname?: string; autoSnapshots?: boolean }) =>
+  updateMyProfile: (body: {
+    nickname?: string;
+    autoSnapshots?: boolean;
+    autoAcceptInvitations?: boolean;
+  }) =>
     request<MeResponse>("/me", {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -492,10 +496,17 @@ export const api = {
   leaveGroup: (id: string) =>
     request<{ ok: true }>(`/groups/${id}/leave`, { method: "POST" }),
   inviteMember: (id: string, body: InviteMemberBody) =>
-    request<{ id: string; token: string; email: string; expiresAt: string | null }>(
-      `/groups/${id}/invitations`,
-      { method: "POST", body: JSON.stringify(body) },
-    ),
+    request<{
+      id: string;
+      token: string;
+      email: string;
+      expiresAt: string | null;
+      autoAccepted: boolean;
+    }>(`/groups/${id}/invitations`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  notificationsUrl: () => `${BASE}/notifications/stream`,
   listMyInvitations: () => request<GroupInvitation[]>("/invitations"),
   acceptInvitation: (token: string) =>
     request<{ groupId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, {

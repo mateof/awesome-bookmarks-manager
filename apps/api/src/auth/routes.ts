@@ -12,6 +12,7 @@ import {
   changePassword,
   getMe,
   login as loginService,
+  setAutoAcceptInvitations,
   setAutoSnapshots,
   setFirstPassword,
   setNickname,
@@ -102,6 +103,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     if (body.nickname !== undefined) setNickname(userId, body.nickname);
     if (body.autoSnapshots !== undefined)
       setAutoSnapshots(userId, body.autoSnapshots);
+    if (body.autoAcceptInvitations !== undefined)
+      setAutoAcceptInvitations(userId, body.autoAcceptInvitations);
     return getMe(userId);
   });
 
