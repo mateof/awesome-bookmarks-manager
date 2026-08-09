@@ -45,9 +45,14 @@ RUN pnpm --filter @awesome-bookmarks/api deploy --prod /out
 # hundred MB. `ca-certificates` stays so undici can validate TLS.
 FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
+# Passed by CI from the workspace root package.json. The image labels carry it
+# too, but labels cannot be read from inside the container at runtime, and
+# /api/v1/version needs it there.
+ARG APP_VERSION=unknown
 ENV NODE_ENV=production \
     DATA_DIR=/data \
     API_PORT=3001 \
+    APP_VERSION=${APP_VERSION} \
     PUBLIC_DIR=/app/public
 
 RUN apt-get update \

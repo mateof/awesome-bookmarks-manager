@@ -61,6 +61,24 @@ cache locally.
 
 ---
 
+## Server
+
+### `GET /version`
+The running product version, the same one the git tag and the Docker image
+label carry.
+
+```json
+{ "version": "0.20.1" }
+```
+
+Authenticated like the rest of `/api/v1`: there is no reason to advertise the
+version to unauthenticated visitors, and every client that wants it is signed
+in anyway. In a container the value comes from the `APP_VERSION` environment
+variable, baked in at build time; from a source checkout it is read from the
+workspace root `package.json`.
+
+---
+
 ## Identity
 
 ### `GET /me`

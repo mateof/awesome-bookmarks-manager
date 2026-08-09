@@ -12,6 +12,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireApiAuth } from "../auth/api-auth.js";
+import { APP_VERSION } from "../util/app-version.js";
 import { getMe } from "../auth/service.js";
 import {
   createBookmark,
@@ -51,6 +52,14 @@ const SearchQuery = z.object({
  * apps, scripts and the MCP server. Registered under /api/v1.
  */
 export const apiV1Routes: FastifyPluginAsync = async (app) => {
+  // --- server ---
+  // Authenticated on purpose: there is no reason to tell the whole internet
+  // which version is running, and every client that wants it is signed in.
+  app.get("/version", async (req) => {
+    requireApiAuth(req);
+    return { version: APP_VERSION };
+  });
+
   // --- identity ---
   app.get("/me", async (req) => {
     const ctx = requireApiAuth(req);
