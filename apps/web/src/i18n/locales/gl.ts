@@ -1,5 +1,7 @@
 const gl = {
   common: {
+    conflict:
+      "Outro usuario cambiou isto mentres o editabas. Recarga e téntao de novo.",
     cancel: "Cancelar",
     save: "Gardar",
     delete: "Eliminar",

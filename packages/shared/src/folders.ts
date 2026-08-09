@@ -16,6 +16,7 @@ export const FolderSchema = z.object({
   imageBlobPath: z.string().nullable(),
   bgColor: z.string().nullable().optional(),
   position: z.number().int(),
+  rev: z.number().int().default(1),
   tagIds: z.array(z.string().uuid()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -36,6 +37,9 @@ export const UpdateFolderBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  // Optimistic concurrency: the rev the client last saw. When present and it
+  // no longer matches the stored row, the update is rejected with 409.
+  baseRev: z.number().int().optional(),
 });
 export type UpdateFolderBody = z.infer<typeof UpdateFolderBodySchema>;
 

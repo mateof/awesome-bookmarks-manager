@@ -3,9 +3,9 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
 import { openField, sealField } from "../auth/encryption.js";
-import { getDb } from "../db/client.js";
-import { folderTags, folders, tags } from "../db/schema.js";
-import { BadRequest, NotFound } from "../util/errors.js";
+import { getDb, getSqlite } from "../db/client.js";
+import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
+import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 
 interface FolderRow {
@@ -17,6 +17,7 @@ interface FolderRow {
   imageBlobPath: string | null;
   bgColor: string | null;
   position: number;
+  rev: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +34,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
     position: row.position,
+    rev: row.rev,
     tagIds,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -78,6 +80,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
             position: r.position,
+            rev: r.rev,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           },
@@ -119,6 +122,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
       position: row.position,
+      rev: row.rev,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     },
@@ -218,11 +222,16 @@ export function updateFolder(
     description?: string | null;
     tagIds?: string[];
     bgColor?: string | null;
+    /** Optimistic concurrency: reject with 409 if the row no longer has it. */
+    baseRev?: number;
   },
 ): Folder {
   const existing = getFolder(ctx, id);
+  if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
+
   const update: Record<string, unknown> = {
     updatedAt: new Date().toISOString(),
+    rev: existing.rev + 1,
   };
   if (input.name !== undefined) {
     update.nameCt = sealField(ctx.dek, ctx.userId, "folder.name", input.name);
@@ -236,18 +245,32 @@ export function updateFolder(
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
   }
-  getDb().update(folders).set(update).where(eq(folders.id, existing.id)).run();
 
-  if (input.tagIds) {
-    ensureTagsExist(ctx, input.tagIds);
-    const db = getDb();
-    db.delete(folderTags).where(eq(folderTags.folderId, id)).run();
-    if (input.tagIds.length > 0) {
-      db.insert(folderTags)
-        .values(input.tagIds.map((t) => ({ folderId: id, tagId: t })))
-        .run();
+  // When baseRev is supplied the update is conditional on the stored rev still
+  // matching; a concurrent writer that already bumped it makes this a no-op,
+  // which we surface as 409. Row + tag changes are one transaction so a
+  // conflict rolls both back.
+  const where =
+    input.baseRev !== undefined
+      ? and(eq(folders.id, existing.id), eq(folders.rev, input.baseRev))
+      : eq(folders.id, existing.id);
+
+  const tx = getSqlite().transaction(() => {
+    const res = getDb().update(folders).set(update).where(where).run();
+    if (input.baseRev !== undefined && res.changes === 0) {
+      throw Conflict("stale_write");
     }
-  }
+    if (input.tagIds) {
+      const db = getDb();
+      db.delete(folderTags).where(eq(folderTags.folderId, id)).run();
+      if (input.tagIds.length > 0) {
+        db.insert(folderTags)
+          .values(input.tagIds.map((t) => ({ folderId: id, tagId: t })))
+          .run();
+      }
+    }
+  });
+  tx();
 
   return getFolder(ctx, id);
 }
@@ -309,11 +332,50 @@ export function moveFolder(
 
 export function deleteFolder(ctx: AuthedContext, id: string) {
   assertFolderOwnedAndAlive(ctx, id);
-  getDb()
-    .update(folders)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(eq(folders.id, id))
-    .run();
+  const now = new Date().toISOString();
+
+  // Collect the whole subtree so descendants are removed with their parent
+  // instead of being orphaned (rows still visible but pointing at a dead
+  // folder). Done in-memory from the user's alive folders (cheap, sync).
+  const all = getDb()
+    .select({ id: folders.id, parentId: folders.parentId })
+    .from(folders)
+    .where(and(eq(folders.userId, ctx.userId), isNull(folders.deletedAt)))
+    .all();
+  const childrenOf = new Map<string, string[]>();
+  for (const f of all) {
+    if (!f.parentId) continue;
+    const list = childrenOf.get(f.parentId) ?? [];
+    list.push(f.id);
+    childrenOf.set(f.parentId, list);
+  }
+  const subtree: string[] = [];
+  const queue = [id];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    subtree.push(cur);
+    for (const child of childrenOf.get(cur) ?? []) queue.push(child);
+  }
+
+  const tx = getSqlite().transaction(() => {
+    getDb()
+      .update(folders)
+      .set({ deletedAt: now })
+      .where(and(eq(folders.userId, ctx.userId), inArray(folders.id, subtree)))
+      .run();
+    getDb()
+      .update(bookmarks)
+      .set({ deletedAt: now })
+      .where(
+        and(
+          eq(bookmarks.userId, ctx.userId),
+          inArray(bookmarks.folderId, subtree),
+          isNull(bookmarks.deletedAt),
+        ),
+      )
+      .run();
+  });
+  tx();
 }
 
 export function setFolderIconPath(

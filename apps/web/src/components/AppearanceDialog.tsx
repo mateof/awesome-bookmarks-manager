@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../api.js";
+import { api, isConflict } from "../api.js";
 import { BackgroundPicker } from "./BackgroundPicker.js";
 import { Modal } from "./Modal.js";
 
@@ -51,9 +51,15 @@ export function AppearanceDialog({ target, onClose, onSaved }: Props) {
   const saveColor = useMutation({
     mutationFn: async () => {
       if (target.kind === "folder") {
-        await api.updateFolder(target.folder.id, { bgColor });
+        await api.updateFolder(target.folder.id, {
+          bgColor,
+          baseRev: target.folder.rev,
+        });
       } else {
-        await api.updateBookmark(target.bookmark.id, { bgColor });
+        await api.updateBookmark(target.bookmark.id, {
+          bgColor,
+          baseRev: target.bookmark.rev,
+        });
       }
     },
     onSuccess: () => {
@@ -62,7 +68,13 @@ export function AppearanceDialog({ target, onClose, onSaved }: Props) {
       onClose();
     },
     onError: (e) =>
-      setErr(e instanceof Error ? e.message : t("folder.errorGenericSave")),
+      setErr(
+        isConflict(e)
+          ? t("common.conflict")
+          : e instanceof Error
+            ? e.message
+            : t("folder.errorGenericSave"),
+      ),
   });
 
   return (

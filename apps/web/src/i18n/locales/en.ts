@@ -1,5 +1,7 @@
 const en = {
   common: {
+    conflict:
+      "Someone else changed this while you were editing. Reload and try again.",
     cancel: "Cancel",
     save: "Save",
     delete: "Delete",

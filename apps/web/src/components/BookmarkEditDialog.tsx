@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { Bookmark } from "@awesome-bookmarks/shared";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../api.js";
+import { api, isConflict } from "../api.js";
 import { BackgroundPicker } from "./BackgroundPicker.js";
 import { IconPicker } from "./IconPicker.js";
 import { Modal } from "./Modal.js";
@@ -38,6 +38,7 @@ export function BookmarkEditDialog({ bookmark, onClose, onSaved }: Props) {
         description: description || null,
         tagIds,
         bgColor,
+        baseRev: bookmark.rev,
       });
       if (iconFile) await api.uploadBookmarkIcon(bookmark.id, iconFile);
     },
@@ -47,7 +48,13 @@ export function BookmarkEditDialog({ bookmark, onClose, onSaved }: Props) {
       onClose();
     },
     onError: (e) =>
-      setErr(e instanceof Error ? e.message : t("folder.errorGenericSave")),
+      setErr(
+        isConflict(e)
+          ? t("common.conflict")
+          : e instanceof Error
+            ? e.message
+            : t("folder.errorGenericSave"),
+      ),
   });
 
   return (

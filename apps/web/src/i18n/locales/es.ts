@@ -1,5 +1,7 @@
 const es = {
   common: {
+    conflict:
+      "Otro usuario ha cambiado esto mientras lo editabas. Recarga y vuelve a intentarlo.",
     cancel: "Cancelar",
     save: "Guardar",
     delete: "Eliminar",

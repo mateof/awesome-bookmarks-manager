@@ -29,6 +29,7 @@ export function ensureSchema() {
       icon_blob_path TEXT,
       image_blob_path TEXT,
       position INTEGER NOT NULL DEFAULT 0,
+      rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
       updated_at TEXT NOT NULL DEFAULT (current_timestamp),
       deleted_at TEXT
@@ -50,6 +51,7 @@ export function ensureSchema() {
       snapshot_text_path TEXT,
       snapshot_status TEXT NOT NULL DEFAULT 'none',
       position INTEGER NOT NULL DEFAULT 0,
+      rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
       updated_at TEXT NOT NULL DEFAULT (current_timestamp),
       deleted_at TEXT
@@ -252,6 +254,9 @@ export function ensureSchema() {
   tryAddColumn("users", "two_factor_secret_ct", "BLOB");
   tryAddColumn("users", "two_factor_pending_ct", "BLOB");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
+  // Optimistic-concurrency revision for folders/bookmarks.
+  tryAddColumn("folders", "rev", "INTEGER NOT NULL DEFAULT 1");
+  tryAddColumn("bookmarks", "rev", "INTEGER NOT NULL DEFAULT 1");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.
   tryAddColumn("folders", "bg_color", "TEXT");

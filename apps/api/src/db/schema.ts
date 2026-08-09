@@ -236,6 +236,9 @@ export const folders = sqliteTable(
     imageBlobPath: text("image_blob_path"),
     bgColor: text("bg_color"),
     position: integer("position").notNull().default(0),
+    // Optimistic-concurrency revision, bumped on every mutation. A conditional
+    // update (WHERE rev = expected) lets a stale writer be rejected with 409.
+    rev: integer("rev").notNull().default(1),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
     deletedAt: text("deleted_at"),
@@ -270,6 +273,8 @@ export const bookmarks = sqliteTable(
     snapshotStatus: text("snapshot_status").notNull().default("none"),
     snapshotError: text("snapshot_error"),
     position: integer("position").notNull().default(0),
+    // Optimistic-concurrency revision (see folders.rev).
+    rev: integer("rev").notNull().default(1),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
     deletedAt: text("deleted_at"),

@@ -4,10 +4,10 @@ import { v4 as uuidv4 } from "uuid";
 import { openField, sealField } from "../auth/encryption.js";
 import { getAutoSnapshots } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
-import { getDb } from "../db/client.js";
+import { getDb, getSqlite } from "../db/client.js";
 import { bookmarkTags, bookmarks, folders, tags } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
-import { BadRequest, NotFound } from "../util/errors.js";
+import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { urlHash } from "../util/url.js";
 
@@ -24,6 +24,7 @@ interface BookmarkRow {
   snapshotStatus: string;
   snapshotError: string | null;
   position: number;
+  rev: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +49,7 @@ function decode(
     snapshotError: row.snapshotError,
     hasSnapshot: !!row.snapshotHtmlPath,
     position: row.position,
+    rev: row.rev,
     tagIds,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -176,6 +178,7 @@ export function listBookmarks(
             snapshotStatus: r.snapshotStatus,
             snapshotError: r.snapshotError,
             position: r.position,
+            rev: r.rev,
             createdAt: r.createdAt,
             updatedAt: r.updatedAt,
           },
@@ -232,6 +235,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       snapshotStatus: row.snapshotStatus,
       snapshotError: row.snapshotError,
       position: row.position,
+      rev: row.rev,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     },
@@ -324,13 +328,17 @@ export function updateBookmark(
     description?: string | null;
     tagIds?: string[];
     bgColor?: string | null;
+    /** Optimistic concurrency: reject with 409 if the row no longer has it. */
+    baseRev?: number;
   },
 ): Bookmark {
   const existing = getBookmark(ctx, id);
   if (input.folderId !== undefined) ensureFolderExists(ctx, input.folderId);
+  if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
 
   const update: Record<string, unknown> = {
     updatedAt: new Date().toISOString(),
+    rev: existing.rev + 1,
   };
   if (input.folderId !== undefined) update.folderId = input.folderId;
   if (input.title !== undefined) {
@@ -360,18 +368,27 @@ export function updateBookmark(
     update.bgColor = input.bgColor;
   }
 
-  getDb().update(bookmarks).set(update).where(eq(bookmarks.id, id)).run();
+  const where =
+    input.baseRev !== undefined
+      ? and(eq(bookmarks.id, id), eq(bookmarks.rev, input.baseRev))
+      : eq(bookmarks.id, id);
 
-  if (input.tagIds) {
-    ensureTagsExist(ctx, input.tagIds);
-    const db = getDb();
-    db.delete(bookmarkTags).where(eq(bookmarkTags.bookmarkId, id)).run();
-    if (input.tagIds.length > 0) {
-      db.insert(bookmarkTags)
-        .values(input.tagIds.map((t) => ({ bookmarkId: id, tagId: t })))
-        .run();
+  const tx = getSqlite().transaction(() => {
+    const res = getDb().update(bookmarks).set(update).where(where).run();
+    if (input.baseRev !== undefined && res.changes === 0) {
+      throw Conflict("stale_write");
     }
-  }
+    if (input.tagIds) {
+      const db = getDb();
+      db.delete(bookmarkTags).where(eq(bookmarkTags.bookmarkId, id)).run();
+      if (input.tagIds.length > 0) {
+        db.insert(bookmarkTags)
+          .values(input.tagIds.map((t) => ({ bookmarkId: id, tagId: t })))
+          .run();
+      }
+    }
+  });
+  tx();
 
   if (urlChanged && input.url && getAutoSnapshots(ctx.userId)) {
     enqueue({

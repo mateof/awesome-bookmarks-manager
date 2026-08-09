@@ -17,7 +17,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api } from "../api.js";
+import { api, isConflict } from "../api.js";
 import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
@@ -1523,7 +1523,13 @@ function BookmarkDialog({
       onClose();
     },
     onError: (e) =>
-      setErr(e instanceof Error ? e.message : t("folder.errorGenericSave")),
+      setErr(
+        isConflict(e)
+          ? t("common.conflict")
+          : e instanceof Error
+            ? e.message
+            : t("folder.errorGenericSave"),
+      ),
   });
   return (
     <Modal title={t("folder.dialogNewBookmark")} onClose={onClose} size="lg">
@@ -1606,6 +1612,7 @@ function FolderDialog({
             description: description || null,
             tagIds,
             bgColor,
+            baseRev: folder!.rev,
           })
         : await api.createFolder({
             parentId,
@@ -1624,7 +1631,13 @@ function FolderDialog({
       onClose();
     },
     onError: (e) =>
-      setErr(e instanceof Error ? e.message : t("folder.errorGenericSave")),
+      setErr(
+        isConflict(e)
+          ? t("common.conflict")
+          : e instanceof Error
+            ? e.message
+            : t("folder.errorGenericSave"),
+      ),
   });
   return (
     <Modal

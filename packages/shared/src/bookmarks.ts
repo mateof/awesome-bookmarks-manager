@@ -27,6 +27,7 @@ export const BookmarkSchema = z.object({
   snapshotError: z.string().nullable().optional(),
   hasSnapshot: z.boolean(),
   position: z.number().int(),
+  rev: z.number().int().default(1),
   tagIds: z.array(z.string().uuid()).default([]),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -57,6 +58,8 @@ export const UpdateBookmarkBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  // Optimistic concurrency: the rev the client last saw (see folders).
+  baseRev: z.number().int().optional(),
 });
 export type UpdateBookmarkBody = z.infer<typeof UpdateBookmarkBodySchema>;
 

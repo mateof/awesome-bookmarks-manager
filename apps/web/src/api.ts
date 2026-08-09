@@ -73,6 +73,11 @@ export class ApiError extends Error {
   }
 }
 
+/** True for a 409 optimistic-concurrency rejection (a stale `baseRev`). */
+export function isConflict(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 409;
+}
+
 /**
  * When any request returns 401 (session expired / missing cookie) or 423
  * (KeyUnavailable — DEK evicted from cache), broadcast a window event so
