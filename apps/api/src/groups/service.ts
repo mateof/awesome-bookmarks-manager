@@ -320,7 +320,11 @@ export function acceptInvitation(ctx: AuthedContext, token: string) {
 export function shareToGroup(
   ctx: AuthedContext,
   groupId: string,
-  input: { sourceType: "folder" | "bookmark"; sourceId: string },
+  input: {
+    sourceType: "folder" | "bookmark";
+    sourceId: string;
+    access?: "viewer" | "editor";
+  },
 ) {
   ensureMember(ctx, groupId);
   const id = uuidv4();
@@ -332,6 +336,7 @@ export function shareToGroup(
       sharedBy: ctx.userId,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
+      access: input.access ?? "viewer",
       payloadStatus: "pending",
     })
     .run();
@@ -373,6 +378,8 @@ function rawShares(groupIds: string[]): SharedItem[] {
       sourceType: groupShares.sourceType,
       sourceId: groupShares.sourceId,
       payloadStatus: groupShares.payloadStatus,
+      access: groupShares.access,
+      rev: groupShares.rev,
       createdAt: groupShares.createdAt,
       updatedAt: groupShares.updatedAt,
     })

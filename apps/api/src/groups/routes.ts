@@ -1,5 +1,6 @@
 import {
   CreateGroupBodySchema,
+  EditSharedNodeBodySchema,
   InviteMemberBodySchema,
   ShareToGroupBodySchema,
   UpdateGroupBodySchema,
@@ -7,7 +8,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
-import { readGroupShareContent } from "./content.js";
+import { editSharedNode, readGroupShareContent } from "./content.js";
 import {
   acceptInvitation,
   createGroup,
@@ -28,6 +29,10 @@ import {
 
 const IdParam = z.object({ id: z.string().uuid() });
 const GroupShareIdParam = z.object({ shareId: z.string().uuid() });
+const NodeParams = z.object({
+  shareId: z.string().uuid(),
+  nodeId: z.string().uuid(),
+});
 const GroupAndUserParams = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
@@ -149,5 +154,18 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
       return { error: "not_found" };
     }
     return readGroupShareContent(ctx, shareId);
+  });
+
+  // Edit a node inside an editable ("editor") share. Membership re-checked
+  // here; editSharedNode enforces the editor access level.
+  app.patch("/shared/:shareId/node/:nodeId", async (req) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = EditSharedNodeBodySchema.parse(req.body);
+    const all = listAllSharedWithMe(ctx);
+    if (!all.find((s) => s.id === shareId)) {
+      return { error: "not_found" };
+    }
+    return editSharedNode(ctx, shareId, nodeId, body);
   });
 };

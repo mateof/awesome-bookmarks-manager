@@ -20,6 +20,7 @@ import type {
   PanelListItem,
   PublicPanelResponse,
   Share,
+  EditSharedNodeBody,
   SharedItem,
   ShareToGroupBody,
   Tag,
@@ -484,6 +485,11 @@ export const api = {
   listShared: () => request<SharedItem[]>("/shared"),
   getSharedContent: (shareId: string) =>
     request<unknown>(`/shared/${shareId}`),
+  editSharedNode: (shareId: string, nodeId: string, body: EditSharedNodeBody) =>
+    request<unknown>(`/shared/${shareId}/node/${nodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 
   // panels
   listPanels: () => request<PanelListItem[]>("/panels"),

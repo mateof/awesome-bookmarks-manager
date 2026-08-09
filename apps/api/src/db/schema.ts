@@ -214,6 +214,10 @@ export const groupShares = sqliteTable(
     sourceId: text("source_id").notNull(),
     payloadCt: blob("payload_ct", { mode: "buffer" }),
     payloadStatus: text("payload_status").notNull().default("pending"),
+    // "viewer" (read-only) | "editor" (group members can edit the live copy).
+    access: text("access").notNull().default("viewer"),
+    // Optimistic-concurrency revision for the editable payload.
+    rev: integer("rev").notNull().default(1),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },

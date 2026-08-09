@@ -359,6 +359,9 @@ const en = {
     nothingShared: "Nothing has been shared with you yet.",
     cannotLoad: "Could not load.",
     backArrow: "← Back",
+    canEdit: "Can edit",
+    readOnly: "Read-only",
+    editNode: "Edit shared item",
   },
   shareToGroup: {
     titleFolder: "Share folder with group",
@@ -366,6 +369,8 @@ const en = {
     noGroups: "You don't have any groups yet. Create one from the Groups section.",
     sharing: "Sharing…",
     shareButton: "Share",
+    accessViewer: "Read-only",
+    accessEditor: "Can edit",
     note:
       "An encrypted copy with the group's key will be created. Later updates on the source are not reflected automatically — share again to update.",
   },

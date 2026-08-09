@@ -359,6 +359,9 @@ const es = {
     nothingShared: "Aún no se ha compartido nada contigo.",
     cannotLoad: "No se ha podido cargar.",
     backArrow: "← Volver",
+    canEdit: "Puede editar",
+    readOnly: "Solo lectura",
+    editNode: "Editar elemento compartido",
   },
   shareToGroup: {
     titleFolder: "Compartir carpeta con grupo",
@@ -366,6 +369,8 @@ const es = {
     noGroups: "Aún no tienes grupos. Crea uno desde la sección Grupos.",
     sharing: "Compartiendo…",
     shareButton: "Compartir",
+    accessViewer: "Solo lectura",
+    accessEditor: "Puede editar",
     note:
       "Se creará una copia cifrada con la clave del grupo. Las actualizaciones posteriores en el origen no se reflejan automáticamente — comparte de nuevo para actualizar.",
   },

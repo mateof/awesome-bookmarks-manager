@@ -360,6 +360,9 @@ const gl = {
     nothingShared: "Aínda non se compartiu nada contigo.",
     cannotLoad: "Non se puido cargar.",
     backArrow: "← Volver",
+    canEdit: "Pode editar",
+    readOnly: "Só lectura",
+    editNode: "Editar elemento compartido",
   },
   shareToGroup: {
     titleFolder: "Compartir cartafol con grupo",
@@ -368,6 +371,8 @@ const gl = {
       "Aínda non tes grupos. Crea un dende a sección Grupos.",
     sharing: "Compartindo…",
     shareButton: "Compartir",
+    accessViewer: "Só lectura",
+    accessEditor: "Pode editar",
     note:
       "Crearase unha copia cifrada coa chave do grupo. As actualizacións posteriores na orixe non se reflicten automaticamente — comparte de novo para actualizar.",
   },

@@ -8,8 +8,9 @@ import {
   groupShares,
   groups,
 } from "../db/schema.js";
-import { Forbidden, NotFound } from "../util/errors.js";
-import { openGroupField, unwrapGroupDek } from "./encryption.js";
+import { Conflict, Forbidden, NotFound } from "../util/errors.js";
+import { sanitizeRichText } from "../util/sanitize.js";
+import { openGroupField, sealGroupField, unwrapGroupDek } from "./encryption.js";
 
 export interface SharedBookmarkContent {
   type: "bookmark";
@@ -137,17 +138,21 @@ function loadFolder(
   };
 }
 
-/** Read a sealed group share back out as plaintext. */
-export function readGroupShareContent(
-  ctx: AuthedContext,
-  shareId: string,
-): SharedContent {
+export interface SharedContentResult {
+  content: SharedContent;
+  access: "viewer" | "editor";
+  rev: number;
+}
+
+function loadShareRow(shareId: string) {
   const row = getDb()
     .select({
       shareId: groupShares.id,
       groupId: groupShares.groupId,
       payloadCt: groupShares.payloadCt,
       payloadStatus: groupShares.payloadStatus,
+      access: groupShares.access,
+      rev: groupShares.rev,
       groupDekWrapped: groups.groupDekWrapped,
     })
     .from(groupShares)
@@ -158,15 +163,101 @@ export function readGroupShareContent(
   if (row.payloadStatus !== "ready" || !row.payloadCt) {
     throw Forbidden("Share is still being prepared");
   }
-  // Caller must verify membership before invoking — we don't know ctx here,
-  // membership check is handled at the route layer.
+  return row;
+}
+
+/** Read a sealed group share back out as plaintext (+ its access level/rev). */
+export function readGroupShareContent(
+  ctx: AuthedContext,
+  shareId: string,
+): SharedContentResult {
+  // Membership is verified at the route layer before this is invoked.
   void ctx;
+  const row = loadShareRow(shareId);
   const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
   const json = openGroupField(
     groupDek,
     row.groupId,
     "share.payload",
-    Buffer.from(row.payloadCt),
+    Buffer.from(row.payloadCt!),
   );
-  return JSON.parse(json) as SharedContent;
+  return {
+    content: JSON.parse(json) as SharedContent,
+    access: row.access as "viewer" | "editor",
+    rev: row.rev,
+  };
+}
+
+function findNode(tree: SharedContent, nodeId: string): SharedContent | null {
+  if (tree.id === nodeId) return tree;
+  if (tree.type === "folder") {
+    for (const b of tree.bookmarks) if (b.id === nodeId) return b;
+    for (const f of tree.subfolders) {
+      const found = findNode(f, nodeId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/**
+ * Edit one node's fields inside an editable ("editor") group share. The whole
+ * payload is re-sealed with the group key. Optimistic concurrency via rev.
+ * Membership is verified at the route layer.
+ */
+export function editSharedNode(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  fields: {
+    title?: string;
+    url?: string;
+    name?: string;
+    description?: string | null;
+    baseRev?: number;
+  },
+): SharedContentResult {
+  void ctx;
+  const row = loadShareRow(shareId);
+  if (row.access !== "editor") {
+    throw Forbidden("This share is read-only");
+  }
+  const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
+  const tree = JSON.parse(
+    openGroupField(groupDek, row.groupId, "share.payload", Buffer.from(row.payloadCt!)),
+  ) as SharedContent;
+
+  const node = findNode(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  if (node.type === "bookmark") {
+    if (fields.title !== undefined) node.title = fields.title;
+    if (fields.url !== undefined) node.url = fields.url;
+  } else {
+    if (fields.name !== undefined) node.name = fields.name;
+  }
+  if (fields.description !== undefined) {
+    node.description = fields.description
+      ? sanitizeRichText(fields.description)
+      : null;
+  }
+
+  const sealed = sealGroupField(
+    groupDek,
+    row.groupId,
+    "share.payload",
+    JSON.stringify(tree),
+  );
+  const where =
+    fields.baseRev !== undefined
+      ? and(eq(groupShares.id, shareId), eq(groupShares.rev, fields.baseRev))
+      : eq(groupShares.id, shareId);
+  const res = getDb()
+    .update(groupShares)
+    .set({ payloadCt: sealed, rev: row.rev + 1, updatedAt: new Date().toISOString() })
+    .where(where)
+    .run();
+  if (fields.baseRev !== undefined && res.changes === 0) {
+    throw Conflict("stale_write");
+  }
+  return { content: tree, access: "editor", rev: row.rev + 1 };
 }

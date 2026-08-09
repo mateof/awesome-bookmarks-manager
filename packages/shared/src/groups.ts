@@ -56,11 +56,25 @@ export const InviteMemberBodySchema = z.object({
 });
 export type InviteMemberBody = z.infer<typeof InviteMemberBodySchema>;
 
+export const AccessLevelSchema = z.enum(["viewer", "editor"]);
+export type AccessLevel = z.infer<typeof AccessLevelSchema>;
+
 export const ShareToGroupBodySchema = z.object({
   sourceType: ShareSourceTypeSchema,
   sourceId: z.string().uuid(),
+  access: AccessLevelSchema.default("viewer"),
 });
 export type ShareToGroupBody = z.infer<typeof ShareToGroupBodySchema>;
+
+/** Edit a single node inside an editable ("editor") group share. */
+export const EditSharedNodeBodySchema = z.object({
+  title: z.string().min(1).max(1024).optional(),
+  url: z.string().url().max(8192).optional(),
+  name: z.string().min(1).max(256).optional(),
+  description: z.string().max(1_000_000).nullable().optional(),
+  baseRev: z.number().int().optional(),
+});
+export type EditSharedNodeBody = z.infer<typeof EditSharedNodeBodySchema>;
 
 export const SharedItemSchema = z.object({
   id: z.string().uuid(),
@@ -71,6 +85,8 @@ export const SharedItemSchema = z.object({
   sourceType: ShareSourceTypeSchema,
   sourceId: z.string().uuid(),
   payloadStatus: z.enum(["pending", "ready", "error"]),
+  access: AccessLevelSchema.default("viewer"),
+  rev: z.number().int().default(1),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

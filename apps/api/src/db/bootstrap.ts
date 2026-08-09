@@ -237,6 +237,8 @@ export function ensureSchema() {
       source_id TEXT NOT NULL,
       payload_ct BLOB,
       payload_status TEXT NOT NULL DEFAULT 'pending',
+      access TEXT NOT NULL DEFAULT 'viewer',
+      rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
       updated_at TEXT NOT NULL DEFAULT (current_timestamp)
     );
@@ -257,6 +259,9 @@ export function ensureSchema() {
   // Optimistic-concurrency revision for folders/bookmarks.
   tryAddColumn("folders", "rev", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("bookmarks", "rev", "INTEGER NOT NULL DEFAULT 1");
+  // Share access level + concurrency rev for editable group shares.
+  tryAddColumn("group_shares", "access", "TEXT NOT NULL DEFAULT 'viewer'");
+  tryAddColumn("group_shares", "rev", "INTEGER NOT NULL DEFAULT 1");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.
   tryAddColumn("folders", "bg_color", "TEXT");
