@@ -63,7 +63,7 @@ RUN apt-get update \
 
 LABEL org.opencontainers.image.source="https://github.com/mateof/awesome-bookmarks-manager" \
       org.opencontainers.image.description="AwesomeBookmarks self-hosted: API + snapshot worker + SPA in one container" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 # API runtime (production-only deps) and its compiled output
 COPY --from=builder /out/node_modules ./node_modules
