@@ -6,6 +6,15 @@ public share links, cloud backups, and a browser extension. Ships as a
 **single Docker container** — Fastify serves both the SPA and the API on
 one port.
 
+## Documentation
+
+- **[Illustrated user guide](doc/guia-usuario.md)** — a visual walkthrough
+  (register, folders, bookmarks, sharing, panels, Chrome extension) with real
+  screenshots. In Spanish.
+- [HTTP API & MCP](doc/README.md) — programmatic access for apps, scripts and AI.
+- [End-to-end tests](e2e/README.md) — the isolated Playwright suite that also
+  generates the guide's screenshots.
+
 ## Features
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions

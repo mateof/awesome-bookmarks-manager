@@ -1,0 +1,19 @@
+{
+  "name": "@awesome-bookmarks/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Isolated Playwright E2E suite + documentation screenshot generator. Lives outside the pnpm workspace so it never touches the app build or the Docker image.",
+  "scripts": {
+    "test": "node scripts/prepare.mjs && playwright test",
+    "test:app": "node scripts/prepare.mjs && playwright test --project=app",
+    "test:ext": "node scripts/prepare.mjs && playwright test --project=extension",
+    "test:headed": "node scripts/prepare.mjs && playwright test --headed",
+    "report": "playwright show-report",
+    "install-browser": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.2"
+  }
+}
