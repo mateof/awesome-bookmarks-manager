@@ -6,6 +6,15 @@ nuevas** (bajo una existente o en la raíz) sin salir del popup.
 
 Funciona en **Chrome**, **Opera** (ambos Chromium) y **Firefox**.
 
+## Descargar (releases)
+
+En cada cambio de versión de la extensión, la CI publica los paquetes ya
+compilados como una [release de GitHub](https://github.com/mateof/awesome-bookmarks-manager/releases)
+(busca los tags `extension-vX.Y.Z`): un `.zip` para Chrome/Opera y otro para
+Firefox. Puedes descargarlos y saltarte la compilación; la configuración y el uso
+(más abajo) son iguales. Si prefieres compilar tú mismo, sigue el apartado
+siguiente.
+
 ## Compilar la extensión
 
 ```bash

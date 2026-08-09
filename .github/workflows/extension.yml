@@ -1,0 +1,110 @@
+name: extension release
+
+# When the browser extension's version changes on main, build the Chrome/Opera
+# and Firefox packages and publish them as a GitHub Release. Idempotent: a
+# release is created only if one does not already exist for that version, so
+# re-runs and unrelated extension edits are no-ops.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/extension/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      exists: ${{ steps.exists.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read extension version
+        id: ver
+        run: |
+          V=$(jq -r '.version' apps/extension/package.json)
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=extension-v$V" >> "$GITHUB_OUTPUT"
+
+      - name: Does the release already exist?
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.ver.outputs.tag }}" -R "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.ver.outputs.tag }} already exists; skipping."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No release for ${{ steps.ver.outputs.tag }} yet; will build."
+          fi
+
+  build-release:
+    name: build & release
+    needs: check
+    if: needs.check.outputs.exists == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install (extension + its workspace deps only)
+        run: pnpm install --frozen-lockfile --filter @awesome-bookmarks/extension...
+
+      - name: Build extension (dist/ Chrome+Opera, dist-firefox/ Firefox)
+        run: pnpm --filter @awesome-bookmarks/extension... run build
+
+      - name: Package zips (manifest at the archive root, no source maps)
+        run: |
+          V="${{ needs.check.outputs.version }}"
+          mkdir -p artifacts
+          (cd apps/extension/dist && zip -qr -X \
+            "$GITHUB_WORKSPACE/artifacts/awesomebookmarks-extension-chrome-opera-v$V.zip" . -x '*.map')
+          (cd apps/extension/dist-firefox && zip -qr -X \
+            "$GITHUB_WORKSPACE/artifacts/awesomebookmarks-extension-firefox-v$V.zip" . -x '*.map')
+          ls -l artifacts
+
+      - name: Build release notes
+        run: |
+          V="${{ needs.check.outputs.version }}"
+          cat > notes.md <<'EOF'
+          Prebuilt packages for the browser extension, version __V__.
+
+          Downloads:
+          - Chrome / Opera: `awesomebookmarks-extension-chrome-opera-v__V__.zip` (Chromium, MV3).
+          - Firefox: `awesomebookmarks-extension-firefox-v__V__.zip` (MV3).
+
+          Full install guide (per browser): https://github.com/mateof/awesome-bookmarks-manager/blob/main/doc/extension.md
+
+          Quick install:
+          - Chrome / Opera: unzip, open `chrome://extensions` (or `opera://extensions`), enable Developer mode, click Load unpacked, and pick the unzipped folder.
+          - Firefox: unzip, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and pick `manifest.json`. It stays until Firefox restarts; sign it on addons.mozilla.org for a permanent install.
+
+          Then open the extension options and set the backend endpoint (including `/api`) and a token (web app: Settings then API).
+          EOF
+          sed -i "s/__V__/$V/g" notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.check.outputs.tag }}" \
+            artifacts/*.zip \
+            -R "${{ github.repository }}" \
+            --title "Browser extension v${{ needs.check.outputs.version }}" \
+            --notes-file notes.md
