@@ -1,10 +1,23 @@
 # AwesomeBookmarks
 
+<p align="center">
+  <a href="https://github.com/mateof/awesome-bookmarks-manager/actions/workflows/docker.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/mateof/awesome-bookmarks-manager/docker.yml?branch=main&amp;label=CI&amp;logo=github"></a>
+  <a href="https://github.com/mateof/awesome-bookmarks-manager/blob/main/package.json"><img alt="Version" src="https://img.shields.io/github/package-json/v/mateof/awesome-bookmarks-manager?label=version&amp;color=blue"></a>
+  <a href="https://github.com/mateof/awesome-bookmarks-manager/pkgs/container/awesome-bookmarks-manager"><img alt="GHCR image" src="https://img.shields.io/badge/ghcr.io-image-2496ED?logo=docker&amp;logoColor=white"></a>
+  <a href="https://github.com/mateof/awesome-bookmarks-manager/pkgs/container/awesome-bookmarks-manager"><img alt="Platforms" src="https://img.shields.io/badge/platforms-amd64%20%C2%B7%20arm64-informational"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/mateof/awesome-bookmarks-manager"></a>
+  <a href="https://github.com/mateof/awesome-bookmarks-manager/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/mateof/awesome-bookmarks-manager"></a>
+</p>
+
 A self-hosted, encrypted, multi-user bookmark manager with folder hierarchies,
 saved snapshots of every page (Wallabag-style), tags, groups for sharing,
 public share links, cloud backups, and a browser extension. Ships as a
 **single Docker container** — Fastify serves both the SPA and the API on
 one port.
+
+<p align="center">
+  <img alt="AwesomeBookmarks library view" src="doc/images/07-bookmarks.png" width="860">
+</p>
 
 ## Documentation
 
@@ -220,6 +233,10 @@ your backend URL and a token (generated in the web UI, Settings → API). The
 popup lets you pick the save folder and create folders. Full per-browser install
 steps: [doc/extension.md](doc/extension.md).
 
+<p align="center">
+  <img alt="Extension popup with folder picker" src="doc/images/21-extension-popup.png" width="300">
+</p>
+
 ### Importing bookmarks from your browser
 
 1. In Chrome / Edge / Firefox: **Settings → Bookmarks → Export to HTML**.
@@ -237,6 +254,10 @@ Netscape Bookmark HTML file, re-importable by every major browser.
 
 Turn any folder into a polished, standalone dashboard of its bookmarks
 (think Homer / Dashy / Flame), reachable at `/panel/{slug}`.
+
+<p align="center">
+  <img alt="Public panel view" src="doc/images/15-panel-public.png" width="820">
+</p>
 
 **Create one:** open a folder, use the ⋮ menu on a folder card → **Generate
 panel**. Pick a name (which becomes the URL slug), a **template**, and an
