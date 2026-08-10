@@ -154,12 +154,18 @@ test("04 · compartir una carpeta con otro usuario", async ({ browser }) => {
     pageA.getByRole("heading", { name: "Compartir carpeta con grupo" }),
   ).toBeHidden();
 
-  // Alan sees the shared folder under "Compartidos conmigo".
+  // Alan sees the shared folder under "Compartidos".
   await pageB.goto("/shared");
   await expect(
-    pageB.getByRole("heading", { name: "Compartidos conmigo" }),
+    pageB.getByRole("heading", { name: "Compartidos" }),
   ).toBeVisible();
-  await expect(pageB.getByText(/compartid/i).first()).toBeVisible();
+  // The shared item shows the real folder name once the snapshot is sealed.
+  await expect(async () => {
+    await pageB.reload();
+    await expect(
+      pageB.getByText(folders.research, { exact: true }).first(),
+    ).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
   await shot(pageB, "12-alan-shared", { full: true });
 });
 

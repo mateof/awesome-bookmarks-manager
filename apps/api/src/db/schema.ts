@@ -198,6 +198,7 @@ export const groupInvitations = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     expiresAt: text("expires_at"),
     acceptedAt: text("accepted_at"),
+    rejectedAt: text("rejected_at"),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (t) => ({

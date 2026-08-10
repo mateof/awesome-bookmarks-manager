@@ -1,5 +1,5 @@
 import type { Group, GroupMember, SharedItem } from "@awesome-bookmarks/shared";
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
@@ -14,7 +14,12 @@ import {
 import { enqueue } from "../jobs/queue.js";
 import { pushNotification } from "../notifications/service.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
-import { generateGroupDek, wrapGroupDek } from "./encryption.js";
+import {
+  generateGroupDek,
+  openGroupField,
+  unwrapGroupDek,
+  wrapGroupDek,
+} from "./encryption.js";
 
 export function listMyGroups(ctx: AuthedContext): Group[] {
   const memberRows = getDb()
@@ -339,9 +344,99 @@ export function listMyInvitations(ctx: AuthedContext) {
       and(
         eq(groupInvitations.email, me.email),
         isNull(groupInvitations.acceptedAt),
+        isNull(groupInvitations.rejectedAt),
       ),
     )
     .all();
+}
+
+/** Invitations the sender created for a group, with derived status. */
+export function listGroupInvitations(ctx: AuthedContext, groupId: string) {
+  ensureOwnerOrAdmin(ctx, groupId);
+  const now = Date.now();
+  const rows = getDb()
+    .select({
+      id: groupInvitations.id,
+      email: groupInvitations.email,
+      invitedByEmail: users.email,
+      expiresAt: groupInvitations.expiresAt,
+      acceptedAt: groupInvitations.acceptedAt,
+      rejectedAt: groupInvitations.rejectedAt,
+      createdAt: groupInvitations.createdAt,
+    })
+    .from(groupInvitations)
+    .innerJoin(users, eq(users.id, groupInvitations.invitedBy))
+    .where(eq(groupInvitations.groupId, groupId))
+    .orderBy(desc(groupInvitations.createdAt))
+    .all();
+  return rows.map((r) => ({
+    ...r,
+    groupId,
+    status: r.acceptedAt
+      ? ("accepted" as const)
+      : r.rejectedAt
+        ? ("rejected" as const)
+        : r.expiresAt && new Date(r.expiresAt).getTime() < now
+          ? ("expired" as const)
+          : ("pending" as const),
+  }));
+}
+
+/** Cancel/delete an unused invitation (owner/admin). Accepted ones stay. */
+export function cancelInvitation(
+  ctx: AuthedContext,
+  groupId: string,
+  invId: string,
+) {
+  ensureOwnerOrAdmin(ctx, groupId);
+  const row = getDb()
+    .select()
+    .from(groupInvitations)
+    .where(
+      and(eq(groupInvitations.id, invId), eq(groupInvitations.groupId, groupId)),
+    )
+    .get();
+  if (!row) throw NotFound("Invitation not found");
+  if (row.acceptedAt) throw BadRequest("Invitation already accepted");
+  getDb().delete(groupInvitations).where(eq(groupInvitations.id, invId)).run();
+}
+
+/** The invitee declines an invitation. */
+export function rejectInvitation(ctx: AuthedContext, token: string) {
+  const inv = getDb()
+    .select()
+    .from(groupInvitations)
+    .where(eq(groupInvitations.token, token))
+    .get();
+  if (!inv) throw NotFound("Invitation not found");
+  if (inv.acceptedAt) throw BadRequest("Invitation already used");
+  if (inv.rejectedAt) return { ok: true };
+  const me = getDb()
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, ctx.userId))
+    .get();
+  if (!me || me.email.toLowerCase() !== inv.email.toLowerCase()) {
+    throw Forbidden("Invitation is for a different email");
+  }
+  getDb()
+    .update(groupInvitations)
+    .set({ rejectedAt: new Date().toISOString() })
+    .where(eq(groupInvitations.id, inv.id))
+    .run();
+  return { ok: true };
+}
+
+/** Everything I have shared into my groups (for a central manage view). */
+export function listMySharesByMe(ctx: AuthedContext): SharedItem[] {
+  const groupIds = getDb()
+    .select({ id: groupMembers.groupId })
+    .from(groupMembers)
+    .where(eq(groupMembers.userId, ctx.userId))
+    .all()
+    .map((r) => r.id);
+  if (groupIds.length === 0) return [];
+  return rawShares(groupIds).filter((s) => s.sharedById === ctx.userId);
 }
 
 export function acceptInvitation(ctx: AuthedContext, token: string) {
@@ -430,7 +525,7 @@ export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
 }
 
 function rawShares(groupIds: string[]): SharedItem[] {
-  return getDb()
+  const rows = getDb()
     .select({
       id: groupShares.id,
       groupId: groupShares.groupId,
@@ -444,12 +539,30 @@ function rawShares(groupIds: string[]): SharedItem[] {
       rev: groupShares.rev,
       createdAt: groupShares.createdAt,
       updatedAt: groupShares.updatedAt,
+      payloadCt: groupShares.payloadCt,
+      groupDekWrapped: groups.groupDekWrapped,
     })
     .from(groupShares)
     .innerJoin(groups, eq(groups.id, groupShares.groupId))
     .innerJoin(users, eq(users.id, groupShares.sharedBy))
     .where(inArray(groupShares.groupId, groupIds))
-    .all() as SharedItem[];
+    .all();
+  return rows.map((r) => {
+    let label: string | null = null;
+    if (r.payloadStatus === "ready" && r.payloadCt) {
+      try {
+        const dek = unwrapGroupDek(r.groupId, Buffer.from(r.groupDekWrapped));
+        const content = JSON.parse(
+          openGroupField(dek, r.groupId, "share.payload", Buffer.from(r.payloadCt)),
+        );
+        label = content?.name ?? content?.title ?? null;
+      } catch {
+        label = null;
+      }
+    }
+    const { payloadCt: _p, groupDekWrapped: _g, ...rest } = r;
+    return { ...rest, label } as SharedItem;
+  });
 }
 
 export function deleteShare(ctx: AuthedContext, shareId: string) {

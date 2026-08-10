@@ -11,6 +11,7 @@ import type {
   Folder,
   Group,
   GroupInvitation,
+  SentInvitation,
   GroupMember,
   InviteMemberBody,
   CreatePanelBody,
@@ -512,6 +513,16 @@ export const api = {
     request<{ groupId: string }>(`/invitations/${encodeURIComponent(token)}/accept`, {
       method: "POST",
     }),
+  rejectInvitation: (token: string) =>
+    request<{ ok: boolean }>(
+      `/invitations/${encodeURIComponent(token)}/reject`,
+      { method: "POST" },
+    ),
+  listGroupInvitations: (id: string) =>
+    request<SentInvitation[]>(`/groups/${id}/invitations`),
+  cancelInvitation: (id: string, invId: string) =>
+    request<void>(`/groups/${id}/invitations/${invId}`, { method: "DELETE" }),
+  listSharesByMe: () => request<SharedItem[]>("/shared/by-me"),
   shareToGroup: (id: string, body: ShareToGroupBody) =>
     request<{ id: string }>(`/groups/${id}/shares`, {
       method: "POST",

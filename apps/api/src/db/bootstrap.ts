@@ -222,6 +222,7 @@ export function ensureSchema() {
       invited_by TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       expires_at TEXT,
       accepted_at TEXT,
+      rejected_at TEXT,
       created_at TEXT NOT NULL DEFAULT (current_timestamp)
     );
     CREATE UNIQUE INDEX IF NOT EXISTS group_invitations_token_idx
@@ -280,6 +281,8 @@ export function ensureSchema() {
   // Share access level + concurrency rev for editable group shares.
   tryAddColumn("group_shares", "access", "TEXT NOT NULL DEFAULT 'viewer'");
   tryAddColumn("group_shares", "rev", "INTEGER NOT NULL DEFAULT 1");
+  // Rejected invitations (for the sender's status view).
+  tryAddColumn("group_invitations", "rejected_at", "TEXT");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.
   tryAddColumn("folders", "bg_color", "TEXT");

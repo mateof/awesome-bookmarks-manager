@@ -88,7 +88,31 @@ export const SharedItemSchema = z.object({
   payloadStatus: z.enum(["pending", "ready", "error"]),
   access: AccessLevelSchema.default("viewer"),
   rev: z.number().int().default(1),
+  // Decrypted display label (the shared folder/bookmark name), when ready.
+  label: z.string().nullable().default(null),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type SharedItem = z.infer<typeof SharedItemSchema>;
+
+export const InvitationStatusSchema = z.enum([
+  "pending",
+  "accepted",
+  "rejected",
+  "expired",
+]);
+export type InvitationStatus = z.infer<typeof InvitationStatusSchema>;
+
+/** An invitation as seen by the sender (owner/admin), with its status. */
+export const SentInvitationSchema = z.object({
+  id: z.string().uuid(),
+  groupId: z.string().uuid(),
+  email: z.string(),
+  invitedByEmail: z.string(),
+  expiresAt: z.string().nullable(),
+  acceptedAt: z.string().nullable(),
+  rejectedAt: z.string().nullable(),
+  createdAt: z.string(),
+  status: InvitationStatusSchema,
+});
+export type SentInvitation = z.infer<typeof SentInvitationSchema>;

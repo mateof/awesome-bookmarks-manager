@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FolderClosed, PencilLine, Users } from "lucide-react";
+import {
+  ExternalLink,
+  FolderClosed,
+  PencilLine,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
@@ -33,55 +39,138 @@ export function SharedPage() {
   return <SharedList />;
 }
 
+function AccessBadge({ access }: { access: string }) {
+  const { t } = useTranslation();
+  return (
+    <span
+      className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
+        access === "editor"
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+          : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+      }`}
+    >
+      {access === "editor" ? t("shared.canEdit") : t("shared.readOnly")}
+    </span>
+  );
+}
+
 function SharedList() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<"withMe" | "byMe">("withMe");
   const shared = useQuery({ queryKey: ["shared"], queryFn: api.listShared });
+  const byMe = useQuery({
+    queryKey: ["shares-by-me"],
+    queryFn: api.listSharesByMe,
+    enabled: tab === "byMe",
+  });
+  const revoke = useMutation({
+    mutationFn: (s: { groupId: string; id: string }) =>
+      api.deleteGroupShare(s.groupId, s.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shares-by-me"] });
+      qc.invalidateQueries({ queryKey: ["shared"] });
+    },
+  });
+
+  const tabCls = (active: boolean) =>
+    `rounded px-3 py-1 text-sm ${
+      active
+        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+        : "hover:bg-slate-100 dark:hover:bg-slate-800"
+    }`;
 
   return (
     <div className="space-y-3">
-      <h1 className="text-xl font-semibold">{t("shared.myShared")}</h1>
-      {shared.isLoading && <div className="text-slate-400">{t("common.loading")}</div>}
-      <div className="space-y-2">
-        {(shared.data ?? []).map((s) => (
-          <Link
-            key={s.id}
-            to={`/shared/${s.id}`}
-            className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
-          >
-            {s.sourceType === "folder" ? (
-              <FolderClosed className="h-5 w-5 text-slate-400" />
-            ) : (
-              <ExternalLink className="h-5 w-5 text-slate-400" />
-            )}
-            <div className="flex-1">
-              <div className="text-sm font-medium">
-                {s.sourceType === "folder"
-                  ? t("shared.folderShared")
-                  : t("shared.bookmarkShared")}
-              </div>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
-                <Users className="h-3 w-3" />
-                {s.groupName} · {t("bookmarksBar.sharedByUser", { email: s.sharedByEmail })}
-              </div>
-            </div>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs ${
-                s.access === "editor"
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                  : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-              }`}
-            >
-              {s.access === "editor" ? t("shared.canEdit") : t("shared.readOnly")}
-            </span>
-            <span className="text-xs uppercase text-slate-400">
-              {s.payloadStatus}
-            </span>
-          </Link>
-        ))}
-        {(shared.data ?? []).length === 0 && !shared.isLoading && (
-          <div className="text-sm text-slate-400">{t("shared.nothingShared")}</div>
-        )}
+      <h1 className="text-xl font-semibold">{t("shared.title")}</h1>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setTab("withMe")} className={tabCls(tab === "withMe")}>
+          {t("shared.withMe")}
+        </button>
+        <button type="button" onClick={() => setTab("byMe")} className={tabCls(tab === "byMe")}>
+          {t("shared.byMe")}
+        </button>
       </div>
+
+      {tab === "withMe" && (
+        <div className="space-y-2">
+          {(shared.data ?? []).map((s) => (
+            <Link
+              key={s.id}
+              to={`/shared/${s.id}`}
+              className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            >
+              {s.sourceType === "folder" ? (
+                <FolderClosed className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ExternalLink className="h-5 w-5 text-slate-400" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium">
+                  {s.label ??
+                    (s.sourceType === "folder"
+                      ? t("shared.folderShared")
+                      : t("shared.bookmarkShared"))}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <Users className="h-3 w-3" />
+                  {s.groupName} ·{" "}
+                  {t("bookmarksBar.sharedByUser", { email: s.sharedByEmail })}
+                </div>
+              </div>
+              <AccessBadge access={s.access} />
+            </Link>
+          ))}
+          {(shared.data ?? []).length === 0 && !shared.isLoading && (
+            <div className="text-sm text-slate-400">
+              {t("shared.nothingShared")}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "byMe" && (
+        <div className="space-y-2">
+          {(byMe.data ?? []).map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+            >
+              {s.sourceType === "folder" ? (
+                <FolderClosed className="h-5 w-5 shrink-0 text-slate-400" />
+              ) : (
+                <ExternalLink className="h-5 w-5 shrink-0 text-slate-400" />
+              )}
+              <Link to={`/shared/${s.id}`} className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium hover:underline">
+                  {s.label ?? t("groups.sharedItem")}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-slate-500">
+                  <Users className="h-3 w-3" />
+                  {s.groupName}
+                </div>
+              </Link>
+              <AccessBadge access={s.access} />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm(t("groups.confirmRemoveShare"))) return;
+                  revoke.mutate({ groupId: s.groupId, id: s.id });
+                }}
+                title={t("shared.revoke")}
+                className="text-slate-400 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          {(byMe.data ?? []).length === 0 && !byMe.isLoading && (
+            <div className="text-sm text-slate-400">
+              {t("shared.byMeEmpty")}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

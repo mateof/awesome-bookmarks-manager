@@ -11,6 +11,7 @@ import { requireAuth } from "../auth/session.js";
 import { editSharedNode, readGroupShareContent } from "./content.js";
 import {
   acceptInvitation,
+  cancelInvitation,
   createGroup,
   deleteGroup,
   deleteShare,
@@ -18,10 +19,13 @@ import {
   inviteMember,
   leaveGroup,
   listAllSharedWithMe,
+  listGroupInvitations,
   listGroupShares,
   listMembers,
   listMyGroups,
   listMyInvitations,
+  listMySharesByMe,
+  rejectInvitation,
   removeMember,
   shareToGroup,
   updateGroup,
@@ -38,6 +42,10 @@ const GroupAndUserParams = z.object({
   userId: z.string().uuid(),
 });
 const TokenParam = z.object({ token: z.string().min(1).max(256) });
+const GroupAndInviteParams = z.object({
+  id: z.string().uuid(),
+  invId: z.string().uuid(),
+});
 
 export const groupRoutes: FastifyPluginAsync = async (app) => {
   app.get("/groups", async (req) => {
@@ -114,6 +122,27 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     return acceptInvitation(ctx, token);
   });
 
+  app.post("/invitations/:token/reject", async (req) => {
+    const ctx = requireAuth(req);
+    const { token } = TokenParam.parse(req.params);
+    return rejectInvitation(ctx, token);
+  });
+
+  // Invitations the sender created for a group, with status; and cancelling
+  // an unused one.
+  app.get("/groups/:id/invitations", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return listGroupInvitations(ctx, id);
+  });
+
+  app.delete("/groups/:id/invitations/:invId", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id, invId } = GroupAndInviteParams.parse(req.params);
+    cancelInvitation(ctx, id, invId);
+    reply.code(204);
+  });
+
   // Group shares
   app.get("/groups/:id/shares", async (req) => {
     const ctx = requireAuth(req);
@@ -141,6 +170,12 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
   app.get("/shared", async (req) => {
     const ctx = requireAuth(req);
     return listAllSharedWithMe(ctx);
+  });
+
+  // Everything I have shared into my groups (central manage view).
+  app.get("/shared/by-me", async (req) => {
+    const ctx = requireAuth(req);
+    return listMySharesByMe(ctx);
   });
 
   app.get("/shared/:shareId", async (req) => {

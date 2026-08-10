@@ -40,6 +40,10 @@ function GroupsList() {
       setAccepted(true);
     },
   });
+  const reject = useMutation({
+    mutationFn: (token: string) => api.rejectInvitation(token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["invitations"] }),
+  });
   const [showCreate, setShowCreate] = useState(false);
 
   return (
@@ -87,6 +91,12 @@ function GroupsList() {
                 className="rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
               >
                 {t("groups.accept")}
+              </button>
+              <button
+                onClick={() => reject.mutate(inv.token)}
+                className="rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                {t("groups.reject")}
               </button>
             </div>
           ))}
@@ -204,6 +214,13 @@ function GroupDetail({ id }: { id: string }) {
     queryKey: ["group-shares", id],
     queryFn: () => api.listGroupShares(id),
   });
+  const canManageRole =
+    group.data?.myRole === "owner" || group.data?.myRole === "admin";
+  const invites = useQuery({
+    queryKey: ["group-invitations", id],
+    queryFn: () => api.listGroupInvitations(id),
+    enabled: canManageRole,
+  });
   const [showInvite, setShowInvite] = useState(false);
   const [lastInvite, setLastInvite] = useState<{
     link: string;
@@ -290,6 +307,46 @@ function GroupDetail({ id }: { id: string }) {
         </div>
       </section>
 
+      {canManage && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-medium uppercase text-slate-500">
+            {t("groups.invitationsHeading")}
+          </h2>
+          {(invites.data ?? []).length === 0 ? (
+            <div className="text-sm text-slate-400">
+              {t("groups.noInvitations")}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {(invites.data ?? []).map((inv) => (
+                <div
+                  key={inv.id}
+                  className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span className="flex-1 truncate text-sm">{inv.email}</span>
+                  <InviteStatusBadge status={inv.status} />
+                  {inv.status !== "accepted" && (
+                    <button
+                      onClick={async () => {
+                        await api.cancelInvitation(id, inv.id);
+                        qc.invalidateQueries({
+                          queryKey: ["group-invitations", id],
+                        });
+                      }}
+                      title={t("groups.cancelInvitation")}
+                      className="text-slate-400 hover:text-red-600"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="space-y-2">
         <h2 className="text-xs font-medium uppercase text-slate-500">
           {t("groups.sharedHeading", { count: shares.data?.length ?? 0 })}
@@ -310,13 +367,17 @@ function GroupDetail({ id }: { id: string }) {
                   onClick={() => nav(`/shared/${s.id}`)}
                   className="flex-1 truncate text-left text-sm hover:underline"
                 >
-                  {s.id.slice(0, 8)}…
+                  {s.label ?? t("groups.sharedItem")}
                 </button>
                 <span className="text-xs text-slate-500">
                   {t("groups.sharedBy", { email: s.sharedByEmail })}
                 </span>
-                <span className="text-xs uppercase text-slate-400">
-                  {s.payloadStatus}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${s.access === "editor" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"}`}
+                >
+                  {s.access === "editor"
+                    ? t("shared.canEdit")
+                    : t("shared.readOnly")}
                 </span>
                 <button
                   onClick={async () => {
@@ -338,7 +399,11 @@ function GroupDetail({ id }: { id: string }) {
         <InviteDialog
           groupId={id}
           onClose={() => setShowInvite(false)}
-          onInvited={setLastInvite}
+          onInvited={(r) => {
+            setLastInvite(r);
+            qc.invalidateQueries({ queryKey: ["group-invitations", id] });
+            qc.invalidateQueries({ queryKey: ["group-members", id] });
+          }}
         />
       )}
       {lastInvite && (
@@ -381,6 +446,23 @@ function GroupDetail({ id }: { id: string }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+function InviteStatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
+  const cls =
+    status === "accepted"
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+      : status === "rejected"
+        ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+        : status === "expired"
+          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+          : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300";
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>
+      {t(`groups.status_${status}` as "groups.status_pending")}
+    </span>
   );
 }
 
