@@ -108,6 +108,8 @@ export const SentInvitationSchema = z.object({
   id: z.string().uuid(),
   groupId: z.string().uuid(),
   email: z.string(),
+  // The invite token, so the sender can re-copy the /invite/<token> link.
+  token: z.string(),
   invitedByEmail: z.string(),
   expiresAt: z.string().nullable(),
   acceptedAt: z.string().nullable(),

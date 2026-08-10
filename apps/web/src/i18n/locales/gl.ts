@@ -346,6 +346,7 @@ const gl = {
     noInvitations: "Non enviaches invitacións.",
     sharedItem: "Elemento compartido",
     cancelInvitation: "Cancelar invitación",
+    copyInviteLink: "Copiar ligazón de invitación",
     reject: "Rexeitar",
     status_pending: "pendente",
     status_accepted: "aceptada",

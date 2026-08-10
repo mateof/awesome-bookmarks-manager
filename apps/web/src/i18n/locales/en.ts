@@ -345,6 +345,7 @@ const en = {
     noInvitations: "You haven't sent any invitations.",
     sharedItem: "Shared item",
     cancelInvitation: "Cancel invitation",
+    copyInviteLink: "Copy invite link",
     reject: "Reject",
     status_pending: "pending",
     status_accepted: "accepted",

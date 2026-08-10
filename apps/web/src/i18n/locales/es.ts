@@ -346,6 +346,7 @@ const es = {
     noInvitations: "No has enviado invitaciones.",
     sharedItem: "Elemento compartido",
     cancelInvitation: "Cancelar invitación",
+    copyInviteLink: "Copiar enlace de invitación",
     reject: "Rechazar",
     status_pending: "pendiente",
     status_accepted: "aceptada",

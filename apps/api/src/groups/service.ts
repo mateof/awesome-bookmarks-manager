@@ -358,6 +358,7 @@ export function listGroupInvitations(ctx: AuthedContext, groupId: string) {
     .select({
       id: groupInvitations.id,
       email: groupInvitations.email,
+      token: groupInvitations.token,
       invitedByEmail: users.email,
       expiresAt: groupInvitations.expiresAt,
       acceptedAt: groupInvitations.acceptedAt,

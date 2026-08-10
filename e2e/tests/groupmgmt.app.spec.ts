@@ -81,6 +81,8 @@ test("gestión de grupo: estados de invitación, cancelar, rechazar, por mí", a
   expect(byEmail(userA.email).status).toBe("accepted");
   expect(byEmail(userB.email).status).toBe("rejected");
   expect(byEmail(userC.email).status).toBe("pending");
+  // Pending invitations expose their token so the sender can re-copy the link.
+  expect(byEmail(userC.email).token).toBe(invC.token);
 
   // Cancel the pending one; cannot cancel an accepted one.
   expect(

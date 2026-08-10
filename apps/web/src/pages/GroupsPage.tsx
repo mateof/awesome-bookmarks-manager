@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Group } from "@awesome-bookmarks/shared";
 import {
+  Check,
   Copy,
   Mail,
   Plus,
@@ -222,6 +223,7 @@ function GroupDetail({ id }: { id: string }) {
     enabled: canManageRole,
   });
   const [showInvite, setShowInvite] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
   const [lastInvite, setLastInvite] = useState<{
     link: string;
     autoAccepted: boolean;
@@ -318,30 +320,67 @@ function GroupDetail({ id }: { id: string }) {
             </div>
           ) : (
             <div className="space-y-1">
-              {(invites.data ?? []).map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <Mail className="h-4 w-4 text-slate-400" />
-                  <span className="flex-1 truncate text-sm">{inv.email}</span>
-                  <InviteStatusBadge status={inv.status} />
-                  {inv.status !== "accepted" && (
-                    <button
-                      onClick={async () => {
-                        await api.cancelInvitation(id, inv.id);
-                        qc.invalidateQueries({
-                          queryKey: ["group-invitations", id],
-                        });
-                      }}
-                      title={t("groups.cancelInvitation")}
-                      className="text-slate-400 hover:text-red-600"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
+              {(invites.data ?? []).map((inv) => {
+                const inviteUrl = `${window.location.origin}/invite/${inv.token}`;
+                return (
+                  <div
+                    key={inv.id}
+                    className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <Mail className="h-4 w-4 shrink-0 text-slate-400" />
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {inv.email}
+                    </span>
+                    {inv.status === "pending" && (
+                      <>
+                        <code
+                          className="hidden max-w-[12rem] truncate text-xs text-slate-400 md:block"
+                          title={inviteUrl}
+                        >
+                          {inviteUrl}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void navigator.clipboard.writeText(inviteUrl);
+                            setCopiedInvite(inv.id);
+                            window.setTimeout(
+                              () =>
+                                setCopiedInvite((c) =>
+                                  c === inv.id ? null : c,
+                                ),
+                              1500,
+                            );
+                          }}
+                          title={t("groups.copyInviteLink")}
+                          className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                        >
+                          {copiedInvite === inv.id ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </>
+                    )}
+                    <InviteStatusBadge status={inv.status} />
+                    {inv.status !== "accepted" && (
+                      <button
+                        onClick={async () => {
+                          await api.cancelInvitation(id, inv.id);
+                          qc.invalidateQueries({
+                            queryKey: ["group-invitations", id],
+                          });
+                        }}
+                        title={t("groups.cancelInvitation")}
+                        className="shrink-0 text-slate-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
