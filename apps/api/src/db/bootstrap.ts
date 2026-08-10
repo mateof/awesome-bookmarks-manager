@@ -286,6 +286,8 @@ export function ensureSchema() {
   // Marker for content imported from a group share ("shared" badge).
   tryAddColumn("folders", "share_origin", "TEXT");
   tryAddColumn("bookmarks", "share_origin", "TEXT");
+  // Live "symlink" portal to a group share (folder imported as a link).
+  tryAddColumn("folders", "linked_share_id", "TEXT");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.
   tryAddColumn("folders", "bg_color", "TEXT");

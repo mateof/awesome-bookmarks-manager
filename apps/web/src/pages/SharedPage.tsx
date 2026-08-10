@@ -1,21 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Copy,
   ExternalLink,
   FolderClosed,
+  Link as LinkIcon,
   PencilLine,
-  Plus,
   Trash2,
   Users,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, isConflict } from "../api.js";
+import { api } from "../api.js";
 import { fmtDate } from "../lib/date.js";
-import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
-import { RichTextEditor } from "../components/RichTextEditor.js";
 import { RichTextView } from "../components/RichTextView.js";
+import { SharedNodeEditor } from "../components/SharedNodeEditor.js";
 
 interface BookmarkPayload {
   type: "bookmark";
@@ -62,17 +62,27 @@ function SharedList() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [tab, setTab] = useState<"withMe" | "byMe">("withMe");
-  const [importing, setImporting] = useState<string | null>(null);
+  const [importing, setImporting] = useState<{
+    shareId: string;
+    mode: "link" | "copy";
+  } | null>(null);
   const shared = useQuery({ queryKey: ["shared"], queryFn: api.listShared });
   const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
   const importShare = useMutation({
-    mutationFn: (v: { shareId: string; parentId: string | null }) =>
-      api.importShare(v.shareId, v.parentId),
-    onSuccess: (r) => {
+    mutationFn: (v: {
+      shareId: string;
+      parentId: string | null;
+      mode: "link" | "copy";
+    }) => api.importShare(v.shareId, v.parentId, v.mode),
+    onSuccess: (r, v) => {
       qc.invalidateQueries({ queryKey: ["folders"] });
       qc.invalidateQueries({ queryKey: ["bookmarks"] });
       setImporting(null);
-      nav(r.type === "folder" ? `/folder/${r.id}` : "/");
+      if (r.type !== "folder") {
+        nav("/");
+        return;
+      }
+      nav(v.mode === "link" ? `/linked/${r.id}` : `/folder/${r.id}`);
     },
   });
   const byMe = useQuery({
@@ -138,12 +148,26 @@ function SharedList() {
               <button
                 type="button"
                 disabled={s.payloadStatus !== "ready"}
-                onClick={() => setImporting(s.id)}
-                title={t("shared.addTo")}
+                onClick={() =>
+                  setImporting({ shareId: s.id, mode: "link" })
+                }
+                title={t("shared.linkToDesc")}
                 className="flex shrink-0 items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
               >
-                <Plus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t("shared.addTo")}</span>
+                <LinkIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t("shared.link")}</span>
+              </button>
+              <button
+                type="button"
+                disabled={s.payloadStatus !== "ready"}
+                onClick={() =>
+                  setImporting({ shareId: s.id, mode: "copy" })
+                }
+                title={t("shared.copyToDesc")}
+                className="flex shrink-0 items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{t("shared.copy")}</span>
               </button>
             </div>
           ))}
@@ -204,12 +228,28 @@ function SharedList() {
           folders={folders.data ?? []}
           movingFolderIds={[]}
           count={1}
-          title={t("shared.addToTitle")}
-          description={t("shared.addToDesc")}
-          confirmLabel={t("shared.addToConfirm")}
+          title={
+            importing.mode === "link"
+              ? t("shared.linkToTitle")
+              : t("shared.copyToTitle")
+          }
+          description={
+            importing.mode === "link"
+              ? t("shared.linkToDesc")
+              : t("shared.copyToDesc")
+          }
+          confirmLabel={
+            importing.mode === "link"
+              ? t("shared.linkToConfirm")
+              : t("shared.copyToConfirm")
+          }
           onClose={() => setImporting(null)}
           onConfirm={(dest) =>
-            importShare.mutate({ shareId: importing, parentId: dest })
+            importShare.mutate({
+              shareId: importing.shareId,
+              parentId: dest,
+              mode: importing.mode,
+            })
           }
         />
       )}
@@ -370,94 +410,5 @@ function Render({
         </details>
       ))}
     </div>
-  );
-}
-
-function SharedNodeEditor({
-  shareId,
-  node,
-  baseRev,
-  onClose,
-  onSaved,
-}: {
-  shareId: string;
-  node: Payload;
-  baseRev: number;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { t } = useTranslation();
-  const isBookmark = node.type === "bookmark";
-  const [title, setTitle] = useState(
-    node.type === "bookmark" ? node.title : node.name,
-  );
-  const [url, setUrl] = useState(node.type === "bookmark" ? node.url : "");
-  const [description, setDescription] = useState(node.description ?? "");
-  const [err, setErr] = useState<string | null>(null);
-
-  const m = useMutation({
-    mutationFn: () =>
-      api.editSharedNode(shareId, node.id, {
-        ...(isBookmark ? { title, url } : { name: title }),
-        description: description || null,
-        baseRev,
-      }),
-    onSuccess: () => {
-      setErr(null);
-      onSaved();
-    },
-    onError: (e) =>
-      setErr(
-        isConflict(e)
-          ? t("common.conflict")
-          : e instanceof Error
-            ? e.message
-            : t("folder.errorGenericSave"),
-      ),
-  });
-
-  return (
-    <Modal title={t("shared.editNode")} onClose={onClose} size="lg">
-      <div className="space-y-2">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={
-            isBookmark
-              ? t("bookmark.fieldTitle")
-              : t("folder.fieldFolderName")
-          }
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-        />
-        {isBookmark && (
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder={t("bookmark.fieldUrl")}
-            className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
-          />
-        )}
-        <RichTextEditor value={description} onChange={setDescription} />
-        {err && <div className="text-sm text-red-600">{err}</div>}
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={m.isPending}
-            onClick={() => m.mutate()}
-            className="rounded bg-slate-900 px-4 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-          >
-            {m.isPending ? t("common.saving") : t("common.save")}
-          </button>
-        </div>
-      </div>
-    </Modal>
   );
 }

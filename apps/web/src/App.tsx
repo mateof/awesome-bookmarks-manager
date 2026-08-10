@@ -5,6 +5,7 @@ import { BookmarkDetailPage } from "./pages/BookmarkDetailPage.js";
 import { FolderPage } from "./pages/FolderPage.js";
 import { GroupsPage } from "./pages/GroupsPage.js";
 import { InvitePage } from "./pages/InvitePage.js";
+import { LinkedSharePage } from "./pages/LinkedSharePage.js";
 import { LoginPage } from "./pages/LoginPage.js";
 import { PanelsPage } from "./pages/PanelsPage.js";
 import { PublicPanelPage } from "./pages/PublicPanelPage.js";
@@ -33,6 +34,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<FolderPage />} />
                   <Route path="/folder/:id" element={<FolderPage />} />
+                  <Route path="/linked/:folderId" element={<LinkedSharePage />} />
                   <Route path="/bookmark/:id" element={<BookmarkDetailPage />} />
                   <Route path="/search" element={<SearchPage />} />
                   <Route path="/groups" element={<GroupsPage />} />

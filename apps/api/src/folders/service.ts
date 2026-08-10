@@ -28,6 +28,7 @@ interface FolderRow {
   imageBlobPath: string | null;
   bgColor: string | null;
   shareOrigin: string | null;
+  linkedShareId: string | null;
   position: number;
   rev: number;
   createdAt: string;
@@ -46,6 +47,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
     shareOrigin: row.shareOrigin,
+    linkedShareId: row.linkedShareId,
     position: row.position,
     rev: row.rev,
     tagIds,
@@ -93,6 +95,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
             shareOrigin: r.shareOrigin,
+            linkedShareId: r.linkedShareId,
             position: r.position,
             rev: r.rev,
             createdAt: r.createdAt,
@@ -136,6 +139,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
       shareOrigin: row.shareOrigin,
+      linkedShareId: row.linkedShareId,
       position: row.position,
       rev: row.rev,
       createdAt: row.createdAt,
@@ -148,7 +152,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
 function ensureParentExists(ctx: AuthedContext, parentId: string | null) {
   if (!parentId) return;
   const row = getDb()
-    .select({ id: folders.id })
+    .select({ id: folders.id, linkedShareId: folders.linkedShareId })
     .from(folders)
     .where(
       and(
@@ -159,6 +163,8 @@ function ensureParentExists(ctx: AuthedContext, parentId: string | null) {
     )
     .get();
   if (!row) throw BadRequest("Parent folder not found");
+  // A linked-share portal has no real children; it mirrors the live share.
+  if (row.linkedShareId) throw BadRequest("Cannot add into a linked folder");
 }
 
 function ensureTagsExist(ctx: AuthedContext, tagIds: string[]) {
@@ -197,6 +203,7 @@ export function createFolder(
     tagIds?: string[];
     bgColor?: string | null;
     shareOrigin?: string | null;
+    linkedShareId?: string | null;
   },
 ): Folder {
   const parentId = input.parentId ?? null;
@@ -218,6 +225,7 @@ export function createFolder(
         : null,
       bgColor: input.bgColor ?? null,
       shareOrigin: input.shareOrigin ?? null,
+      linkedShareId: input.linkedShareId ?? null,
       position: nextPosition(ctx, parentId),
     })
     .run();

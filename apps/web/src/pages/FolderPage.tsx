@@ -15,7 +15,7 @@ import {
   TabletSmartphone,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
@@ -94,6 +94,11 @@ export function FolderPage() {
   const items = (allBookmarks.data ?? []).filter(
     (b) => b.folderId === folderId,
   );
+
+  // A linked-share portal has no real content; its home is the live view.
+  useEffect(() => {
+    if (folder?.linkedShareId) nav(`/linked/${folder.id}`, { replace: true });
+  }, [folder?.linkedShareId, folder?.id, nav]);
 
   const [showAddBookmark, setShowAddBookmark] = useState(false);
   const [showAddFolder, setShowAddFolder] = useState(false);
@@ -617,7 +622,10 @@ export function FolderPage() {
         countDirectItems={countDirectItems}
         folderKebab={folderKebab}
         bookmarkKebab={bookmarkKebab}
-        onNavFolder={(id) => nav(`/folder/${id}`)}
+        onNavFolder={(id) => {
+          const sf = subfolders.find((f) => f.id === id);
+          nav(sf?.linkedShareId ? `/linked/${id}` : `/folder/${id}`);
+        }}
       />
 
       {showAddBookmark && (

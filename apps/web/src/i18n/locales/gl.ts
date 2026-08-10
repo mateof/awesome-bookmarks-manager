@@ -395,6 +395,23 @@ const gl = {
     canEdit: "Pode editar",
     readOnly: "Só lectura",
     editNode: "Editar elemento compartido",
+    link: "Ligar",
+    copy: "Copiar",
+    linkToTitle: "Ligar no meu inicio",
+    linkToDesc:
+      "Escolle onde crear a ligazón viva. Actualízase soa e é de só lectura (agás que poidas editar).",
+    linkToConfirm: "Ligar aquí",
+    copyToTitle: "Copiar aos meus cartafoles",
+    copyToDesc:
+      "Copia puntual que pasa a ser túa. Non se actualiza nin mostra icona de compartido.",
+    copyToConfirm: "Copiar aquí",
+  },
+  linked: {
+    home: "Inicio",
+    notLinked: "Este cartafol non é unha ligazón compartida.",
+    unavailable: "O contido compartido xa non está dispoñible.",
+    empty: "Este cartafol compartido está baleiro.",
+    itemCount: "{{count}} elementos",
   },
   shareToGroup: {
     titleFolder: "Compartir cartafol con grupo",

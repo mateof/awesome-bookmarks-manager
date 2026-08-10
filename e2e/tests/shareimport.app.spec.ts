@@ -2,8 +2,10 @@ import { type APIRequestContext, expect, test } from "@playwright/test";
 import { seedSpanish, signup } from "../fixtures/app.js";
 
 /**
- * Import a shared folder into my own home: it becomes owned folders/bookmarks
- * (the top one marked as shared), so I can manage them like my own.
+ * Importing a shared folder has two modes:
+ *  - link (default): a single live "symlink" portal (linkedShareId set,
+ *    shared badge), no subtree copied.
+ *  - copy: a fully-owned point-in-time snapshot (subtree copied, no badge).
  */
 const owner = {
   email: "edith.clarke@example.com",
@@ -16,7 +18,15 @@ const member = {
   password: "FirstWomanASME1950",
 };
 
-test("importar carpeta compartida a mi inicio con marca de compartida", async ({
+interface FolderRow {
+  id: string;
+  name: string;
+  parentId: string | null;
+  shareOrigin: string | null;
+  linkedShareId: string | null;
+}
+
+test("importar carpeta compartida: modo enlace (symlink) y modo copia", async ({
   browser,
 }) => {
   const mk = async (u: {
@@ -58,12 +68,14 @@ test("importar carpeta compartida a mi inicio con marca de compartida", async ({
       data: { email: member.email, expiresInDays: 7 },
     })
   ).json();
-  expect((await mreq.post(`/api/invitations/${inv.token}/accept`)).ok()).toBeTruthy();
+  expect(
+    (await mreq.post(`/api/invitations/${inv.token}/accept`)).ok(),
+  ).toBeTruthy();
   await oreq.post(`/api/groups/${group.id}/shares`, {
     data: { sourceType: "folder", sourceId: proyecto.id, access: "viewer" },
   });
 
-  // Member finds the share, then imports it (retry until the snapshot sealed).
+  // Member finds the share (retry until the snapshot sealed).
   let shareId = "";
   await expect(async () => {
     const list = await (await mreq.get("/api/shared")).json();
@@ -71,32 +83,63 @@ test("importar carpeta compartida a mi inicio con marca de compartida", async ({
     shareId = list[0].id;
   }).toPass({ timeout: 10_000 });
 
-  // Member picks a destination folder (not the root) for the import.
   const destino = await (
     await mreq.post("/api/folders", { data: { name: "Destino" } })
   ).json();
 
-  let imported: { id: string; type: string } = { id: "", type: "" };
+  // --- Mode: link -> a single portal folder into "Destino".
+  let linked: { id: string; type: string } = { id: "", type: "" };
   await expect(async () => {
     const r = await mreq.post(`/api/shared/${shareId}/import`, {
-      data: { parentId: destino.id },
+      data: { parentId: destino.id, mode: "link" },
     });
     expect(r.ok(), await r.text()).toBeTruthy();
-    imported = await r.json();
+    linked = await r.json();
   }).toPass({ timeout: 30_000 });
-  expect(imported.type).toBe("folder");
+  expect(linked.type).toBe("folder");
 
-  // The member now owns the subtree: top folder inside the chosen folder and
-  // marked shared, the rest plain.
-  const folders = await (await mreq.get("/api/folders")).json();
-  const proy = folders.find((f: { name: string }) => f.name === "Proyecto");
-  const docs = folders.find((f: { name: string }) => f.name === "Docs");
-  expect(proy?.id).toBe(imported.id);
-  expect(proy.parentId).toBe(destino.id);
-  expect(proy.shareOrigin).toBe("Equipo Clarke");
+  let folders: FolderRow[] = await (await mreq.get("/api/folders")).json();
+  const portal = folders.find((f) => f.id === linked.id)!;
+  expect(portal.name).toBe("Proyecto");
+  expect(portal.parentId).toBe(destino.id);
+  expect(portal.shareOrigin).toBe("Equipo Clarke");
+  expect(portal.linkedShareId).toBe(shareId);
+  // Link does NOT copy the subtree: no owned "Docs", no owned "Ref".
+  expect(folders.some((f) => f.name === "Docs")).toBe(false);
+  const bmsAfterLink = await (await mreq.get("/api/bookmarks")).json();
+  expect(bmsAfterLink.length).toBe(0);
+  // The portal is read-only: adding into it is rejected.
+  const addInto = await mreq.post("/api/bookmarks", {
+    data: {
+      url: "https://blocked.example/",
+      title: "No",
+      folderId: portal.id,
+      fetchSnapshot: false,
+    },
+  });
+  expect(addInto.ok()).toBe(false);
+
+  // --- Mode: copy -> a fully-owned snapshot at root (no badge).
+  const copied = await (
+    await mreq.post(`/api/shared/${shareId}/import`, {
+      data: { parentId: null, mode: "copy" },
+    })
+  ).json();
+  expect(copied.type).toBe("folder");
+
+  folders = await (await mreq.get("/api/folders")).json();
+  const copy = folders.find((f) => f.id === copied.id)!;
+  expect(copy.name).toBe("Proyecto");
+  expect(copy.parentId).toBeNull();
+  expect(copy.shareOrigin).toBeNull();
+  expect(copy.linkedShareId).toBeNull();
+  const docs = folders.find(
+    (f) => f.name === "Docs" && f.parentId === copy.id,
+  );
   expect(docs).toBeTruthy();
-  expect(docs.shareOrigin).toBeNull();
-
-  const bms = await (await mreq.get("/api/bookmarks")).json();
-  expect(bms.some((b: { title: string }) => b.title === "Ref")).toBeTruthy();
+  expect(docs!.shareOrigin).toBeNull();
+  const bmsAfterCopy = await (await mreq.get("/api/bookmarks")).json();
+  expect(bmsAfterCopy.some((b: { title: string }) => b.title === "Ref")).toBe(
+    true,
+  );
 });

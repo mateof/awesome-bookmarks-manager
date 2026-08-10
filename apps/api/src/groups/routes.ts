@@ -9,7 +9,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { editSharedNode, readGroupShareContent } from "./content.js";
-import { importShareToHome } from "./import.js";
+import { copyShareToHome, linkShareToHome } from "./import.js";
 import {
   acceptInvitation,
   cancelInvitation,
@@ -184,13 +184,21 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { shareId } = GroupShareIdParam.parse(req.params);
     const body = z
-      .object({ parentId: z.string().uuid().nullable().optional() })
+      .object({
+        parentId: z.string().uuid().nullable().optional(),
+        // "link" (default): a live portal to the share. "copy": a fully-owned
+        // point-in-time snapshot with no shared badge.
+        mode: z.enum(["link", "copy"]).optional(),
+      })
       .parse(req.body ?? {});
     const item = listAllSharedWithMe(ctx).find((s) => s.id === shareId);
     if (!item) return { error: "not_found" };
     const { content } = readGroupShareContent(ctx, shareId);
     reply.code(201);
-    return importShareToHome(ctx, content, body.parentId ?? null, item.groupName);
+    const parentId = body.parentId ?? null;
+    return body.mode === "copy"
+      ? copyShareToHome(ctx, content, parentId)
+      : linkShareToHome(ctx, content, parentId, item.groupName, shareId);
   });
 
   app.get("/shared/:shareId", async (req) => {

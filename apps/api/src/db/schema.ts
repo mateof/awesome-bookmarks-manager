@@ -249,6 +249,9 @@ export const folders = sqliteTable(
     // Set (to the source group name) when this was imported from a group
     // share, so the UI can mark it as "shared".
     shareOrigin: text("share_origin"),
+    // When set, this folder is a live "symlink" portal to a group share: it
+    // has no real children; opening it renders the share's current content.
+    linkedShareId: text("linked_share_id"),
     position: integer("position").notNull().default(0),
     // Optimistic-concurrency revision, bumped on every mutation. A conditional
     // update (WHERE rev = expected) lets a stale writer be rejected with 409.

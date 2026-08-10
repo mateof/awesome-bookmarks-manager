@@ -394,6 +394,23 @@ const en = {
     canEdit: "Can edit",
     readOnly: "Read-only",
     editNode: "Edit shared item",
+    link: "Link",
+    copy: "Copy",
+    linkToTitle: "Link into my home",
+    linkToDesc:
+      "Choose where to create the live link. It updates on its own and is read-only (unless you can edit).",
+    linkToConfirm: "Link here",
+    copyToTitle: "Copy to my folders",
+    copyToDesc:
+      "A point-in-time copy that becomes yours. It doesn't update and shows no shared badge.",
+    copyToConfirm: "Copy here",
+  },
+  linked: {
+    home: "Home",
+    notLinked: "This folder is not a shared link.",
+    unavailable: "The shared content is no longer available.",
+    empty: "This shared folder is empty.",
+    itemCount: "{{count}} items",
   },
   shareToGroup: {
     titleFolder: "Share folder with group",

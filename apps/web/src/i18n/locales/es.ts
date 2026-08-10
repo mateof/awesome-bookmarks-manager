@@ -394,6 +394,23 @@ const es = {
     canEdit: "Puede editar",
     readOnly: "Solo lectura",
     editNode: "Editar elemento compartido",
+    link: "Enlazar",
+    copy: "Copiar",
+    linkToTitle: "Enlazar en mi inicio",
+    linkToDesc:
+      "Elige dónde crear el enlace vivo. Se actualiza solo y es de solo lectura (salvo que puedas editar).",
+    linkToConfirm: "Enlazar aquí",
+    copyToTitle: "Copiar a mis carpetas",
+    copyToDesc:
+      "Copia puntual que pasa a ser tuya. No se actualiza ni muestra icono de compartido.",
+    copyToConfirm: "Copiar aquí",
+  },
+  linked: {
+    home: "Inicio",
+    notLinked: "Esta carpeta no es un enlace compartido.",
+    unavailable: "El contenido compartido ya no está disponible.",
+    empty: "Esta carpeta compartida está vacía.",
+    itemCount: "{{count}} elementos",
   },
   shareToGroup: {
     titleFolder: "Compartir carpeta con grupo",

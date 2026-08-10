@@ -93,7 +93,7 @@ function loadTagIds(bookmarkIds: string[]): Map<string, string[]> {
 function ensureFolderExists(ctx: AuthedContext, folderId: string | null) {
   if (!folderId) return;
   const fr = getDb()
-    .select({ id: folders.id })
+    .select({ id: folders.id, linkedShareId: folders.linkedShareId })
     .from(folders)
     .where(
       and(
@@ -104,6 +104,8 @@ function ensureFolderExists(ctx: AuthedContext, folderId: string | null) {
     )
     .get();
   if (!fr) throw BadRequest("Folder not found");
+  // A linked-share portal mirrors the live share; it holds no real bookmarks.
+  if (fr.linkedShareId) throw BadRequest("Cannot add into a linked folder");
 }
 
 function ensureTagsExist(ctx: AuthedContext, tagIds: string[]) {

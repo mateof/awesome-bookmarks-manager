@@ -523,10 +523,14 @@ export const api = {
   cancelInvitation: (id: string, invId: string) =>
     request<void>(`/groups/${id}/invitations/${invId}`, { method: "DELETE" }),
   listSharesByMe: () => request<SharedItem[]>("/shared/by-me"),
-  importShare: (shareId: string, parentId: string | null = null) =>
+  importShare: (
+    shareId: string,
+    parentId: string | null = null,
+    mode: "link" | "copy" = "link",
+  ) =>
     request<{ id: string; type: "folder" | "bookmark" }>(
       `/shared/${shareId}/import`,
-      { method: "POST", body: JSON.stringify({ parentId }) },
+      { method: "POST", body: JSON.stringify({ parentId, mode }) },
     ),
   shareToGroup: (id: string, body: ShareToGroupBody) =>
     request<{ id: string }>(`/groups/${id}/shares`, {

@@ -111,7 +111,11 @@ function Node({
           <FolderClosed className="h-4 w-4 text-slate-500" />
         )}
         <Link
-          to={`/folder/${folder.id}`}
+          to={
+            folder.linkedShareId
+              ? `/linked/${folder.id}`
+              : `/folder/${folder.id}`
+          }
           className="flex min-w-0 flex-1 items-center gap-1 truncate"
         >
           <span className="truncate">{folder.name}</span>
