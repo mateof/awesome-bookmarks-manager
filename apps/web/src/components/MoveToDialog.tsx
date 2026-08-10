@@ -13,6 +13,10 @@ interface Props {
   onClose: () => void;
   /** Resolve the move; `dest` is null for the root. */
   onConfirm: (dest: string | null) => void | Promise<void>;
+  /** Optional label overrides so the picker can be reused (e.g. for import). */
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
 }
 
 export function MoveToDialog({
@@ -21,6 +25,9 @@ export function MoveToDialog({
   count,
   onClose,
   onConfirm,
+  title,
+  description,
+  confirmLabel,
 }: Props) {
   const { t } = useTranslation();
   // undefined = nothing chosen yet; null = root; string = a folder id.
@@ -90,9 +97,9 @@ export function MoveToDialog({
       });
 
   return (
-    <Modal title={t("moveDialog.title")} onClose={onClose} size="md">
+    <Modal title={title ?? t("moveDialog.title")} onClose={onClose} size="md">
       <p className="text-sm text-slate-500 dark:text-slate-400">
-        {t("moveDialog.description", { count })}
+        {description ?? t("moveDialog.description", { count })}
       </p>
       <div className="max-h-[50vh] overflow-auto rounded border border-slate-200 p-1 dark:border-slate-800">
         <button
@@ -123,7 +130,9 @@ export function MoveToDialog({
           disabled={dest === undefined || pending}
           className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
         >
-          {pending ? t("moveDialog.moving") : t("moveDialog.confirm")}
+          {pending
+            ? t("moveDialog.moving")
+            : (confirmLabel ?? t("moveDialog.confirm"))}
         </button>
       </div>
     </Modal>

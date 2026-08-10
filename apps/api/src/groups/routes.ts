@@ -179,15 +179,18 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     return listMySharesByMe(ctx);
   });
 
-  // Import a shared item into my own home as owned folders/bookmarks.
+  // Import a shared item into my own library (root or a chosen folder).
   app.post("/shared/:shareId/import", async (req, reply) => {
     const ctx = requireAuth(req);
     const { shareId } = GroupShareIdParam.parse(req.params);
+    const body = z
+      .object({ parentId: z.string().uuid().nullable().optional() })
+      .parse(req.body ?? {});
     const item = listAllSharedWithMe(ctx).find((s) => s.id === shareId);
     if (!item) return { error: "not_found" };
     const { content } = readGroupShareContent(ctx, shareId);
     reply.code(201);
-    return importShareToHome(ctx, content, null, item.groupName);
+    return importShareToHome(ctx, content, body.parentId ?? null, item.groupName);
   });
 
   app.get("/shared/:shareId", async (req) => {

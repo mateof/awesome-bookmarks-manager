@@ -13,6 +13,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { fmtDate } from "../lib/date.js";
 import { Modal } from "../components/Modal.js";
+import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { RichTextView } from "../components/RichTextView.js";
 
@@ -61,12 +62,16 @@ function SharedList() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [tab, setTab] = useState<"withMe" | "byMe">("withMe");
+  const [importing, setImporting] = useState<string | null>(null);
   const shared = useQuery({ queryKey: ["shared"], queryFn: api.listShared });
+  const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
   const importShare = useMutation({
-    mutationFn: (shareId: string) => api.importShare(shareId),
+    mutationFn: (v: { shareId: string; parentId: string | null }) =>
+      api.importShare(v.shareId, v.parentId),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["folders"] });
       qc.invalidateQueries({ queryKey: ["bookmarks"] });
+      setImporting(null);
       nav(r.type === "folder" ? `/folder/${r.id}` : "/");
     },
   });
@@ -132,17 +137,13 @@ function SharedList() {
               <AccessBadge access={s.access} />
               <button
                 type="button"
-                disabled={
-                  s.payloadStatus !== "ready" || importShare.isPending
-                }
-                onClick={() => importShare.mutate(s.id)}
-                title={t("shared.importToHome")}
+                disabled={s.payloadStatus !== "ready"}
+                onClick={() => setImporting(s.id)}
+                title={t("shared.addTo")}
                 className="flex shrink-0 items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">
-                  {t("shared.importToHome")}
-                </span>
+                <span className="hidden sm:inline">{t("shared.addTo")}</span>
               </button>
             </div>
           ))}
@@ -196,6 +197,21 @@ function SharedList() {
             </div>
           )}
         </div>
+      )}
+
+      {importing && (
+        <MoveToDialog
+          folders={folders.data ?? []}
+          movingFolderIds={[]}
+          count={1}
+          title={t("shared.addToTitle")}
+          description={t("shared.addToDesc")}
+          confirmLabel={t("shared.addToConfirm")}
+          onClose={() => setImporting(null)}
+          onConfirm={(dest) =>
+            importShare.mutate({ shareId: importing, parentId: dest })
+          }
+        />
       )}
     </div>
   );

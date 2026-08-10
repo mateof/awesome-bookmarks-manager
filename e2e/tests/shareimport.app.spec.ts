@@ -71,19 +71,28 @@ test("importar carpeta compartida a mi inicio con marca de compartida", async ({
     shareId = list[0].id;
   }).toPass({ timeout: 10_000 });
 
+  // Member picks a destination folder (not the root) for the import.
+  const destino = await (
+    await mreq.post("/api/folders", { data: { name: "Destino" } })
+  ).json();
+
   let imported: { id: string; type: string } = { id: "", type: "" };
   await expect(async () => {
-    const r = await mreq.post(`/api/shared/${shareId}/import`);
+    const r = await mreq.post(`/api/shared/${shareId}/import`, {
+      data: { parentId: destino.id },
+    });
     expect(r.ok(), await r.text()).toBeTruthy();
     imported = await r.json();
   }).toPass({ timeout: 30_000 });
   expect(imported.type).toBe("folder");
 
-  // The member now owns the subtree: top folder marked shared, rest plain.
+  // The member now owns the subtree: top folder inside the chosen folder and
+  // marked shared, the rest plain.
   const folders = await (await mreq.get("/api/folders")).json();
   const proy = folders.find((f: { name: string }) => f.name === "Proyecto");
   const docs = folders.find((f: { name: string }) => f.name === "Docs");
   expect(proy?.id).toBe(imported.id);
+  expect(proy.parentId).toBe(destino.id);
   expect(proy.shareOrigin).toBe("Equipo Clarke");
   expect(docs).toBeTruthy();
   expect(docs.shareOrigin).toBeNull();
