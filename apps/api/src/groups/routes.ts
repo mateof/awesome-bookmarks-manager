@@ -9,6 +9,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { editSharedNode, readGroupShareContent } from "./content.js";
+import { importShareToHome } from "./import.js";
 import {
   acceptInvitation,
   cancelInvitation,
@@ -176,6 +177,17 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
   app.get("/shared/by-me", async (req) => {
     const ctx = requireAuth(req);
     return listMySharesByMe(ctx);
+  });
+
+  // Import a shared item into my own home as owned folders/bookmarks.
+  app.post("/shared/:shareId/import", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId } = GroupShareIdParam.parse(req.params);
+    const item = listAllSharedWithMe(ctx).find((s) => s.id === shareId);
+    if (!item) return { error: "not_found" };
+    const { content } = readGroupShareContent(ctx, shareId);
+    reply.code(201);
+    return importShareToHome(ctx, content, null, item.groupName);
   });
 
   app.get("/shared/:shareId", async (req) => {

@@ -26,6 +26,7 @@ interface FolderRow {
   iconBlobPath: string | null;
   imageBlobPath: string | null;
   bgColor: string | null;
+  shareOrigin: string | null;
   position: number;
   rev: number;
   createdAt: string;
@@ -43,6 +44,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
+    shareOrigin: row.shareOrigin,
     position: row.position,
     rev: row.rev,
     tagIds,
@@ -89,6 +91,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             iconBlobPath: r.iconBlobPath,
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
+            shareOrigin: r.shareOrigin,
             position: r.position,
             rev: r.rev,
             createdAt: r.createdAt,
@@ -131,6 +134,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       iconBlobPath: row.iconBlobPath,
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
+      shareOrigin: row.shareOrigin,
       position: row.position,
       rev: row.rev,
       createdAt: row.createdAt,
@@ -191,6 +195,7 @@ export function createFolder(
     description?: string;
     tagIds?: string[];
     bgColor?: string | null;
+    shareOrigin?: string | null;
   },
 ): Folder {
   const parentId = input.parentId ?? null;
@@ -211,6 +216,7 @@ export function createFolder(
         ? sealField(ctx.dek, ctx.userId, "folder.description", cleanDescription)
         : null,
       bgColor: input.bgColor ?? null,
+      shareOrigin: input.shareOrigin ?? null,
       position: nextPosition(ctx, parentId),
     })
     .run();

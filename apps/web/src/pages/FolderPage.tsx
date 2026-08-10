@@ -528,6 +528,11 @@ export function FolderPage() {
           bgColor={folder!.bgColor}
           icon={folderIconNode}
           title={folder!.name}
+          subtitle={
+            folder!.shareOrigin
+              ? t("folder.sharedFrom", { group: folder!.shareOrigin })
+              : undefined
+          }
           actions={headerControls}
         />
       ) : (
@@ -542,6 +547,14 @@ export function FolderPage() {
           <h1 className="text-xl font-semibold">
             {folder?.name ?? t("folder.rootTitle")}
           </h1>
+          {folder?.shareOrigin && (
+            <span
+              title={t("folder.sharedFrom", { group: folder.shareOrigin })}
+              className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+            >
+              <Share2 className="h-3 w-3" /> {t("folder.shared")}
+            </span>
+          )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {headerControls}
           </div>
@@ -884,26 +897,46 @@ function FolderNestZone({ sf, size }: { sf: Folder; size: string }) {
     <span
       ref={nest.ref}
       title={t("folder.dropToNest")}
-      className={`inline-flex rounded-lg p-1 transition ${
+      className={`relative inline-flex rounded-lg p-1 transition ${
         nest.isOver ? "bg-blue-500/20 ring-2 ring-inset ring-blue-500" : ""
       }`}
     >
       <FolderIcon sf={sf} size={size} />
+      {sf.shareOrigin && (
+        <span
+          title={t("folder.sharedFrom", { group: sf.shareOrigin })}
+          className="absolute -bottom-1 -right-1 rounded-full bg-blue-500 p-0.5 text-white ring-2 ring-white dark:ring-slate-900"
+        >
+          <Share2 className="h-2.5 w-2.5" />
+        </span>
+      )}
     </span>
   );
 }
 
 function BookmarkIcon({ b, size }: { b: Bookmark; size: string }) {
-  if (b.iconBlobPath) {
-    return (
-      <img
-        src={api.bookmarkIconUrl(b.id)}
-        alt=""
-        className={`${size} shrink-0 rounded object-cover`}
-      />
-    );
-  }
-  return <ExternalLink className={`${size} shrink-0 text-slate-400`} />;
+  const { t } = useTranslation();
+  const inner = b.iconBlobPath ? (
+    <img
+      src={api.bookmarkIconUrl(b.id)}
+      alt=""
+      className={`${size} shrink-0 rounded object-cover`}
+    />
+  ) : (
+    <ExternalLink className={`${size} shrink-0 text-slate-400`} />
+  );
+  if (!b.shareOrigin) return inner;
+  return (
+    <span className="relative inline-flex">
+      {inner}
+      <span
+        title={t("folder.sharedFrom", { group: b.shareOrigin })}
+        className="absolute -bottom-1 -right-1 rounded-full bg-blue-500 p-0.5 text-white ring-2 ring-white dark:ring-slate-900"
+      >
+        <Share2 className="h-2 w-2" />
+      </span>
+    </span>
+  );
 }
 
 function HoverCheckbox({
@@ -1428,7 +1461,15 @@ function TableLayout(p: BodyProps) {
                 <td className="px-2 py-2">
                   <FolderIcon sf={sf} size="h-5 w-5" />
                 </td>
-                <td className="truncate px-2 py-2 font-medium">{sf.name}</td>
+                <td className="truncate px-2 py-2 font-medium">
+        {sf.name}
+        {sf.shareOrigin && (
+          <Share2
+            className="ml-1 inline h-3 w-3 text-blue-500"
+            aria-label={t("folder.sharedFrom", { group: sf.shareOrigin })}
+          />
+        )}
+      </td>
                 <td className="px-2 py-2 text-slate-400">—</td>
                 <td className="px-2 py-2">
                   <TagChipList

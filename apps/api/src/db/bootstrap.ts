@@ -283,6 +283,9 @@ export function ensureSchema() {
   tryAddColumn("group_shares", "rev", "INTEGER NOT NULL DEFAULT 1");
   // Rejected invitations (for the sender's status view).
   tryAddColumn("group_invitations", "rejected_at", "TEXT");
+  // Marker for content imported from a group share ("shared" badge).
+  tryAddColumn("folders", "share_origin", "TEXT");
+  tryAddColumn("bookmarks", "share_origin", "TEXT");
   // Per-card appearance: optional background colour (hex with optional
   // alpha) and an encrypted background image stored as a blob.
   tryAddColumn("folders", "bg_color", "TEXT");

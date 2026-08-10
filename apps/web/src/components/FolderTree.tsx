@@ -5,6 +5,7 @@ import {
   FolderClosed,
   FolderOpen,
   Home,
+  Share2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,8 +110,14 @@ function Node({
         ) : (
           <FolderClosed className="h-4 w-4 text-slate-500" />
         )}
-        <Link to={`/folder/${folder.id}`} className="flex-1 truncate">
-          {folder.name}
+        <Link
+          to={`/folder/${folder.id}`}
+          className="flex min-w-0 flex-1 items-center gap-1 truncate"
+        >
+          <span className="truncate">{folder.name}</span>
+          {folder.shareOrigin && (
+            <Share2 className="h-3 w-3 shrink-0 text-blue-500" />
+          )}
         </Link>
       </div>
       {open &&

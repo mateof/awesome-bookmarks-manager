@@ -15,6 +15,7 @@ export const FolderSchema = z.object({
   iconBlobPath: z.string().nullable(),
   imageBlobPath: z.string().nullable(),
   bgColor: z.string().nullable().optional(),
+  shareOrigin: z.string().nullable().default(null),
   position: z.number().int(),
   rev: z.number().int().default(1),
   tagIds: z.array(z.string().uuid()).default([]),

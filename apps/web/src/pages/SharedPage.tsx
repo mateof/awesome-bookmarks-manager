@@ -3,12 +3,13 @@ import {
   ExternalLink,
   FolderClosed,
   PencilLine,
+  Plus,
   Trash2,
   Users,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { fmtDate } from "../lib/date.js";
 import { Modal } from "../components/Modal.js";
@@ -58,8 +59,17 @@ function AccessBadge({ access }: { access: string }) {
 function SharedList() {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const nav = useNavigate();
   const [tab, setTab] = useState<"withMe" | "byMe">("withMe");
   const shared = useQuery({ queryKey: ["shared"], queryFn: api.listShared });
+  const importShare = useMutation({
+    mutationFn: (shareId: string) => api.importShare(shareId),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["folders"] });
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+      nav(r.type === "folder" ? `/folder/${r.id}` : "/");
+    },
+  });
   const byMe = useQuery({
     queryKey: ["shares-by-me"],
     queryFn: api.listSharesByMe,
@@ -96,18 +106,17 @@ function SharedList() {
       {tab === "withMe" && (
         <div className="space-y-2">
           {(shared.data ?? []).map((s) => (
-            <Link
+            <div
               key={s.id}
-              to={`/shared/${s.id}`}
-              className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+              className="flex items-center gap-3 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
             >
               {s.sourceType === "folder" ? (
-                <FolderClosed className="h-5 w-5 text-slate-400" />
+                <FolderClosed className="h-5 w-5 shrink-0 text-slate-400" />
               ) : (
-                <ExternalLink className="h-5 w-5 text-slate-400" />
+                <ExternalLink className="h-5 w-5 shrink-0 text-slate-400" />
               )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">
+              <Link to={`/shared/${s.id}`} className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium hover:underline">
                   {s.label ??
                     (s.sourceType === "folder"
                       ? t("shared.folderShared")
@@ -119,9 +128,23 @@ function SharedList() {
                   {t("bookmarksBar.sharedByUser", { email: s.sharedByEmail })} ·{" "}
                   {t("shared.sharedOn", { date: fmtDate(s.createdAt) })}
                 </div>
-              </div>
+              </Link>
               <AccessBadge access={s.access} />
-            </Link>
+              <button
+                type="button"
+                disabled={
+                  s.payloadStatus !== "ready" || importShare.isPending
+                }
+                onClick={() => importShare.mutate(s.id)}
+                title={t("shared.importToHome")}
+                className="flex shrink-0 items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {t("shared.importToHome")}
+                </span>
+              </button>
+            </div>
           ))}
           {(shared.data ?? []).length === 0 && !shared.isLoading && (
             <div className="text-sm text-slate-400">

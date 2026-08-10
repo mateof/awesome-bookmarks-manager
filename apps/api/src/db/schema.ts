@@ -246,6 +246,9 @@ export const folders = sqliteTable(
     iconBlobPath: text("icon_blob_path"),
     imageBlobPath: text("image_blob_path"),
     bgColor: text("bg_color"),
+    // Set (to the source group name) when this was imported from a group
+    // share, so the UI can mark it as "shared".
+    shareOrigin: text("share_origin"),
     position: integer("position").notNull().default(0),
     // Optimistic-concurrency revision, bumped on every mutation. A conditional
     // update (WHERE rev = expected) lets a stale writer be rejected with 409.
@@ -283,6 +286,8 @@ export const bookmarks = sqliteTable(
     snapshotTextPath: text("snapshot_text_path"),
     snapshotStatus: text("snapshot_status").notNull().default("none"),
     snapshotError: text("snapshot_error"),
+    // Source group name when imported from a share (see folders.shareOrigin).
+    shareOrigin: text("share_origin"),
     position: integer("position").notNull().default(0),
     // Optimistic-concurrency revision (see folders.rev).
     rev: integer("rev").notNull().default(1),

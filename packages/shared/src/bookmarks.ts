@@ -26,6 +26,7 @@ export const BookmarkSchema = z.object({
   snapshotStatus: SnapshotStatusSchema,
   snapshotError: z.string().nullable().optional(),
   hasSnapshot: z.boolean(),
+  shareOrigin: z.string().nullable().default(null),
   position: z.number().int(),
   rev: z.number().int().default(1),
   tagIds: z.array(z.string().uuid()).default([]),

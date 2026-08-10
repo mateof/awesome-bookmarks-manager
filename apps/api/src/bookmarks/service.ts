@@ -32,6 +32,7 @@ interface BookmarkRow {
   iconBlobPath: string | null;
   imageBlobPath: string | null;
   bgColor: string | null;
+  shareOrigin: string | null;
   snapshotHtmlPath: string | null;
   snapshotStatus: string;
   snapshotError: string | null;
@@ -57,6 +58,7 @@ function decode(
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
+    shareOrigin: row.shareOrigin,
     snapshotStatus: row.snapshotStatus as SnapshotStatus,
     snapshotError: row.snapshotError,
     hasSnapshot: !!row.snapshotHtmlPath,
@@ -186,6 +188,7 @@ export function listBookmarks(
             iconBlobPath: r.iconBlobPath,
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
+            shareOrigin: r.shareOrigin,
             snapshotHtmlPath: r.snapshotHtmlPath,
             snapshotStatus: r.snapshotStatus,
             snapshotError: r.snapshotError,
@@ -243,6 +246,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       iconBlobPath: row.iconBlobPath,
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
+      shareOrigin: row.shareOrigin,
       snapshotHtmlPath: row.snapshotHtmlPath,
       snapshotStatus: row.snapshotStatus,
       snapshotError: row.snapshotError,
@@ -265,6 +269,7 @@ export function createBookmark(
     tagIds?: string[];
     bgColor?: string | null;
     fetchSnapshot?: boolean;
+    shareOrigin?: string | null;
   },
 ): Bookmark {
   const folderId = input.folderId ?? null;
@@ -299,6 +304,7 @@ export function createBookmark(
         : null,
       urlHash: urlHash(input.url, ctx.userId),
       bgColor: input.bgColor ?? null,
+      shareOrigin: input.shareOrigin ?? null,
       snapshotStatus: fetch ? "pending" : "none",
       snapshotError: null,
       position: nextPosition(ctx, folderId),
