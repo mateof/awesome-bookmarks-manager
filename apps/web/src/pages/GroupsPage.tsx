@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { Modal } from "../components/Modal.js";
+import { fmtDate, fmtDateTime } from "../lib/date.js";
 
 export function GroupsPage() {
   const { id } = useParams();
@@ -288,9 +289,14 @@ function GroupDetail({ id }: { id: string }) {
               key={m.userId}
               className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
             >
-              <Mail className="h-4 w-4 text-slate-400" />
-              <span>{m.email}</span>
-              <span className="ml-auto text-xs text-slate-500">{m.role}</span>
+              <Mail className="h-4 w-4 shrink-0 text-slate-400" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm">{m.email}</div>
+                <div className="text-xs text-slate-400">
+                  {t("groups.memberSince", { date: fmtDate(m.joinedAt) })}
+                </div>
+              </div>
+              <span className="text-xs text-slate-500">{m.role}</span>
               {canManage && m.role !== "owner" && (
                 <button
                   onClick={async () => {
@@ -322,15 +328,26 @@ function GroupDetail({ id }: { id: string }) {
             <div className="space-y-1">
               {(invites.data ?? []).map((inv) => {
                 const inviteUrl = `${window.location.origin}/invite/${inv.token}`;
+                const dateLine =
+                  inv.status === "accepted" && inv.acceptedAt
+                    ? t("groups.acceptedOn", {
+                        date: fmtDateTime(inv.acceptedAt),
+                      })
+                    : inv.status === "rejected" && inv.rejectedAt
+                      ? t("groups.rejectedOn", {
+                          date: fmtDateTime(inv.rejectedAt),
+                        })
+                      : t("groups.invitedOn", { date: fmtDate(inv.createdAt) });
                 return (
                   <div
                     key={inv.id}
                     className="flex items-center gap-2 rounded border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <Mail className="h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {inv.email}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm">{inv.email}</div>
+                      <div className="text-xs text-slate-400">{dateLine}</div>
+                    </div>
                     {inv.status === "pending" && (
                       <>
                         <code
@@ -417,6 +434,9 @@ function GroupDetail({ id }: { id: string }) {
                   {s.access === "editor"
                     ? t("shared.canEdit")
                     : t("shared.readOnly")}
+                </span>
+                <span className="hidden text-xs text-slate-400 sm:inline">
+                  {fmtDate(s.createdAt)}
                 </span>
                 <button
                   onClick={async () => {

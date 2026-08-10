@@ -96,6 +96,12 @@ test("gestión de grupo: estados de invitación, cancelar, rechazar, por mí", a
   await oreq.post(`/api/groups/${group.id}/shares`, {
     data: { sourceType: "folder", sourceId: folder.id, access: "editor" },
   });
+
+  // The owner's own share is NOT under "shared with me"; a member's is.
+  expect((await (await oreq.get("/api/shared")).json()).length).toBe(0);
+  await expect(async () => {
+    expect((await (await areq.get("/api/shared")).json()).length).toBe(1);
+  }).toPass({ timeout: 10_000 });
   let mine: {
     id: string;
     groupId: string;

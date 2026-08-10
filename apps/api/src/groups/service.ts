@@ -522,7 +522,8 @@ export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
     .all()
     .map((r) => r.id);
   if (groupIds.length === 0) return [];
-  return rawShares(groupIds);
+  // Exclude my own shares: they belong under "shared by me", not "with me".
+  return rawShares(groupIds).filter((s) => s.sharedById !== ctx.userId);
 }
 
 function rawShares(groupIds: string[]): SharedItem[] {

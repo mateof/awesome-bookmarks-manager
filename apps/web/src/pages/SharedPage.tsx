@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
+import { fmtDate } from "../lib/date.js";
 import { Modal } from "../components/Modal.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { RichTextView } from "../components/RichTextView.js";
@@ -115,7 +116,8 @@ function SharedList() {
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Users className="h-3 w-3" />
                   {s.groupName} ·{" "}
-                  {t("bookmarksBar.sharedByUser", { email: s.sharedByEmail })}
+                  {t("bookmarksBar.sharedByUser", { email: s.sharedByEmail })} ·{" "}
+                  {t("shared.sharedOn", { date: fmtDate(s.createdAt) })}
                 </div>
               </div>
               <AccessBadge access={s.access} />
@@ -147,7 +149,8 @@ function SharedList() {
                 </div>
                 <div className="flex items-center gap-1 text-xs text-slate-500">
                   <Users className="h-3 w-3" />
-                  {s.groupName}
+                  {s.groupName} ·{" "}
+                  {t("shared.sharedOn", { date: fmtDate(s.createdAt) })}
                 </div>
               </Link>
               <AccessBadge access={s.access} />
