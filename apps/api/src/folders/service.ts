@@ -5,6 +5,7 @@ import type { AuthedContext } from "../auth/session.js";
 import { openField, sealField } from "../auth/encryption.js";
 import { getDb, getSqlite } from "../db/client.js";
 import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
+import { resealSharesForFolderTree } from "../groups/resync.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { type FolderSnapshot, recordVersion } from "../versions/service.js";
@@ -229,6 +230,8 @@ export function createFolder(
 
   const created = getFolder(ctx, id);
   recordVersion(ctx, "folder", id, created.rev, folderSnapshot(created));
+  // A new subfolder inside a shared folder must reach members.
+  resealSharesForFolderTree(ctx, parentId);
   return created;
 }
 
@@ -292,6 +295,8 @@ export function updateFolder(
 
   const updated = getFolder(ctx, id);
   recordVersion(ctx, "folder", id, updated.rev, folderSnapshot(updated));
+  // Rename/description/bg changes on a folder that is (or is inside) a share.
+  resealSharesForFolderTree(ctx, id);
   return updated;
 }
 
@@ -324,6 +329,12 @@ export function moveFolder(
   assertFolderOwnedAndAlive(ctx, id);
   ensureParentExists(ctx, newParentId);
   if (newParentId === id) throw BadRequest("Cannot move into self");
+  const oldParentId =
+    getDb()
+      .select({ parentId: folders.parentId })
+      .from(folders)
+      .where(eq(folders.id, id))
+      .get()?.parentId ?? null;
   // Cycle check: walk up newParent's ancestors looking for id.
   let cursor = newParentId;
   const visited = new Set<string>();
@@ -348,6 +359,9 @@ export function moveFolder(
     })
     .where(eq(folders.id, id))
     .run();
+  // Moving in or out of a shared subtree changes what members should see.
+  resealSharesForFolderTree(ctx, oldParentId);
+  resealSharesForFolderTree(ctx, newParentId);
 }
 
 /** All alive folder ids in the subtree rooted at rootId (including itself). */
@@ -380,6 +394,12 @@ export function subtreeFolderIds(
 export function deleteFolder(ctx: AuthedContext, id: string) {
   assertFolderOwnedAndAlive(ctx, id);
   const now = new Date().toISOString();
+  const parentId =
+    getDb()
+      .select({ parentId: folders.parentId })
+      .from(folders)
+      .where(eq(folders.id, id))
+      .get()?.parentId ?? null;
   // Remove the whole subtree so descendants aren't orphaned.
   const subtree = subtreeFolderIds(ctx, id);
 
@@ -402,6 +422,8 @@ export function deleteFolder(ctx: AuthedContext, id: string) {
       .run();
   });
   tx();
+  // If a shared folder contained this subtree, the removal must reach members.
+  resealSharesForFolderTree(ctx, parentId);
 }
 
 export function setFolderIconPath(

@@ -6,6 +6,10 @@ import { getAutoSnapshots } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb, getSqlite } from "../db/client.js";
 import { bookmarkTags, bookmarks, folders, tags } from "../db/schema.js";
+import {
+  resealSharesForBookmark,
+  resealSharesForFolderTree,
+} from "../groups/resync.js";
 import { enqueue } from "../jobs/queue.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
@@ -335,6 +339,8 @@ export function createBookmark(
 
   const saved = getBookmark(ctx, id);
   recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  // A new bookmark inside a shared folder must reach members.
+  resealSharesForBookmark(ctx, id, saved.folderId);
   return saved;
 }
 
@@ -425,6 +431,12 @@ export function updateBookmark(
 
   const saved = getBookmark(ctx, id);
   recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  // Reflect edits (title/url/description) to members; also cover the old
+  // folder if the bookmark was moved out of a shared subtree.
+  resealSharesForBookmark(ctx, id, saved.folderId);
+  if (input.folderId !== undefined && existing.folderId !== saved.folderId) {
+    resealSharesForFolderTree(ctx, existing.folderId);
+  }
   return saved;
 }
 
@@ -456,6 +468,12 @@ export function moveBookmark(
 ) {
   assertBookmarkOwnedAndAlive(ctx, id);
   if (newFolderId) ensureFolderExists(ctx, newFolderId);
+  const oldFolderId =
+    getDb()
+      .select({ folderId: bookmarks.folderId })
+      .from(bookmarks)
+      .where(eq(bookmarks.id, id))
+      .get()?.folderId ?? null;
   getDb()
     .update(bookmarks)
     .set({
@@ -465,15 +483,26 @@ export function moveBookmark(
     })
     .where(eq(bookmarks.id, id))
     .run();
+  // Moving in or out of a shared folder changes what members should see.
+  resealSharesForBookmark(ctx, id, newFolderId);
+  resealSharesForFolderTree(ctx, oldFolderId);
 }
 
 export function deleteBookmark(ctx: AuthedContext, id: string) {
   assertBookmarkOwnedAndAlive(ctx, id);
+  const folderId =
+    getDb()
+      .select({ folderId: bookmarks.folderId })
+      .from(bookmarks)
+      .where(eq(bookmarks.id, id))
+      .get()?.folderId ?? null;
   getDb()
     .update(bookmarks)
     .set({ deletedAt: new Date().toISOString() })
     .where(eq(bookmarks.id, id))
     .run();
+  // The removal must reach members of a share covering this bookmark.
+  resealSharesForBookmark(ctx, id, folderId);
 }
 
 export function refreshSnapshot(ctx: AuthedContext, id: string) {
