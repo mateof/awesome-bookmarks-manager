@@ -5,11 +5,12 @@ import { folders, groupShares } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
 
 /**
- * Keep read-only ("viewer") group shares in sync with the owner's live
- * content: when the owner changes something inside a shared folder subtree,
- * re-enqueue the seal job so the materialized snapshot is rebuilt from the
- * current state and members see the change. Editor shares are left alone (the
- * group co-edits the payload directly, so we don't overwrite their edits).
+ * Keep group shares in sync with the owner's live content: when the owner
+ * changes something inside a shared folder subtree, re-enqueue the seal job so
+ * the materialized snapshot is rebuilt from the current state and members see
+ * the change. This applies to both viewer and editor shares; for editor shares
+ * the seal job overlays the group's in-place field edits on surviving nodes
+ * (see mergeEditorFieldEdits) so re-materializing structure never wipes them.
  *
  * The seal job needs the sharer's DEK, which is cached because the sharer is
  * the one making the edit.
@@ -38,7 +39,7 @@ function enqueueSeal(userId: string, shareId: string): void {
   });
 }
 
-/** Re-seal my viewer shares whose folder source is at or above this folder. */
+/** Re-seal my shares whose folder source is at or above this folder. */
 export function resealSharesForFolderTree(
   ctx: AuthedContext,
   folderId: string | null,
@@ -53,7 +54,6 @@ export function resealSharesForFolderTree(
       and(
         eq(groupShares.sharedBy, ctx.userId),
         eq(groupShares.sourceType, "folder"),
-        eq(groupShares.access, "viewer"),
         inArray(groupShares.sourceId, ids),
       ),
     )
@@ -75,7 +75,6 @@ export function resealSharesForBookmark(
       and(
         eq(groupShares.sharedBy, ctx.userId),
         eq(groupShares.sourceType, "bookmark"),
-        eq(groupShares.access, "viewer"),
         eq(groupShares.sourceId, bookmarkId),
       ),
     )

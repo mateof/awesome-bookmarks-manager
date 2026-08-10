@@ -138,6 +138,54 @@ function loadFolder(
   };
 }
 
+/**
+ * Overlay the group's in-place field edits (title/url/name/description) from a
+ * previous editor-share payload onto a freshly rebuilt tree, matched by node
+ * id. Structure (added/removed/moved nodes) comes from `fresh`; the group's
+ * collaborative field edits on nodes that still exist are preserved from `old`.
+ * Used only for editor shares so re-materializing the owner's structural
+ * changes never wipes the group's edits. Viewer shares use `fresh` verbatim.
+ */
+export function mergeEditorFieldEdits(
+  fresh: SharedContent,
+  old: SharedContent,
+): SharedContent {
+  const oldById = new Map<string, SharedContent>();
+  const index = (n: SharedContent): void => {
+    oldById.set(n.id, n);
+    if (n.type === "folder") {
+      for (const b of n.bookmarks) oldById.set(b.id, b);
+      for (const f of n.subfolders) index(f);
+    }
+  };
+  index(old);
+
+  const applyBookmark = (n: SharedBookmarkContent): SharedBookmarkContent => {
+    const prev = oldById.get(n.id);
+    if (prev && prev.type === "bookmark") {
+      return {
+        ...n,
+        title: prev.title,
+        url: prev.url,
+        description: prev.description,
+      };
+    }
+    return n;
+  };
+  const applyFolder = (n: SharedFolderContent): SharedFolderContent => {
+    const prev = oldById.get(n.id);
+    return {
+      ...n,
+      name: prev && prev.type === "folder" ? prev.name : n.name,
+      description: prev ? prev.description : n.description,
+      bookmarks: n.bookmarks.map(applyBookmark),
+      subfolders: n.subfolders.map(applyFolder),
+    };
+  };
+
+  return fresh.type === "folder" ? applyFolder(fresh) : applyBookmark(fresh);
+}
+
 export interface SharedContentResult {
   content: SharedContent;
   access: "viewer" | "editor";

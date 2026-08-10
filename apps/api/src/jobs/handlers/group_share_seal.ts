@@ -1,8 +1,13 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client.js";
 import { groupShares, groups } from "../../db/schema.js";
-import { buildPayloadForShare } from "../../groups/content.js";
 import {
+  buildPayloadForShare,
+  mergeEditorFieldEdits,
+  type SharedContent,
+} from "../../groups/content.js";
+import {
+  openGroupField,
   sealGroupField,
   unwrapGroupDek,
 } from "../../groups/encryption.js";
@@ -36,11 +41,37 @@ export async function runGroupShareSealJob(
     row.group.id,
     Buffer.from(row.group.groupDekWrapped),
   );
+
+  // Editor shares can carry the group's in-place field edits. Rebuilding from
+  // the owner's originals gives us the current structure; overlay the group's
+  // edits on surviving nodes so a re-seal never wipes collaborative work.
+  let finalContent: SharedContent = content;
+  if (
+    row.share.access === "editor" &&
+    row.share.payloadStatus === "ready" &&
+    row.share.payloadCt
+  ) {
+    try {
+      const old = JSON.parse(
+        openGroupField(
+          groupDek,
+          row.group.id,
+          "share.payload",
+          Buffer.from(row.share.payloadCt),
+        ),
+      ) as SharedContent;
+      finalContent = mergeEditorFieldEdits(content, old);
+    } catch {
+      // If the previous payload can't be read, fall back to the fresh tree.
+      finalContent = content;
+    }
+  }
+
   const sealed = sealGroupField(
     groupDek,
     row.group.id,
     "share.payload",
-    JSON.stringify(content),
+    JSON.stringify(finalContent),
   );
 
   getDb()

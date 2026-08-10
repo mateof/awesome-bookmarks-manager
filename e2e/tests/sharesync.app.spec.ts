@@ -17,11 +17,33 @@ const member = {
   password: "SubstitutionPrin1987",
 };
 
+const editorOwner = {
+  email: "joan.clarke@example.com",
+  nickname: "joanc",
+  password: "BletchleyPark1940x",
+};
+const editorMember = {
+  email: "margaret.hamilton@example.com",
+  nickname: "margareth",
+  password: "ApolloGuidance1969",
+};
+
 interface FolderNode {
   type: "folder";
   name: string;
-  bookmarks: { title: string }[];
+  bookmarks: { id: string; title: string }[];
   subfolders: FolderNode[];
+}
+
+async function makeUser(
+  browser: import("@playwright/test").Browser,
+  u: { email: string; nickname: string; password: string },
+): Promise<APIRequestContext> {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, u);
+  return page.request;
 }
 
 test("cambios del propietario en una carpeta compartida llegan a los miembros", async ({
@@ -115,5 +137,81 @@ test("cambios del propietario en una carpeta compartida llegan a los miembros", 
       await mreq.get(`/api/shared/${shareId}`)
     ).json();
     expect((content as FolderNode).name).toBe("Proyecto Alfa");
+  }).toPass({ timeout: 15_000 });
+});
+
+test("share editor: cambios estructurales del propietario llegan y se preservan las ediciones del grupo", async ({
+  browser,
+}) => {
+  const oreq = await makeUser(browser, editorOwner);
+  const mreq = await makeUser(browser, editorMember);
+
+  const folder = await (
+    await oreq.post("/api/folders", { data: { name: "Colaborativa" } })
+  ).json();
+  await oreq.post("/api/bookmarks", {
+    data: {
+      url: "https://example.org/",
+      title: "Ref",
+      folderId: folder.id,
+      fetchSnapshot: false,
+    },
+  });
+
+  const group = await (
+    await oreq.post("/api/groups", { data: { name: "Apollo Team" } })
+  ).json();
+  const inv = await (
+    await oreq.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: editorMember.email, expiresInDays: 7 },
+    })
+  ).json();
+  expect(
+    (await mreq.post(`/api/invitations/${inv.token}/accept`)).ok(),
+  ).toBeTruthy();
+  await oreq.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: folder.id, access: "editor" },
+  });
+
+  // Member sees the editable share and its bookmark.
+  let shareId = "";
+  let refId = "";
+  await expect(async () => {
+    const list = await (await mreq.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    const { content } = await (
+      await mreq.get(`/api/shared/${shareId}`)
+    ).json();
+    const ref = (content as FolderNode).bookmarks.find((b) => b.title === "Ref");
+    expect(ref).toBeTruthy();
+    refId = ref!.id;
+  }).toPass({ timeout: 10_000 });
+
+  // The group edits the bookmark's title in the live shared view.
+  const edit = await mreq.patch(`/api/shared/${shareId}/node/${refId}`, {
+    data: { title: "Ref del grupo" },
+  });
+  expect(edit.ok(), await edit.text()).toBeTruthy();
+
+  // The owner adds a NEW bookmark to the source folder.
+  await oreq.post("/api/bookmarks", {
+    data: {
+      url: "https://example.net/",
+      title: "Extra",
+      folderId: folder.id,
+      fetchSnapshot: false,
+    },
+  });
+
+  // Member sees the owner's structural change AND keeps the group's edit.
+  await expect(async () => {
+    const { content } = await (
+      await mreq.get(`/api/shared/${shareId}`)
+    ).json();
+    const titles = (content as FolderNode).bookmarks.map((b) => b.title);
+    expect(titles).toContain("Extra");
+    expect(titles).toContain("Ref del grupo");
+    expect(titles).not.toContain("Ref");
   }).toPass({ timeout: 15_000 });
 });
