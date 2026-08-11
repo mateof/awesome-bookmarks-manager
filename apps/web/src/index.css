@@ -12,6 +12,34 @@ body,
   height: 100%;
 }
 
+/* Adaptive text colour for cards with a custom background (colour or image).
+   `.on-dark-bg` forces readable light text (dark background); `.on-light-bg`
+   forces dark text (light background), overriding the theme's defaults and the
+   muted slate utilities used inside the cards. */
+.on-dark-bg {
+  color: #f8fafc;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+}
+.on-dark-bg a {
+  color: #f8fafc;
+}
+.on-dark-bg .text-slate-500,
+.on-dark-bg .text-slate-400 {
+  color: #e2e8f0 !important;
+}
+.on-light-bg {
+  color: #0f172a;
+}
+.on-light-bg a {
+  color: #0f172a;
+}
+.on-light-bg .text-slate-500 {
+  color: #334155 !important;
+}
+.on-light-bg .text-slate-400 {
+  color: #475569 !important;
+}
+
 /* Horizontal strips (e.g. panel tag rows) that scroll without a visible bar. */
 .no-scrollbar {
   scrollbar-width: none;

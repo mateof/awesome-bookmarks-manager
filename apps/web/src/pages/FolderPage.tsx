@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
+import { contrastClass, useCardTone } from "../lib/contrast.js";
 import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
@@ -887,6 +888,24 @@ function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
   return s;
 }
 
+function folderBgUrl(f: Folder): string | null {
+  return f.imageBlobPath ? api.folderBgImageUrl(f.id, f.updatedAt) : null;
+}
+
+function bookmarkBgUrl(b: Bookmark): string | null {
+  return b.imageBlobPath ? api.bookmarkBgImageUrl(b.id, b.updatedAt) : null;
+}
+
+/** Extra class that forces readable text when a card has a custom background;
+ * empty for the default (theme) background. */
+function useFolderContrast(f: Folder): string {
+  return contrastClass(useCardTone(f.bgColor, folderBgUrl(f)));
+}
+
+function useBookmarkContrast(b: Bookmark): string {
+  return contrastClass(useCardTone(b.bgColor, bookmarkBgUrl(b)));
+}
+
 function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
   if (sf.iconBlobPath) {
     return (
@@ -995,6 +1014,7 @@ function selectBookmarkLabel(t: any, title: string) {
 function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useFolderSortable(sf);
+  const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (
@@ -1008,7 +1028,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
       style={{ ...drag.style, ...folderBgStyle(sf) }}
-      className="group relative flex cursor-pointer flex-col items-center gap-2 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group relative flex cursor-pointer flex-col items-center gap-2 rounded border border-slate-200 bg-white p-3 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1045,6 +1065,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useFolderSortable(sf);
+  const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const count = p.countDirectItems(sf.id);
@@ -1059,7 +1080,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
       style={{ ...drag.style, ...folderBgStyle(sf) }}
-      className="group flex cursor-pointer items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group flex cursor-pointer items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1086,6 +1107,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useFolderSortable(sf);
+  const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const desc = stripTags(sf.description);
@@ -1101,7 +1123,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
       style={{ ...drag.style, ...folderBgStyle(sf) }}
-      className="group relative flex min-h-[8rem] cursor-pointer flex-col rounded border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group relative flex min-h-[8rem] cursor-pointer flex-col rounded border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <div className="flex items-center gap-3">
         <HoverCheckbox
@@ -1149,6 +1171,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useFolderSortable(sf);
+  const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   return (
@@ -1162,7 +1185,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         if (e.key === "Enter") p.onNavFolder(sf.id);
       }}
       style={{ ...drag.style, ...folderBgStyle(sf) }}
-      className="group relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1195,6 +1218,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useBookmarkSortable(b);
+  const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
@@ -1202,7 +1226,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       ref={drag.ref}
       {...drag.props}
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
-      className="group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900"
+      className={`group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1256,6 +1280,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useBookmarkSortable(b);
+  const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
@@ -1263,7 +1288,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
       ref={drag.ref}
       {...drag.props}
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
-      className="group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1312,6 +1337,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useBookmarkSortable(b);
+  const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   const desc = stripTags(b.description);
@@ -1320,7 +1346,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       ref={drag.ref}
       {...drag.props}
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
-      className="group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+      className={`group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${contrast}`}
     >
       <div className="flex flex-col gap-1 p-3">
         <div className="flex items-center gap-2">
@@ -1387,6 +1413,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useBookmarkSortable(b);
+  const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
@@ -1394,7 +1421,7 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       ref={drag.ref}
       {...drag.props}
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
-      className="group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
         selected={selected}
@@ -1504,6 +1531,7 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const relativeTime = useRelativeTime();
   const drag = useFolderSortable(sf);
+  const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
   const count = p.countDirectItems(sf.id);
@@ -1511,7 +1539,7 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
     <tr
       ref={drag.ref}
       style={{ ...drag.style, ...folderBgStyle(sf) }}
-      className="cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
       onClick={() => p.onNavFolder(sf.id)}
     >
       <DragHandleCell
@@ -1565,13 +1593,14 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const { t } = useTranslation();
   const relativeTime = useRelativeTime();
   const drag = useBookmarkSortable(b);
+  const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
   return (
     <tr
       ref={drag.ref}
       style={{ ...drag.style, ...bookmarkBgStyle(b) }}
-      className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+      className={`bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <DragHandleCell
         setRef={drag.setActivatorNodeRef}

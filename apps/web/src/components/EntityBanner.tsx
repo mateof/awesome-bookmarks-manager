@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { colorLuminance, toneForLuminance } from "../lib/contrast.js";
 
 /**
  * siyuan-style cover header shown at the top of a folder or bookmark when it
@@ -21,6 +22,13 @@ export function EntityBanner({
   actions?: ReactNode;
 }) {
   const hasImage = !!imageUrl;
+  // An image always gets a dark gradient scrim (below), so white text reads on
+  // any image. For a plain colour, pick text tone from the colour's luminance
+  // so a dark colour gets light text and vice-versa (independent of theme,
+  // since the banner background is a fixed colour).
+  const light = hasImage
+    ? true
+    : (toneForLuminance(colorLuminance(bgColor)) ?? "dark") === "light";
   return (
     <div className="relative h-32 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 sm:h-40">
       <div
@@ -50,9 +58,7 @@ export function EntityBanner({
         <div className="min-w-0 flex-1">
           <h1
             className={`truncate text-xl font-semibold ${
-              hasImage
-                ? "text-white drop-shadow-md"
-                : "text-slate-900 dark:text-slate-100"
+              light ? "text-white drop-shadow-md" : "text-slate-900"
             }`}
           >
             {title}
@@ -60,9 +66,7 @@ export function EntityBanner({
           {subtitle && (
             <div
               className={`truncate text-sm ${
-                hasImage
-                  ? "text-white/85 drop-shadow"
-                  : "text-slate-600 dark:text-slate-300"
+                light ? "text-white/85 drop-shadow" : "text-slate-700"
               }`}
             >
               {subtitle}
