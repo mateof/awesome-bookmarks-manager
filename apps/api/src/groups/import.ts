@@ -25,6 +25,7 @@ export function linkShareToHome(
       url: content.url,
       title: content.title,
       description: content.description ?? undefined,
+      bgColor: content.bgColor,
       shareOrigin: groupName,
       fetchSnapshot: false,
     });
@@ -34,6 +35,7 @@ export function linkShareToHome(
     parentId,
     name: content.name,
     description: content.description ?? undefined,
+    bgColor: content.bgColor,
     shareOrigin: groupName,
     linkedShareId: shareId,
   });
@@ -57,6 +59,7 @@ export function copyShareToHome(
       url: content.url,
       title: content.title,
       description: content.description ?? undefined,
+      bgColor: content.bgColor,
       fetchSnapshot: false,
     });
     return { id: b.id, type: "bookmark" };
@@ -65,6 +68,7 @@ export function copyShareToHome(
     parentId,
     name: content.name,
     description: content.description ?? undefined,
+    bgColor: content.bgColor,
   });
   importChildren(ctx, content, f.id);
   return { id: f.id, type: "folder" };
@@ -81,6 +85,7 @@ function importChildren(
       url: b.url,
       title: b.title,
       description: b.description ?? undefined,
+      bgColor: b.bgColor,
       fetchSnapshot: false,
     });
   }
@@ -89,6 +94,7 @@ function importChildren(
       parentId,
       name: sf.name,
       description: sf.description ?? undefined,
+      bgColor: sf.bgColor,
     });
     importChildren(ctx, sf, child.id);
   }

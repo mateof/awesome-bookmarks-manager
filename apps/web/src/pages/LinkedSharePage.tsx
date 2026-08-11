@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { contrastClass, useCardTone } from "../lib/contrast.js";
 import { RichTextView } from "../components/RichTextView.js";
 import {
   SharedNodeEditor,
@@ -203,8 +204,12 @@ function FolderCard({
 }) {
   const count = folder.subfolders.length + folder.bookmarks.length;
   const { t } = useTranslation();
+  const tone = contrastClass(useCardTone(folder.bgColor ?? null, null));
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <div
+      style={folder.bgColor ? { backgroundColor: folder.bgColor } : undefined}
+      className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${tone}`}
+    >
       <button
         type="button"
         onClick={onOpen}
@@ -232,8 +237,14 @@ function BookmarkCard({
   canEdit: boolean;
   onEdit: () => void;
 }) {
+  const tone = contrastClass(useCardTone(bookmark.bgColor ?? null, null));
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <div
+      style={
+        bookmark.bgColor ? { backgroundColor: bookmark.bgColor } : undefined
+      }
+      className={`flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${tone}`}
+    >
       <a
         href={bookmark.url}
         target="_blank"

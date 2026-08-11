@@ -11,6 +11,7 @@ export interface SharedBookmarkPayload {
   title: string;
   url: string;
   description: string | null;
+  bgColor?: string | null;
 }
 
 export interface SharedFolderPayload {
@@ -18,6 +19,7 @@ export interface SharedFolderPayload {
   id: string;
   name: string;
   description: string | null;
+  bgColor?: string | null;
   bookmarks: SharedBookmarkPayload[];
   subfolders: SharedFolderPayload[];
 }

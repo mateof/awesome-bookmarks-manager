@@ -18,6 +18,7 @@ export interface SharedBookmarkContent {
   title: string;
   url: string;
   description: string | null;
+  bgColor: string | null;
 }
 
 export interface SharedFolderContent {
@@ -25,6 +26,7 @@ export interface SharedFolderContent {
   id: string;
   name: string;
   description: string | null;
+  bgColor: string | null;
   bookmarks: SharedBookmarkContent[];
   subfolders: SharedFolderContent[];
 }
@@ -77,6 +79,7 @@ function loadBookmark(
           Buffer.from(row.descriptionCt),
         )
       : null,
+    bgColor: row.bgColor ?? null,
   };
 }
 
@@ -133,6 +136,7 @@ function loadFolder(
           Buffer.from(row.descriptionCt),
         )
       : null,
+    bgColor: row.bgColor ?? null,
     bookmarks: childBookmarks.map((b) => loadBookmark(userId, dek, b.id)),
     subfolders: childFolders.map((f) => loadFolder(userId, dek, f.id)),
   };
