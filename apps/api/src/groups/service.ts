@@ -514,16 +514,26 @@ export function listGroupShares(
   return rawShares([groupId]);
 }
 
-export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
-  const groupIds = getDb()
+function myGroupIds(ctx: AuthedContext): string[] {
+  return getDb()
     .select({ id: groupMembers.groupId })
     .from(groupMembers)
     .where(eq(groupMembers.userId, ctx.userId))
     .all()
     .map((r) => r.id);
-  if (groupIds.length === 0) return [];
+}
+
+/** Every share in a group I belong to, including the ones I created myself.
+ * Used to authorize reading/editing a share's content (any group member may),
+ * whereas the "shared with me" list hides my own. */
+export function listSharesInMyGroups(ctx: AuthedContext): SharedItem[] {
+  const ids = myGroupIds(ctx);
+  return ids.length === 0 ? [] : rawShares(ids);
+}
+
+export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
   // Exclude my own shares: they belong under "shared by me", not "with me".
-  return rawShares(groupIds).filter((s) => s.sharedById !== ctx.userId);
+  return listSharesInMyGroups(ctx).filter((s) => s.sharedById !== ctx.userId);
 }
 
 function rawShares(groupIds: string[]): SharedItem[] {

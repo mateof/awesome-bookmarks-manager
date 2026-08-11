@@ -26,6 +26,7 @@ import {
   listMyGroups,
   listMyInvitations,
   listMySharesByMe,
+  listSharesInMyGroups,
   rejectInvitation,
   removeMember,
   shareToGroup,
@@ -204,11 +205,10 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
   app.get("/shared/:shareId", async (req) => {
     const ctx = requireAuth(req);
     const { shareId } = GroupShareIdParam.parse(req.params);
-    // listAllSharedWithMe already filters to my groups; readGroupShareContent
-    // doesn't check membership, so we re-check here.
-    const all = listAllSharedWithMe(ctx);
-    if (!all.find((s) => s.id === shareId)) {
-      // Could be that the share exists but I'm not a member of the group
+    // readGroupShareContent doesn't check membership, so re-check here. Any
+    // group member may read the content, including the person who shared it
+    // (that's the "shared by me" case), so use the unfiltered group list.
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
       return { error: "not_found" };
     }
     return readGroupShareContent(ctx, shareId);
@@ -220,8 +220,7 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { shareId, nodeId } = NodeParams.parse(req.params);
     const body = EditSharedNodeBodySchema.parse(req.body);
-    const all = listAllSharedWithMe(ctx);
-    if (!all.find((s) => s.id === shareId)) {
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
       return { error: "not_found" };
     }
     return editSharedNode(ctx, shareId, nodeId, body);
