@@ -32,7 +32,7 @@ export interface NestData {
   folderId: string | null; // null = root
 }
 
-interface SortableResult {
+export interface SortableResult {
   ref: (node: HTMLElement | null) => void;
   /** Spread on the whole element to make all of it a drag handle (cards). */
   props: Record<string, unknown>;

@@ -43,6 +43,7 @@ import { ViewModeToggle } from "../components/ViewModeToggle.js";
 import {
   BOOKMARK_SORTABLE_IDS,
   FOLDER_SORTABLE_IDS,
+  type SortableResult,
   useBookmarkSortable,
   useFolderSortable,
   useNestDrop,
@@ -1062,6 +1063,30 @@ function selectBookmarkLabel(t: any, title: string) {
   return `${t("common.selectBookmark")} ${title}`;
 }
 
+/**
+ * Grip that reorders a card. Only this button carries the drag listeners (with
+ * touch-action: none), so the rest of the card stays clickable and the list
+ * still scrolls on touch — the same pattern the table rows use, which is what
+ * makes reordering work on mobile.
+ */
+function CardDragHandle({ drag }: { drag: SortableResult }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      ref={drag.setActivatorNodeRef}
+      type="button"
+      aria-label={t("table.dragHandle")}
+      title={t("table.dragHandle")}
+      {...drag.attributes}
+      {...drag.listeners}
+      onClick={stopBubble}
+      className="shrink-0 cursor-grab touch-none rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing dark:hover:bg-slate-800 dark:hover:text-slate-200"
+    >
+      <GripVertical className="h-4 w-4" />
+    </button>
+  );
+}
+
 function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const { t } = useTranslation();
   const drag = useFolderSortable(sf);
@@ -1070,9 +1095,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const selected = p.selection.has(key);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      role="link"
+      ref={drag.ref}      role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
@@ -1088,12 +1111,13 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         className="absolute left-1 top-1"
       />
       <div
-        className={`absolute right-1 top-1 transition-opacity ${
+        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
           selected
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
+        <CardDragHandle drag={drag} />
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-8 w-8" />
@@ -1122,9 +1146,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const count = p.countDirectItems(sf.id);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      role="link"
+      ref={drag.ref}      role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
@@ -1150,6 +1172,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
       <div className="text-xs text-slate-500">
         {t("folder.itemsCount", { count })}
       </div>
+      <CardDragHandle drag={drag} />
       <KebabMenu items={p.folderKebab(sf)} />
     </div>
   );
@@ -1165,9 +1188,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const count = p.countDirectItems(sf.id);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      role="link"
+      ref={drag.ref}      role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
@@ -1191,12 +1212,13 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
           </div>
         </div>
         <div
-          className={`shrink-0 transition-opacity ${
+          className={`flex shrink-0 items-center gap-0.5 transition-opacity ${
             selected
               ? "opacity-100"
               : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           }`}
         >
+          <CardDragHandle drag={drag} />
           <KebabMenu items={p.folderKebab(sf)} />
         </div>
       </div>
@@ -1227,9 +1249,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const selected = p.selection.has(key);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      role="link"
+      ref={drag.ref}      role="link"
       tabIndex={0}
       onClick={() => p.onNavFolder(sf.id)}
       onKeyDown={(e) => {
@@ -1245,12 +1265,13 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         className="absolute left-1 top-1"
       />
       <div
-        className={`absolute right-1 top-1 transition-opacity ${
+        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
           selected
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
+        <CardDragHandle drag={drag} />
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-10 w-10" />
@@ -1274,9 +1295,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const selected = p.selection.has(key);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
+      ref={drag.ref}      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className={`group relative flex items-start gap-2 rounded border border-slate-200 bg-white p-3 pl-7 dark:border-slate-800 dark:bg-slate-900 ${contrast}`}
     >
       <HoverCheckbox
@@ -1323,6 +1342,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
+      <CardDragHandle drag={drag} />
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
   );
@@ -1336,9 +1356,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const selected = p.selection.has(key);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
+      ref={drag.ref}      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className={`group flex items-center gap-3 bg-white px-3 py-2 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
@@ -1380,6 +1398,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
+      <CardDragHandle drag={drag} />
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
   );
@@ -1394,9 +1413,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const desc = stripTags(b.description);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
+      ref={drag.ref}      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className={`group relative flex flex-col overflow-hidden rounded border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 ${contrast}`}
     >
       <div className="flex flex-col gap-1 p-3">
@@ -1424,12 +1441,13 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
             <ExternalLink className="h-4 w-4" />
           </a>
           <div
-            className={`shrink-0 transition-opacity ${
+            className={`flex shrink-0 items-center gap-0.5 transition-opacity ${
               selected
                 ? "opacity-100"
                 : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             }`}
           >
+            <CardDragHandle drag={drag} />
             <KebabMenu items={p.bookmarkKebab(b)} />
           </div>
         </div>
@@ -1469,9 +1487,7 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const selected = p.selection.has(key);
   return (
     <div
-      ref={drag.ref}
-      {...drag.props}
-      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
+      ref={drag.ref}      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
       className={`group relative flex aspect-square flex-col items-center justify-center gap-1 rounded border border-slate-200 bg-white p-2 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800 ${contrast}`}
     >
       <HoverCheckbox
@@ -1481,12 +1497,13 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
         className="absolute left-1 top-1"
       />
       <div
-        className={`absolute right-1 top-1 transition-opacity ${
+        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
           selected
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
+        <CardDragHandle drag={drag} />
         <KebabMenu items={p.bookmarkKebab(b)} />
       </div>
       <a
