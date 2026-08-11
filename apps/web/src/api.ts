@@ -252,6 +252,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ newParentId, position }),
     }),
+  copyFolder: (id: string, parentId: string | null = null) =>
+    request<{ id: string; type: "folder" | "bookmark" }>(
+      `/folders/${id}/copy`,
+      { method: "POST", body: JSON.stringify({ parentId }) },
+    ),
   deleteFolder: (id: string) =>
     request<void>(`/folders/${id}`, { method: "DELETE" }),
 
@@ -280,6 +285,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ newFolderId, position }),
     }),
+  copyBookmark: (id: string, folderId: string | null = null) =>
+    request<{ id: string; type: "folder" | "bookmark" }>(
+      `/bookmarks/${id}/copy`,
+      { method: "POST", body: JSON.stringify({ folderId }) },
+    ),
   refreshSnapshot: (id: string) =>
     request<{ ok: true }>(`/bookmarks/${id}/refresh-snapshot`, {
       method: "POST",

@@ -12,6 +12,7 @@ import { getDb } from "../db/client.js";
 import { folders } from "../db/schema.js";
 import { readBlob } from "../storage/blobs.js";
 import { storeFolderBgImage, storeFolderIcon } from "../storage/icons.js";
+import { copyFolderTree } from "./copy.js";
 import { BadRequest, NotFound } from "../util/errors.js";
 import { detectImageContentType, imageNotModified } from "../util/image.js";
 import {
@@ -60,6 +61,16 @@ export const folderRoutes: FastifyPluginAsync = async (app) => {
     const body = MoveFolderBodySchema.parse(req.body);
     moveFolder(ctx, id, body.newParentId, body.position);
     return { ok: true };
+  });
+
+  app.post("/folders/:id/copy", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const body = z
+      .object({ parentId: z.string().uuid().nullable().optional() })
+      .parse(req.body ?? {});
+    reply.code(201);
+    return copyFolderTree(ctx, id, body.parentId ?? null);
   });
 
   app.delete("/folders/:id", async (req, reply) => {

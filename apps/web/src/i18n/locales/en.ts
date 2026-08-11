@@ -182,6 +182,8 @@ const en = {
     editFolderKebab: "Edit folder",
     editBookmarkKebab: "Edit bookmark",
     moveKebab: "Move to…",
+    copyKebab: "Copy to…",
+    upLevel: "Up one level",
     deleteFolderKebab: "Delete folder",
     exportFolderKebab: "Export folder",
     exportBookmarkKebab: "Export bookmark",
@@ -235,6 +237,13 @@ const en = {
     confirm: "Move here",
     cancel: "Cancel",
     moving: "Moving…",
+    expand: "Expand",
+    collapse: "Collapse",
+  },
+  copyDialog: {
+    title: "Copy to folder",
+    description: "Choose where to create the copy (or the root).",
+    confirm: "Copy here",
   },
   footer: {
     madeWithPrefix: "Made with",

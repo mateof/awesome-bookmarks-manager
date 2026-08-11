@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
+  ArrowUp,
+  Copy,
   Download,
   ExternalLink,
   FolderClosed,
@@ -124,6 +126,10 @@ export function FolderPage() {
   const [moveTarget, setMoveTarget] = useState<{
     folderIds: string[];
     bookmarkIds: string[];
+  } | null>(null);
+  const [copyTarget, setCopyTarget] = useState<{
+    kind: "folder" | "bookmark";
+    id: string;
   } | null>(null);
   const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
 
@@ -391,6 +397,11 @@ export function FolderPage() {
       onClick: () => setMoveTarget({ folderIds: [f.id], bookmarkIds: [] }),
     },
     {
+      label: t("folder.copyKebab"),
+      icon: <Copy className="h-4 w-4" />,
+      onClick: () => setCopyTarget({ kind: "folder", id: f.id }),
+    },
+    {
       label: t("panels.generateKebab"),
       icon: <LayoutDashboard className="h-4 w-4" />,
       onClick: () => setPanelFolder(f),
@@ -423,6 +434,11 @@ export function FolderPage() {
       label: t("folder.moveKebab"),
       icon: <FolderInput className="h-4 w-4" />,
       onClick: () => setMoveTarget({ folderIds: [], bookmarkIds: [b.id] }),
+    },
+    {
+      label: t("folder.copyKebab"),
+      icon: <Copy className="h-4 w-4" />,
+      onClick: () => setCopyTarget({ kind: "bookmark", id: b.id }),
     },
     {
       label: t("background.kebabItem"),
@@ -529,7 +545,22 @@ export function FolderPage() {
 
   return (
     <div className="space-y-4">
-      {folderId && <Breadcrumbs folderId={folderId} />}
+      {folderId && (
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              nav(folder?.parentId ? `/folder/${folder.parentId}` : "/")
+            }
+            title={t("folder.upLevel")}
+            aria-label={t("folder.upLevel")}
+            className="shrink-0 rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+          <Breadcrumbs folderId={folderId} />
+        </div>
+      )}
 
       {hasCover ? (
         <EntityBanner
@@ -705,6 +736,26 @@ export function FolderPage() {
             await moveItems(moveTarget, dest);
             clearSelection();
             setMoveTarget(null);
+          }}
+        />
+      )}
+      {copyTarget && (
+        <MoveToDialog
+          folders={folders.data ?? []}
+          movingFolderIds={[]}
+          count={1}
+          title={t("copyDialog.title")}
+          description={t("copyDialog.description")}
+          confirmLabel={t("copyDialog.confirm")}
+          onClose={() => setCopyTarget(null)}
+          onConfirm={async (dest) => {
+            const r =
+              copyTarget.kind === "folder"
+                ? await api.copyFolder(copyTarget.id, dest)
+                : await api.copyBookmark(copyTarget.id, dest);
+            invalidate();
+            setCopyTarget(null);
+            if (r.type === "folder") nav(`/folder/${r.id}`);
           }}
         />
       )}

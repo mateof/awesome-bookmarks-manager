@@ -1,5 +1,5 @@
 import type { Folder } from "@awesome-bookmarks/shared";
-import { FolderClosed, Home } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderClosed, Home } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "./Modal.js";
@@ -33,16 +33,30 @@ export function MoveToDialog({
   // undefined = nothing chosen yet; null = root; string = a folder id.
   const [dest, setDest] = useState<string | null | undefined>(undefined);
   const [pending, setPending] = useState(false);
+  // Folders start collapsed; the user expands them as needed.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+
+  const childrenOf = useMemo(() => {
+    const m = new Map<string | null, Folder[]>();
+    for (const f of folders) {
+      const arr = m.get(f.parentId) ?? [];
+      arr.push(f);
+      m.set(f.parentId, arr);
+    }
+    return m;
+  }, [folders]);
+
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   // A folder can't move into itself or into any of its own descendants; the
   // API rejects it, but disabling those rows keeps the choice honest.
   const disabled = useMemo(() => {
-    const childrenOf = new Map<string | null, Folder[]>();
-    for (const f of folders) {
-      const arr = childrenOf.get(f.parentId) ?? [];
-      arr.push(f);
-      childrenOf.set(f.parentId, arr);
-    }
     const blocked = new Set<string>(movingFolderIds);
     const stack = [...movingFolderIds];
     while (stack.length > 0) {
@@ -55,7 +69,7 @@ export function MoveToDialog({
       }
     }
     return blocked;
-  }, [folders, movingFolderIds]);
+  }, [childrenOf, movingFolderIds]);
 
   const confirm = async () => {
     if (dest === undefined || pending) return;
@@ -68,33 +82,55 @@ export function MoveToDialog({
   };
 
   const renderNodes = (parentId: string | null, depth: number) =>
-    folders
-      .filter((f) => f.parentId === parentId)
-      .map((f) => {
-        const isDisabled = disabled.has(f.id);
-        const isSelected = dest === f.id;
-        return (
-          <div key={f.id}>
+    (childrenOf.get(parentId) ?? []).map((f) => {
+      const isDisabled = disabled.has(f.id);
+      const isSelected = dest === f.id;
+      const hasChildren = (childrenOf.get(f.id) ?? []).length > 0;
+      const isOpen = expanded.has(f.id);
+      return (
+        <div key={f.id}>
+          <div
+            className={`flex items-center rounded ${
+              isSelected
+                ? "bg-blue-500/15 ring-1 ring-inset ring-blue-500"
+                : ""
+            }`}
+            style={{ paddingLeft: depth * 16 }}
+          >
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={() => toggle(f.id)}
+                aria-label={isOpen ? t("moveDialog.collapse") : t("moveDialog.expand")}
+                className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+              >
+                {isOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+            ) : (
+              <span className="w-6 shrink-0" />
+            )}
             <button
               type="button"
               disabled={isDisabled}
               onClick={() => setDest(f.id)}
-              style={{ paddingLeft: 8 + depth * 16 }}
-              className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm ${
-                isSelected
-                  ? "bg-blue-500/15 ring-1 ring-inset ring-blue-500"
-                  : isDisabled
-                    ? "cursor-not-allowed text-slate-400 dark:text-slate-600"
-                    : "hover:bg-slate-100 dark:hover:bg-slate-800"
+              className={`flex flex-1 items-center gap-2 rounded px-1 py-1.5 text-left text-sm ${
+                isDisabled
+                  ? "cursor-not-allowed text-slate-400 dark:text-slate-600"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               <FolderClosed className="h-4 w-4 shrink-0 text-slate-500" />
               <span className="truncate">{f.name}</span>
             </button>
-            {renderNodes(f.id, depth + 1)}
           </div>
-        );
-      });
+          {hasChildren && isOpen && renderNodes(f.id, depth + 1)}
+        </div>
+      );
+    });
 
   return (
     <Modal title={title ?? t("moveDialog.title")} onClose={onClose} size="md">

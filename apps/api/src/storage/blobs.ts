@@ -32,6 +32,20 @@ export async function readBlob(relPath: string): Promise<Buffer> {
   return readFile(join(blobsRoot(), relPath));
 }
 
+/**
+ * Copy an existing blob to a new absolute path. Icon/background blobs are
+ * sealed with a user-scoped AAD (not entity-scoped), so the bytes stay valid
+ * for a different entity — this is how a copied folder/bookmark keeps its
+ * icon and background. Returns the new relative storage path.
+ */
+export async function copyBlob(
+  srcRelPath: string,
+  destAbsPath: string,
+): Promise<string> {
+  const bytes = await readFile(join(blobsRoot(), srcRelPath));
+  return writeBlob(destAbsPath, bytes);
+}
+
 export async function deleteBlob(relPath: string | null | undefined): Promise<void> {
   if (!relPath) return;
   await rm(join(blobsRoot(), relPath), { force: true });

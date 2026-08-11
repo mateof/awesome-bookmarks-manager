@@ -182,6 +182,8 @@ const gl = {
     editFolderKebab: "Editar cartafol",
     editBookmarkKebab: "Editar marcador",
     moveKebab: "Mover a…",
+    copyKebab: "Copiar a…",
+    upLevel: "Subir de nivel",
     deleteFolderKebab: "Eliminar cartafol",
     exportFolderKebab: "Exportar cartafol",
     exportBookmarkKebab: "Exportar marcador",
@@ -235,6 +237,13 @@ const gl = {
     confirm: "Mover aquí",
     cancel: "Cancelar",
     moving: "Movendo…",
+    expand: "Despregar",
+    collapse: "Pregar",
+  },
+  copyDialog: {
+    title: "Copiar a cartafol",
+    description: "Escolle onde crear a copia (ou a raíz).",
+    confirm: "Copiar aquí",
   },
   footer: {
     madeWithPrefix: "Feito con",

@@ -7,6 +7,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { copyBookmarkTo } from "../folders/copy.js";
 import { storeBookmarkIcon } from "../storage/icons.js";
 import { BadRequest } from "../util/errors.js";
 import {
@@ -63,6 +64,16 @@ export const bookmarkRoutes: FastifyPluginAsync = async (app) => {
     const body = MoveBookmarkBodySchema.parse(req.body);
     moveBookmark(ctx, id, body.newFolderId, body.position);
     return { ok: true };
+  });
+
+  app.post("/bookmarks/:id/copy", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const body = z
+      .object({ folderId: z.string().uuid().nullable().optional() })
+      .parse(req.body ?? {});
+    reply.code(201);
+    return copyBookmarkTo(ctx, id, body.folderId ?? null);
   });
 
   app.post("/bookmarks/:id/refresh-snapshot", async (req) => {
