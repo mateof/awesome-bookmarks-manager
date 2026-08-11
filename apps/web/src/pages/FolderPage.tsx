@@ -6,6 +6,7 @@ import {
   FolderClosed,
   FolderInput,
   FolderPlus,
+  GripVertical,
   History,
   LayoutDashboard,
   Palette,
@@ -45,7 +46,11 @@ import {
 } from "../dnd.js";
 import { useViewMode, type ViewMode } from "../view-mode.js";
 import type { Tag } from "@awesome-bookmarks/shared";
-import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 type SelectionKey = `folder:${string}` | `bookmark:${string}`;
 
@@ -1429,15 +1434,17 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 
 function TableLayout(p: BodyProps) {
   const { t } = useTranslation();
-  const relativeTime = useRelativeTime();
   if (p.subfolders.length === 0 && p.items.length === 0) {
     return <div className="text-sm text-slate-400">{t("folder.noItemsHere")}</div>;
   }
+  const folderIds = FOLDER_SORTABLE_IDS(p.subfolders);
+  const bookmarkIds = BOOKMARK_SORTABLE_IDS(p.items);
   return (
     <div className="overflow-x-auto rounded border border-slate-200 dark:border-slate-800">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
           <tr>
+            <th className="w-6 px-1 py-2"></th>
             <th className="w-8 px-2 py-2"></th>
             <th className="w-8 px-2 py-2"></th>
             <th className="px-2 py-2 text-left">{t("table.title")}</th>
@@ -1449,29 +1456,80 @@ function TableLayout(p: BodyProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-          {p.subfolders.map((sf) => {
-            const key: SelectionKey = `folder:${sf.id}`;
-            const selected = p.selection.has(key);
-            const count = p.countDirectItems(sf.id);
-            return (
-              <tr
-                key={`f-${sf.id}`}
-                style={folderBgStyle(sf)}
-                className="cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
-                onClick={() => p.onNavFolder(sf.id)}
-              >
-                <td className="px-2 py-2" onClick={stopBubble}>
-                  <HoverCheckbox
-                    selected={selected}
-                    onToggle={() => p.toggle(key)}
-                    label={selectFolderLabel(t, sf.name)}
-                    alwaysVisible
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <FolderIcon sf={sf} size="h-5 w-5" />
-                </td>
-                <td className="truncate px-2 py-2 font-medium">
+          <SortableContext items={folderIds} strategy={verticalListSortingStrategy}>
+            {p.subfolders.map((sf) => (
+              <TableFolderRow key={`f-${sf.id}`} sf={sf} p={p} />
+            ))}
+          </SortableContext>
+          <SortableContext
+            items={bookmarkIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {p.items.map((b) => (
+              <TableBookmarkRow key={`b-${b.id}`} b={b} p={p} />
+            ))}
+          </SortableContext>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Drag-handle cell for a sortable table row. Carries the dnd-kit activator so
+ * links/checkboxes elsewhere in the row stay clickable. */
+function DragHandleCell({
+  setRef,
+  handleProps,
+}: {
+  setRef: (n: HTMLElement | null) => void;
+  handleProps: Record<string, unknown>;
+}) {
+  const { t } = useTranslation();
+  return (
+    <td className="px-1 py-2" onClick={stopBubble}>
+      <button
+        ref={setRef}
+        type="button"
+        aria-label={t("table.dragHandle")}
+        {...handleProps}
+        className="cursor-grab touch-none rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500 active:cursor-grabbing dark:hover:bg-slate-800 dark:hover:text-slate-300"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+    </td>
+  );
+}
+
+function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
+  const { t } = useTranslation();
+  const relativeTime = useRelativeTime();
+  const drag = useFolderSortable(sf);
+  const key: SelectionKey = `folder:${sf.id}`;
+  const selected = p.selection.has(key);
+  const count = p.countDirectItems(sf.id);
+  return (
+    <tr
+      ref={drag.ref}
+      style={{ ...drag.style, ...folderBgStyle(sf) }}
+      className="cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+      onClick={() => p.onNavFolder(sf.id)}
+    >
+      <DragHandleCell
+        setRef={drag.setActivatorNodeRef}
+        handleProps={{ ...drag.attributes, ...drag.listeners }}
+      />
+      <td className="px-2 py-2" onClick={stopBubble}>
+        <HoverCheckbox
+          selected={selected}
+          onToggle={() => p.toggle(key)}
+          label={selectFolderLabel(t, sf.name)}
+          alwaysVisible
+        />
+      </td>
+      <td className="px-2 py-2">
+        <FolderIcon sf={sf} size="h-5 w-5" />
+      </td>
+      <td className="truncate px-2 py-2 font-medium">
         {sf.name}
         {sf.shareOrigin && (
           <Share2
@@ -1480,101 +1538,101 @@ function TableLayout(p: BodyProps) {
           />
         )}
       </td>
-                <td className="px-2 py-2 text-slate-400">—</td>
-                <td className="px-2 py-2">
-                  <TagChipList
-                    tagIds={sf.tagIds ?? []}
-                    allTags={p.allTags}
-                    size="sm"
-                    asLink
-                    max={3}
-                  />
-                </td>
-                <td className="px-2 py-2 text-xs text-slate-500">
-                  {t("folder.itemsCount", { count })}
-                </td>
-                <td className="px-2 py-2 text-xs text-slate-500">
-                  {relativeTime(sf.createdAt)}
-                </td>
-                <td className="px-2 py-2" onClick={stopBubble}>
-                  <KebabMenu items={p.folderKebab(sf)} />
-                </td>
-              </tr>
-            );
-          })}
-          {p.items.map((b) => {
-            const key: SelectionKey = `bookmark:${b.id}`;
-            const selected = p.selection.has(key);
-            return (
-              <tr
-                key={`b-${b.id}`}
-                style={bookmarkBgStyle(b)}
-                className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
-              >
-                <td className="px-2 py-2">
-                  <HoverCheckbox
-                    selected={selected}
-                    onToggle={() => p.toggle(key)}
-                    label={selectBookmarkLabel(t, b.title)}
-                    alwaysVisible
-                  />
-                </td>
-                <td className="px-2 py-2">
-                  <BookmarkIcon b={b} size="h-5 w-5" />
-                </td>
-                <td className="max-w-[20ch] truncate px-2 py-2 font-medium">
-                  <Link
-                    to={`/bookmark/${b.id}`}
-                    className="hover:underline"
-                  >
-                    {b.title}
-                  </Link>
-                </td>
-                <td className="max-w-[30ch] truncate px-2 py-2 text-xs text-slate-500">
-                  <a
-                    href={b.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
-                  >
-                    {b.url}
-                  </a>
-                </td>
-                <td className="px-2 py-2">
-                  <TagChipList
-                    tagIds={b.tagIds ?? []}
-                    allTags={p.allTags}
-                    size="sm"
-                    asLink
-                    max={3}
-                  />
-                </td>
-                <td className="px-2 py-2 text-[10px] uppercase tracking-wide text-slate-400">
-                  {b.snapshotStatus}
-                </td>
-                <td className="px-2 py-2 text-xs text-slate-500">
-                  {relativeTime(b.createdAt)}
-                </td>
-                <td className="px-2 py-2">
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={b.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={t("bookmark.openUrlTitle")}
-                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                    <KebabMenu items={p.bookmarkKebab(b)} />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+      <td className="px-2 py-2 text-slate-400">—</td>
+      <td className="px-2 py-2">
+        <TagChipList
+          tagIds={sf.tagIds ?? []}
+          allTags={p.allTags}
+          size="sm"
+          asLink
+          max={3}
+        />
+      </td>
+      <td className="px-2 py-2 text-xs text-slate-500">
+        {t("folder.itemsCount", { count })}
+      </td>
+      <td className="px-2 py-2 text-xs text-slate-500">
+        {relativeTime(sf.createdAt)}
+      </td>
+      <td className="px-2 py-2" onClick={stopBubble}>
+        <KebabMenu items={p.folderKebab(sf)} />
+      </td>
+    </tr>
+  );
+}
+
+function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
+  const { t } = useTranslation();
+  const relativeTime = useRelativeTime();
+  const drag = useBookmarkSortable(b);
+  const key: SelectionKey = `bookmark:${b.id}`;
+  const selected = p.selection.has(key);
+  return (
+    <tr
+      ref={drag.ref}
+      style={{ ...drag.style, ...bookmarkBgStyle(b) }}
+      className="bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800"
+    >
+      <DragHandleCell
+        setRef={drag.setActivatorNodeRef}
+        handleProps={{ ...drag.attributes, ...drag.listeners }}
+      />
+      <td className="px-2 py-2">
+        <HoverCheckbox
+          selected={selected}
+          onToggle={() => p.toggle(key)}
+          label={selectBookmarkLabel(t, b.title)}
+          alwaysVisible
+        />
+      </td>
+      <td className="px-2 py-2">
+        <BookmarkIcon b={b} size="h-5 w-5" />
+      </td>
+      <td className="max-w-[20ch] truncate px-2 py-2 font-medium">
+        <Link to={`/bookmark/${b.id}`} className="hover:underline">
+          {b.title}
+        </Link>
+      </td>
+      <td className="max-w-[30ch] truncate px-2 py-2 text-xs text-slate-500">
+        <a
+          href={b.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          {b.url}
+        </a>
+      </td>
+      <td className="px-2 py-2">
+        <TagChipList
+          tagIds={b.tagIds ?? []}
+          allTags={p.allTags}
+          size="sm"
+          asLink
+          max={3}
+        />
+      </td>
+      <td className="px-2 py-2 text-[10px] uppercase tracking-wide text-slate-400">
+        {b.snapshotStatus}
+      </td>
+      <td className="px-2 py-2 text-xs text-slate-500">
+        {relativeTime(b.createdAt)}
+      </td>
+      <td className="px-2 py-2">
+        <div className="flex items-center gap-1">
+          <a
+            href={b.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={t("bookmark.openUrlTitle")}
+            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+          <KebabMenu items={p.bookmarkKebab(b)} />
+        </div>
+      </td>
+    </tr>
   );
 }
 

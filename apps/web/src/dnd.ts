@@ -34,7 +34,14 @@ export interface NestData {
 
 interface SortableResult {
   ref: (node: HTMLElement | null) => void;
+  /** Spread on the whole element to make all of it a drag handle (cards). */
   props: Record<string, unknown>;
+  /** For a dedicated drag handle: attributes go on the element, listeners on
+   * the handle button, and setActivatorNodeRef marks the handle. Used by the
+   * table layout so links/checkboxes in a row stay clickable. */
+  attributes: Record<string, unknown>;
+  listeners: Record<string, unknown>;
+  setActivatorNodeRef: (node: HTMLElement | null) => void;
   style: React.CSSProperties;
   isDragging: boolean;
 }
@@ -47,6 +54,9 @@ export function useFolderSortable(sf: Folder): SortableResult {
   return {
     ref: s.setNodeRef,
     props: { ...s.attributes, ...s.listeners },
+    attributes: s.attributes as unknown as Record<string, unknown>,
+    listeners: (s.listeners ?? {}) as Record<string, unknown>,
+    setActivatorNodeRef: s.setActivatorNodeRef,
     style: {
       transform: CSS.Transform.toString(s.transform),
       transition: s.transition,
@@ -65,6 +75,9 @@ export function useBookmarkSortable(b: Bookmark): SortableResult {
   return {
     ref: s.setNodeRef,
     props: { ...s.attributes, ...s.listeners },
+    attributes: s.attributes as unknown as Record<string, unknown>,
+    listeners: (s.listeners ?? {}) as Record<string, unknown>,
+    setActivatorNodeRef: s.setActivatorNodeRef,
     style: {
       transform: CSS.Transform.toString(s.transform),
       transition: s.transition,

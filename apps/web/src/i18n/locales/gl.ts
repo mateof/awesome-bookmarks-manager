@@ -806,6 +806,7 @@ const gl = {
     info: "Info",
     added: "Engadido",
     tags: "Etiquetas",
+    dragHandle: "Arrastrar para reordenar",
   },
   iconLib: {
     library: "Biblioteca",

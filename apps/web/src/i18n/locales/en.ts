@@ -803,6 +803,7 @@ const en = {
     info: "Info",
     added: "Added",
     tags: "Tags",
+    dragHandle: "Drag to reorder",
   },
   iconLib: {
     library: "Library",

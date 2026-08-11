@@ -13,6 +13,11 @@ const user = {
   nickname: "evelynb",
   password: "GraceMentored1957x",
 };
+const user2 = {
+  email: "joan.feynman@example.com",
+  nickname: "joanf",
+  password: "AuroraPhysics1960x",
+};
 
 test("el kebab no inicia un arrastre de la tarjeta", async ({ browser }) => {
   const ctx = await browser.newContext();
@@ -68,4 +73,46 @@ test("el kebab no inicia un arrastre de la tarjeta", async ({ browser }) => {
   );
   expect(sorted[0].title).toBe("ZDragSrc");
   expect(sorted[1].title).toBe("ZDropTgt");
+});
+
+test("una opción del kebab se puede pulsar aunque tape otra tarjeta (grid)", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  // sm+ so the desktop dropdown shows, but < md so the grid is a single
+  // column and the two cards stack (the dropdown overlaps the one below).
+  await page.setViewportSize({ width: 700, height: 800 });
+  await signup(page, user2);
+
+  await page.request.post("/api/bookmarks", {
+    data: {
+      url: "https://top.example/",
+      title: "TopCard",
+      fetchSnapshot: false,
+    },
+  });
+  await page.request.post("/api/bookmarks", {
+    data: {
+      url: "https://bottom.example/",
+      title: "BottomCard",
+      fetchSnapshot: false,
+    },
+  });
+
+  await page.goto("/"); // grid is the default view
+
+  const topCard = page
+    .locator("div.group.relative")
+    .filter({ hasText: "TopCard" })
+    .first();
+  await topCard.getByRole("button", { name: "Más acciones" }).click();
+
+  // The portalled dropdown sits above the card below, so the option is
+  // clickable and opens the appearance dialog instead of starting a drag.
+  await page.getByRole("button", { name: "Apariencia" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Apariencia" }),
+  ).toBeVisible();
 });

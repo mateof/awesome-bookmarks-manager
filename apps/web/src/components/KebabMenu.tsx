@@ -1,5 +1,5 @@
 import { MoreVertical } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -16,17 +16,61 @@ interface Props {
   align?: "left" | "right";
 }
 
+const MENU_WIDTH = 176; // ~ min-w 11rem
+const ROW_HEIGHT = 34;
+
 export function KebabMenu({ items, className = "", align = "right" }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  // Position the desktop dropdown from the button's viewport rect. It is
+  // portalled to <body> with `position: fixed`, so no ancestor `overflow` can
+  // clip it and no sibling card can paint over it (both were happening in the
+  // grid and large-card layouts, which made the menu unclickable and let the
+  // press fall through to the card's drag sensor).
+  const place = useCallback(() => {
+    const btn = btnRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    let left = align === "right" ? r.right - MENU_WIDTH : r.left;
+    left = Math.max(8, Math.min(left, window.innerWidth - MENU_WIDTH - 8));
+    const estH = items.length * ROW_HEIGHT + 12;
+    let top = r.bottom + 4;
+    if (top + estH > window.innerHeight - 8) {
+      top = Math.max(8, r.top - estH - 4);
+    }
+    setPos({ top, left });
+  }, [align, items.length]);
+
+  useLayoutEffect(() => {
+    if (open) place();
+  }, [open, place]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => place();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [open, place]);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (ref.current?.contains(target) || sheetRef.current?.contains(target)) {
+      if (
+        ref.current?.contains(target) ||
+        menuRef.current?.contains(target) ||
+        sheetRef.current?.contains(target)
+      ) {
         return;
       }
       setOpen(false);
@@ -69,13 +113,14 @@ export function KebabMenu({ items, className = "", align = "right" }: Props) {
       className={`relative ${className}`}
       onClick={stop}
       // The card behind this menu is a @dnd-kit sortable; its drag sensor
-      // starts on pointerdown. Because the menu (and the portalled sheet) are
-      // React descendants of the card, their pointer events bubble up the React
-      // tree to the drag listeners and get read as a drag. Stop them here so
-      // clicking a menu item never starts a drag.
+      // starts on pointerdown. The menu and its portalled surfaces are React
+      // descendants of this root, so their pointer events bubble up the React
+      // tree to the drag listeners. Stop them here so interacting with the menu
+      // never starts a drag.
       onPointerDown={(e) => e.stopPropagation()}
     >
       <button
+        ref={btnRef}
         type="button"
         aria-label={t("common.moreActions")}
         onClick={(e) => {
@@ -89,31 +134,41 @@ export function KebabMenu({ items, className = "", align = "right" }: Props) {
 
       {open && (
         <>
-          {/* Desktop: dropdown */}
-          <div
-            className={`absolute z-20 mt-1 hidden min-w-[10rem] rounded border border-slate-200 bg-white py-1 text-sm shadow-lg sm:block dark:border-slate-700 dark:bg-slate-800 ${
-              align === "right" ? "right-0" : "left-0"
-            }`}
-          >
-            {items.map((it, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={(e) => {
-                  stop(e);
-                  pick(it);
-                }}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${
-                  it.danger
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-slate-700 dark:text-slate-200"
-                }`}
-              >
-                {it.icon}
-                <span>{it.label}</span>
-              </button>
-            ))}
-          </div>
+          {/* Desktop: dropdown, portalled + fixed so it can't be clipped or
+              covered by neighbouring cards. */}
+          {createPortal(
+            <div
+              ref={menuRef}
+              onClick={stop}
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{
+                top: pos?.top ?? -9999,
+                left: pos?.left ?? -9999,
+                width: MENU_WIDTH,
+              }}
+              className="fixed z-50 hidden rounded border border-slate-200 bg-white py-1 text-sm shadow-lg sm:block dark:border-slate-700 dark:bg-slate-800"
+            >
+              {items.map((it, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={(e) => {
+                    stop(e);
+                    pick(it);
+                  }}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                    it.danger
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-slate-700 dark:text-slate-200"
+                  }`}
+                >
+                  {it.icon}
+                  <span>{it.label}</span>
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )}
 
           {/* Mobile: native-style bottom sheet, portalled so transformed card
               ancestors don't offset the fixed positioning. */}

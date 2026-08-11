@@ -804,6 +804,7 @@ const es = {
     info: "Info",
     added: "Añadido",
     tags: "Tags",
+    dragHandle: "Arrastrar para reordenar",
   },
   iconLib: {
     library: "Biblioteca",
