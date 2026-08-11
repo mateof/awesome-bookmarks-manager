@@ -64,7 +64,17 @@ export function KebabMenu({ items, className = "", align = "right" }: Props) {
   };
 
   return (
-    <div ref={ref} className={`relative ${className}`} onClick={stop}>
+    <div
+      ref={ref}
+      className={`relative ${className}`}
+      onClick={stop}
+      // The card behind this menu is a @dnd-kit sortable; its drag sensor
+      // starts on pointerdown. Because the menu (and the portalled sheet) are
+      // React descendants of the card, their pointer events bubble up the React
+      // tree to the drag listeners and get read as a drag. Stop them here so
+      // clicking a menu item never starts a drag.
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <button
         type="button"
         aria-label={t("common.moreActions")}
