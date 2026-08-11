@@ -374,10 +374,17 @@ export const api = {
     request<void>(`/shares/${id}`, { method: "DELETE" }),
 
   // icons / images (URL helpers — used as <img src=>)
-  folderIconUrl: (id: string) => `${BASE}/folders/${id}/icon`,
-  folderBgImageUrl: (id: string) => `${BASE}/folders/${id}/bg-image`,
-  bookmarkIconUrl: (id: string) => `${BASE}/bookmarks/${id}/icon`,
-  bookmarkBgImageUrl: (id: string) => `${BASE}/bookmarks/${id}/bg-image`,
+  // The blob is overwritten in place, so the URL is otherwise stable; pass the
+  // entity's updatedAt as a cache-busting `v` so the browser refetches (and
+  // the <img>/CSS reloads) the moment the icon/background changes.
+  folderIconUrl: (id: string, v?: string) =>
+    `${BASE}/folders/${id}/icon${v ? `?v=${encodeURIComponent(v)}` : ""}`,
+  folderBgImageUrl: (id: string, v?: string) =>
+    `${BASE}/folders/${id}/bg-image${v ? `?v=${encodeURIComponent(v)}` : ""}`,
+  bookmarkIconUrl: (id: string, v?: string) =>
+    `${BASE}/bookmarks/${id}/icon${v ? `?v=${encodeURIComponent(v)}` : ""}`,
+  bookmarkBgImageUrl: (id: string, v?: string) =>
+    `${BASE}/bookmarks/${id}/bg-image${v ? `?v=${encodeURIComponent(v)}` : ""}`,
   bookmarkSnapshotUrl: (id: string) => `${BASE}/bookmarks/${id}/snapshot.html`,
   uploadFolderIcon: async (id: string, file: File) => {
     const fd = new FormData();

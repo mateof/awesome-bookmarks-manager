@@ -70,14 +70,18 @@ export function BookmarkDetailPage() {
       <Breadcrumbs folderId={b.folderId} trailing={b.title} />
       {hasCover && (
         <EntityBanner
-          imageUrl={b.imageBlobPath ? api.bookmarkBgImageUrl(b.id) : null}
+          imageUrl={
+            b.imageBlobPath
+              ? api.bookmarkBgImageUrl(b.id, b.updatedAt)
+              : null
+          }
           bgColor={b.bgColor}
           title={b.title}
           subtitle={b.url}
           icon={
             b.iconBlobPath ? (
               <img
-                src={api.bookmarkIconUrl(b.id)}
+                src={api.bookmarkIconUrl(b.id, b.updatedAt)}
                 alt=""
                 className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-md ring-2 ring-white/70"
               />
@@ -100,7 +104,7 @@ export function BookmarkDetailPage() {
         {!hasCover &&
           (b.iconBlobPath ? (
             <img
-              src={api.bookmarkIconUrl(b.id)}
+              src={api.bookmarkIconUrl(b.id, b.updatedAt)}
               alt=""
               className="h-8 w-8 rounded object-cover"
             />

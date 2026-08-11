@@ -75,7 +75,9 @@ export function BookmarkEditDialog({ bookmark, onClose, onSaved }: Props) {
         />
         <IconPicker
           currentUrl={
-            bookmark.iconBlobPath ? api.bookmarkIconUrl(bookmark.id) : null
+            bookmark.iconBlobPath
+              ? api.bookmarkIconUrl(bookmark.id, bookmark.updatedAt)
+              : null
           }
           onPick={async (f) => setIconFile(f)}
           autoFetchUrl={url}
@@ -87,7 +89,7 @@ export function BookmarkEditDialog({ bookmark, onClose, onSaved }: Props) {
           onBgColorChange={setBgColor}
           currentImageUrl={
             bookmark.imageBlobPath
-              ? api.bookmarkBgImageUrl(bookmark.id)
+              ? api.bookmarkBgImageUrl(bookmark.id, bookmark.updatedAt)
               : null
           }
           onImagePick={async (f) => {

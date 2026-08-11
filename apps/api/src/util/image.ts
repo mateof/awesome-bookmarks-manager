@@ -1,3 +1,39 @@
+import { createHash } from "node:crypto";
+import type { FastifyReply, FastifyRequest } from "fastify";
+
+/**
+ * Icon/background images are served from a URL that is stable per entity
+ * (`/folders/:id/bg-image`), and the blob is overwritten in place when the
+ * user picks a new one, so the URL never changes. With a long `max-age` the
+ * browser kept showing the old image after a change. We instead revalidate:
+ * a weak ETag derived from the row's `updatedAt` (which bumps whenever the
+ * icon/background is set or cleared) lets the browser get a cheap 304 when
+ * nothing changed and the fresh bytes the moment it does.
+ */
+export function imageEtag(updatedAt: string): string {
+  return `"${createHash("sha1").update(updatedAt).digest("hex").slice(0, 16)}"`;
+}
+
+/**
+ * Set revalidation headers for an image response. Returns true after sending a
+ * 304 when the client's cached copy still matches (caller should stop);
+ * otherwise the caller decrypts and sends the bytes.
+ */
+export function imageNotModified(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  updatedAt: string,
+): boolean {
+  const etag = imageEtag(updatedAt);
+  reply.header("etag", etag);
+  reply.header("cache-control", "private, no-cache");
+  if (req.headers["if-none-match"] === etag) {
+    reply.code(304).send();
+    return true;
+  }
+  return false;
+}
+
 /**
  * Best-effort image content-type from magic bytes. Blobs are stored without a
  * recorded MIME, and browsers will not render an SVG served as a generic

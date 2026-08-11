@@ -8,7 +8,7 @@ import { bookmarks } from "../db/schema.js";
 import { readBlob } from "../storage/blobs.js";
 import { storeBookmarkBgImage } from "../storage/icons.js";
 import { BadRequest, NotFound } from "../util/errors.js";
-import { detectImageContentType } from "../util/image.js";
+import { detectImageContentType, imageNotModified } from "../util/image.js";
 import { getBookmark, setBookmarkBgImagePath } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
@@ -56,6 +56,7 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
       .select({
         userId: bookmarks.userId,
         path: bookmarks.iconBlobPath,
+        updatedAt: bookmarks.updatedAt,
       })
       .from(bookmarks)
       .where(
@@ -67,6 +68,7 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
       )
       .get();
     if (!row || !row.path) throw NotFound("Icon not set");
+    if (imageNotModified(req, reply, row.updatedAt)) return;
     let png: Buffer;
     try {
       const sealed = await readBlob(row.path);
@@ -81,10 +83,7 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
         .run();
       throw NotFound("Icon could not be loaded; will be re-fetched");
     }
-    reply
-      .header("content-type", detectImageContentType(png))
-      .header("cache-control", "private, max-age=86400")
-      .send(png);
+    reply.header("content-type", detectImageContentType(png)).send(png);
   });
 
   app.post("/bookmarks/:id/bg-image", async (req) => {
@@ -110,7 +109,10 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
     const row = getDb()
-      .select({ path: bookmarks.imageBlobPath })
+      .select({
+        path: bookmarks.imageBlobPath,
+        updatedAt: bookmarks.updatedAt,
+      })
       .from(bookmarks)
       .where(
         and(
@@ -121,12 +123,10 @@ export const snapshotRoutes: FastifyPluginAsync = async (app) => {
       )
       .get();
     if (!row || !row.path) throw NotFound("Background not set");
+    if (imageNotModified(req, reply, row.updatedAt)) return;
     const sealed = await readBlob(row.path);
     const bytes = aeadDecrypt(ctx.dek, sealed, `${ctx.userId}|bookmark.bg`);
-    reply
-      .header("content-type", detectImageContentType(bytes))
-      .header("cache-control", "private, max-age=86400")
-      .send(bytes);
+    reply.header("content-type", detectImageContentType(bytes)).send(bytes);
   });
 };
 

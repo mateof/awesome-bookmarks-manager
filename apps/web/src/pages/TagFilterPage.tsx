@@ -59,7 +59,7 @@ export function TagFilterPage() {
               >
                 {f.iconBlobPath ? (
                   <img
-                    src={api.folderIconUrl(f.id)}
+                    src={api.folderIconUrl(f.id, f.updatedAt)}
                     alt=""
                     className="h-6 w-6 rounded object-cover"
                   />
@@ -93,7 +93,7 @@ export function TagFilterPage() {
               >
                 {b.iconBlobPath ? (
                   <img
-                    src={api.bookmarkIconUrl(b.id)}
+                    src={api.bookmarkIconUrl(b.id, b.updatedAt)}
                     alt=""
                     className="h-8 w-8 shrink-0 rounded object-cover"
                   />

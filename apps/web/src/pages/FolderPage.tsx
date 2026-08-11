@@ -439,7 +439,7 @@ export function FolderPage() {
   const hasCover = !!(folder && (folder.imageBlobPath || folder.bgColor));
   const folderIconNode = folder?.iconBlobPath ? (
     <img
-      src={api.folderIconUrl(folder.id)}
+      src={api.folderIconUrl(folder.id, folder.updatedAt)}
       alt=""
       className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-md ring-2 ring-white/70"
     />
@@ -528,7 +528,9 @@ export function FolderPage() {
       {hasCover ? (
         <EntityBanner
           imageUrl={
-            folder!.imageBlobPath ? api.folderBgImageUrl(folder!.id) : null
+            folder!.imageBlobPath
+              ? api.folderBgImageUrl(folder!.id, folder!.updatedAt)
+              : null
           }
           bgColor={folder!.bgColor}
           icon={folderIconNode}
@@ -544,7 +546,7 @@ export function FolderPage() {
         <div className="flex flex-wrap items-center gap-3">
           {folder?.iconBlobPath && (
             <img
-              src={api.folderIconUrl(folder.id)}
+              src={api.folderIconUrl(folder.id, folder.updatedAt)}
               alt=""
               className="h-10 w-10 rounded object-cover"
             />
@@ -862,7 +864,7 @@ function folderBgStyle(f: Folder): React.CSSProperties {
   const s: React.CSSProperties = {};
   if (f.bgColor) s.backgroundColor = f.bgColor;
   if (f.imageBlobPath) {
-    s.backgroundImage = `url('${api.folderBgImageUrl(f.id)}')`;
+    s.backgroundImage = `url('${api.folderBgImageUrl(f.id, f.updatedAt)}')`;
     s.backgroundSize = "cover";
     s.backgroundPosition = "center";
   }
@@ -873,7 +875,7 @@ function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
   const s: React.CSSProperties = {};
   if (b.bgColor) s.backgroundColor = b.bgColor;
   if (b.imageBlobPath) {
-    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.id)}')`;
+    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.id, b.updatedAt)}')`;
     s.backgroundSize = "cover";
     s.backgroundPosition = "center";
   }
@@ -884,7 +886,7 @@ function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
   if (sf.iconBlobPath) {
     return (
       <img
-        src={api.folderIconUrl(sf.id)}
+        src={api.folderIconUrl(sf.id, sf.updatedAt)}
         alt=""
         className={`${size} rounded object-cover`}
       />
@@ -926,7 +928,7 @@ function BookmarkIcon({ b, size }: { b: Bookmark; size: string }) {
   const { t } = useTranslation();
   const inner = b.iconBlobPath ? (
     <img
-      src={api.bookmarkIconUrl(b.id)}
+      src={api.bookmarkIconUrl(b.id, b.updatedAt)}
       alt=""
       className={`${size} shrink-0 rounded object-cover`}
     />
@@ -1751,7 +1753,7 @@ function FolderDialog({
           className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
         />
         <IconPicker
-          currentUrl={folder?.iconBlobPath ? api.folderIconUrl(folder.id) : null}
+          currentUrl={folder?.iconBlobPath ? api.folderIconUrl(folder.id, folder.updatedAt) : null}
           onPick={async (file) => setIconFile(file)}
         />
         <RichTextEditor value={description} onChange={setDescription} />
@@ -1761,7 +1763,7 @@ function FolderDialog({
           onBgColorChange={setBgColor}
           currentImageUrl={
             isEdit && folder?.imageBlobPath
-              ? api.folderBgImageUrl(folder.id)
+              ? api.folderBgImageUrl(folder.id, folder.updatedAt)
               : null
           }
           onImagePick={async (file) => {

@@ -268,7 +268,7 @@ function BookmarkRow({
       >
         {bookmark.iconBlobPath ? (
           <img
-            src={api.bookmarkIconUrl(bookmark.id)}
+            src={api.bookmarkIconUrl(bookmark.id, bookmark.updatedAt)}
             alt=""
             className="h-4 w-4 rounded object-cover"
           />

@@ -32,10 +32,10 @@ export function AppearanceDialog({ target, onClose, onSaved }: Props) {
   const imageUrl =
     target.kind === "folder"
       ? target.folder.imageBlobPath
-        ? api.folderBgImageUrl(target.folder.id)
+        ? api.folderBgImageUrl(target.folder.id, target.folder.updatedAt)
         : null
       : target.bookmark.imageBlobPath
-        ? api.bookmarkBgImageUrl(target.bookmark.id)
+        ? api.bookmarkBgImageUrl(target.bookmark.id, target.bookmark.updatedAt)
         : null;
 
   const uploadImage = (file: File) =>
