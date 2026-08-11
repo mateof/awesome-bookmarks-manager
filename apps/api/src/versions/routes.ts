@@ -22,6 +22,7 @@ import {
   getVersion,
   listActivity,
   listVersions,
+  recordVersion,
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
@@ -40,12 +41,36 @@ export const versionRoutes: FastifyPluginAsync = async (app) => {
   app.get("/folders/:id/versions", async (req) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
+    const list = listVersions(ctx, "folder", id);
+    if (list.length > 0) return list;
+    // Entities created before versioning existed have no baseline, so the tab
+    // looked empty even when the folder's subtree had activity. Record the
+    // current state once (a lazy backfill — snapshots are DEK-sealed, so this
+    // can only run for an authenticated owner, not at startup).
+    const f = getFolder(ctx, id);
+    recordVersion(ctx, "folder", id, f.rev, {
+      name: f.name,
+      description: f.description,
+      bgColor: f.bgColor ?? null,
+      tagIds: f.tagIds,
+    });
     return listVersions(ctx, "folder", id);
   });
 
   app.get("/bookmarks/:id/versions", async (req) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
+    const list = listVersions(ctx, "bookmark", id);
+    if (list.length > 0) return list;
+    const b = getBookmark(ctx, id);
+    recordVersion(ctx, "bookmark", id, b.rev, {
+      title: b.title,
+      url: b.url,
+      description: b.description,
+      bgColor: b.bgColor ?? null,
+      folderId: b.folderId,
+      tagIds: b.tagIds,
+    });
     return listVersions(ctx, "bookmark", id);
   });
 
