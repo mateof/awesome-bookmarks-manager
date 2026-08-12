@@ -14,7 +14,13 @@ export interface FolderLite {
 }
 
 function base(cfg: ExtConfig): string {
-  return cfg.endpoint.replace(/\/$/, "");
+  // The backend serves the API under `/api`. Be forgiving about how the user
+  // typed the endpoint: accept both the plain server origin
+  // (`https://host`) and the full API base (`https://host/api`), so a missing
+  // `/api` doesn't send requests into the SPA (which returns index.html and
+  // breaks JSON parsing with "Unexpected token '<'").
+  const e = cfg.endpoint.trim().replace(/\/+$/, "");
+  return /\/api$/.test(e) ? e : `${e}/api`;
 }
 
 async function req(cfg: ExtConfig, path: string, init: RequestInit) {

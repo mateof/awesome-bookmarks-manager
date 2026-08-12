@@ -50,7 +50,10 @@ test("extensión de Chrome: token, carpetas y guardado de pestaña", async ({
   // 3. Configure the extension's options page with endpoint + token.
   const options = await context.newPage();
   await options.goto(`chrome-extension://${extensionId}/options.html`);
-  await options.locator("#endpoint").fill(`${BASE_URL}/api`);
+  // Configure the plain server origin WITHOUT the "/api" suffix: the extension
+  // must add it, otherwise requests fall into the SPA and folder-loading fails
+  // with "Unexpected token '<'".
+  await options.locator("#endpoint").fill(BASE_URL);
   await options.locator("#token").fill(token);
   await options.locator("#save-btn").click();
   await expect(options.locator("#status")).toHaveText(/Guardado/);

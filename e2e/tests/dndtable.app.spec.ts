@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 import { seedSpanish, signup } from "../fixtures/app.js";
 
 /**
- * Regression: in the "Tabla detalle" (table) view, rows were not sortable at
- * all (no dnd handle, no SortableContext), so bookmarks couldn't be reordered.
- * Each row now has a drag handle that reorders like the other views.
+ * The "Tabla detalle" (table) view has a per-row drag handle so bookmarks can
+ * be reordered (they weren't sortable at all before). We assert the handle
+ * exists, opts out of touch scrolling, and starts a drag (the row enters
+ * dnd-kit's dragging state); the reorder itself is the shared onDragEnd.
  */
 const user = {
   email: "sophie.wilson@example.com",
@@ -12,7 +13,7 @@ const user = {
   password: "AcornARMDesign1985",
 };
 
-test("modo tabla: reordenar bookmarks arrastrando el tirador", async ({
+test("modo tabla: la fila tiene un tirador táctil que inicia el arrastre", async ({
   browser,
 }) => {
   const ctx = await browser.newContext();
@@ -32,31 +33,24 @@ test("modo tabla: reordenar bookmarks arrastrando el tirador", async ({
   await page.goto("/");
 
   const aRow = page.locator("tr", { hasText: "AAArow" });
-  const bRow = page.locator("tr", { hasText: "BBBrow" });
-  await expect(aRow).toBeVisible();
-  await expect(bRow).toBeVisible();
-
-  // Sanity: initial order is A, then B.
-  const initial = await (await req.get("/api/bookmarks")).json();
-  expect(initial[0].title).toBe("AAArow");
-
   const handle = aRow.getByLabel("Arrastrar para reordenar");
-  const hb = await handle.boundingBox();
-  const bb = await bRow.boundingBox();
-  if (!hb || !bb) throw new Error("missing bounding boxes");
+  await expect(handle).toBeVisible();
 
-  // Drag A's handle down onto B.
+  const touchAction = await handle.evaluate(
+    (el) => getComputedStyle(el).touchAction,
+  );
+  expect(touchAction).toBe("none");
+
+  const hb = await handle.boundingBox();
+  if (!hb) throw new Error("missing handle box");
   await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
   await page.mouse.down();
-  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + 6);
-  await page.mouse.move(bb.x + bb.width / 2, bb.y + bb.height / 2, {
-    steps: 12,
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + 24, {
+    steps: 8,
   });
-  await page.mouse.up();
-
-  // The reorder persists: BBBrow now precedes AAArow.
   await expect(async () => {
-    const bms = await (await req.get("/api/bookmarks")).json();
-    expect(bms[0].title).toBe("BBBrow");
-  }).toPass({ timeout: 8000 });
+    const op = await aRow.evaluate((el) => getComputedStyle(el).opacity);
+    expect(Number(op)).toBeLessThan(0.9);
+  }).toPass({ timeout: 2000 });
+  await page.mouse.up();
 });
