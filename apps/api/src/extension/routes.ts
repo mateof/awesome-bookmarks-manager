@@ -63,6 +63,41 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
     return { id: folder.id, parentId: folder.parentId, name: folder.name };
   });
 
+  // Tag list for the extension's autocomplete — token-authenticated.
+  app.get("/ext/tags", async (req) => {
+    const ctx = requireApiAuth(req);
+    return listTags(ctx).map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+    }));
+  });
+
+  // Create a tag (with a chosen colour) from the extension. Idempotent: if a
+  // tag with that name already exists it's returned as-is, so the popup can
+  // call this for "new" tags without worrying about races.
+  app.post("/ext/tags", async (req, reply) => {
+    const ctx = requireApiAuth(req);
+    const body = z
+      .object({
+        name: z.string().trim().min(1).max(64),
+        color: z.string().max(40).optional(),
+      })
+      .parse(req.body);
+    const existing = listTags(ctx).find(
+      (t) => t.name.toLowerCase() === body.name.toLowerCase(),
+    );
+    if (existing) {
+      return { id: existing.id, name: existing.name, color: existing.color };
+    }
+    const created = createTag(ctx, {
+      name: body.name,
+      color: body.color ?? "#64748b",
+    });
+    reply.code(201);
+    return { id: created.id, name: created.name, color: created.color };
+  });
+
   // Quick-add — token-authenticated. Tokens minted after headless DEK
   // wrapping self-warm the DEK, so this keeps working across the idle
   // timeout without a web login.

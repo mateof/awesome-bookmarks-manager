@@ -4,23 +4,48 @@
     <meta charset="utf-8" />
     <title>AwesomeBookmarks</title>
     <style>
-      body { width: 320px; margin: 0; font-family: system-ui, sans-serif; }
+      body { width: 340px; margin: 0; font-family: system-ui, sans-serif; }
       .wrap { padding: 12px; }
       h3 { margin: 0 0 2px; font-size: 14px; }
-      input, button, select, textarea {
+      input, button, textarea {
         width: 100%; box-sizing: border-box; padding: 6px; margin-bottom: 6px;
       }
       .url { font-size: 12px; color: #64748b; word-break: break-all; margin-bottom: 8px; }
       .lbl { display: block; font-size: 11px; color: #64748b; margin: 4px 0 2px; }
       .row { display: flex; gap: 6px; }
-      .row input { flex: 1; }
-      .row button { width: auto; white-space: nowrap; }
+      .row input { flex: 1; margin-bottom: 0; }
+      .row button { width: auto; white-space: nowrap; margin-bottom: 0; }
       .mini { font-size: 12px; }
       .hint { font-size: 11px; color: #94a3b8; margin: -2px 0 6px; }
       .ok { color: #059669; font-size: 12px; }
       .err { color: #dc2626; font-size: 12px; }
       a { color: #2563eb; font-size: 12px; }
-      button#save-btn { background: #0f172a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; }
+      button#save-btn { background: #0f172a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; margin-top: 4px; }
+
+      /* Tags */
+      #tag-chips { display: flex; flex-wrap: wrap; }
+      #tag-chips:empty { display: none; }
+      .tag-chip { display: inline-flex; align-items: center; gap: 5px; background: #f1f5f9; border-radius: 12px; padding: 2px 6px 2px 8px; font-size: 12px; margin: 0 4px 4px 0; }
+      .tag-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; cursor: pointer; border: 1px solid rgba(0,0,0,0.12); }
+      .tag-chip .rm { all: unset; cursor: pointer; color: #94a3b8; font-size: 13px; line-height: 1; padding: 0 2px; }
+      .tag-chip .rm:hover { color: #dc2626; }
+      #tag-suggest { border: 1px solid #e2e8f0; border-radius: 4px; margin: -4px 0 6px; max-height: 150px; overflow-y: auto; }
+      #tag-suggest:empty { display: none; }
+      .suggest-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; cursor: pointer; font-size: 12px; }
+      .suggest-row:hover, .suggest-row.active { background: #eff6ff; }
+      .swatches { display: inline-flex; gap: 4px; margin-left: auto; }
+      .swatch { width: 15px; height: 15px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(0,0,0,0.12); }
+      .swatch:hover { transform: scale(1.15); }
+
+      /* Folder tree */
+      #folder-tree { max-height: 190px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px; margin-bottom: 6px; }
+      .tree-row { display: flex; align-items: center; gap: 3px; padding: 3px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+      .tree-row:hover { background: #f1f5f9; }
+      .tree-row.sel { background: #dbeafe; font-weight: 600; }
+      .tree-chevron { width: 15px; text-align: center; color: #94a3b8; cursor: pointer; user-select: none; flex-shrink: 0; }
+      .tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .tree-path { font-size: 11px; color: #94a3b8; margin-left: 4px; }
+      .tree-empty { font-size: 12px; color: #94a3b8; padding: 6px; }
     </style>
   </head>
   <body>
@@ -29,10 +54,15 @@
       <div class="url" id="url-display"></div>
 
       <input id="title-input" placeholder="Título" />
-      <input id="tags-input" placeholder="Tags separadas por coma" />
 
-      <label class="lbl" for="folder-select">Guardar en</label>
-      <select id="folder-select"></select>
+      <label class="lbl">Tags</label>
+      <div id="tag-chips"></div>
+      <input id="tags-input" placeholder="Escribe para buscar o crear tags…" autocomplete="off" />
+      <div id="tag-suggest"></div>
+
+      <label class="lbl">Guardar en</label>
+      <input id="folder-search" placeholder="Buscar carpeta…" autocomplete="off" />
+      <div id="folder-tree"></div>
       <a href="#" id="new-folder-toggle" class="mini">＋ Nueva carpeta</a>
 
       <div id="new-folder-row" style="display: none">

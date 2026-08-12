@@ -13,6 +13,12 @@ export interface FolderLite {
   name: string;
 }
 
+export interface TagLite {
+  id: string;
+  name: string;
+  color: string;
+}
+
 function base(cfg: ExtConfig): string {
   // The backend serves the API under `/api`. Be forgiving about how the user
   // typed the endpoint: accept both the plain server origin
@@ -55,6 +61,20 @@ export async function createFolder(
   input: { name: string; parentId?: string | null },
 ): Promise<FolderLite> {
   return req(cfg, "/ext/folders", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listTags(cfg: ExtConfig): Promise<TagLite[]> {
+  return req(cfg, "/ext/tags", { method: "GET" });
+}
+
+export async function createTag(
+  cfg: ExtConfig,
+  input: { name: string; color: string },
+): Promise<TagLite> {
+  return req(cfg, "/ext/tags", {
     method: "POST",
     body: JSON.stringify(input),
   });

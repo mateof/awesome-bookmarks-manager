@@ -47,6 +47,12 @@ test("extensión de Chrome: token, carpetas y guardado de pestaña", async ({
   const trabajoId = await mkFolder("Trabajo", null);
   await mkFolder("Proyectos", trabajoId);
 
+  // Seed an existing tag so the popup can autocomplete it.
+  await app.request.post(`${BASE_URL}/api/ext/tags`, {
+    headers: { authorization: `Bearer ${token}` },
+    data: { name: "demo", color: "#22c55e" },
+  });
+
   // 3. Configure the extension's options page with endpoint + token.
   const options = await context.newPage();
   await options.goto(`chrome-extension://${extensionId}/options.html`);
@@ -68,12 +74,29 @@ test("extensión de Chrome: token, carpetas y guardado de pestaña", async ({
   await site.bringToFront();
   await popup.reload();
 
-  const select = popup.locator("#folder-select");
-  await expect(select).toContainText("Trabajo");
-  await expect(select).toContainText("Proyectos");
+  const tree = popup.locator("#folder-tree");
+  await expect(tree).toContainText("Trabajo");
 
-  // Choose "Trabajo" as parent and prepare a new subfolder for the screenshot.
-  await select.selectOption(trabajoId);
+  // Search finds a nested folder without expanding the tree by hand.
+  await popup.locator("#folder-search").fill("Proyectos");
+  await expect(tree).toContainText("Proyectos");
+  await popup.locator("#folder-search").fill("");
+
+  // Tag autocomplete: typing suggests the existing tag; clicking adds a chip.
+  const suggest = popup.locator("#tag-suggest");
+  await popup.locator("#tags-input").fill("de");
+  await expect(suggest).toContainText("demo");
+  await suggest.getByText("demo", { exact: true }).click();
+  await expect(popup.locator("#tag-chips")).toContainText("demo");
+
+  // A brand-new tag: pick a colour swatch to create it.
+  await popup.locator("#tags-input").fill("urgente");
+  await expect(suggest).toContainText("Crear «urgente»");
+  await suggest.locator(".swatch").first().click();
+  await expect(popup.locator("#tag-chips")).toContainText("urgente");
+
+  // Select "Trabajo" in the tree and create a subfolder from the popup.
+  await tree.getByText("Trabajo", { exact: true }).click();
   await popup.locator("#new-folder-toggle").click();
   await popup.locator("#new-folder-name").fill("Ideas");
   await expect(popup.locator("#new-folder-hint")).toContainText("Trabajo");
@@ -82,9 +105,18 @@ test("extensión de Chrome: token, carpetas y guardado de pestaña", async ({
   // Actually create it (exercises the popup → POST /ext/folders path).
   await popup.locator("#new-folder-create").click();
   await expect(popup.locator("#status")).toContainText("Ideas");
-  const ideasId = await select.inputValue();
-  expect(ideasId).not.toBe(trabajoId);
-  expect(ideasId).not.toBe("");
+
+  // Resolve the new folder id from the API (there's no <select> value now).
+  const foldersNow = await (
+    await app.request.get(`${BASE_URL}/api/ext/folders`, {
+      headers: { authorization: `Bearer ${token}` },
+    })
+  ).json();
+  const ideas = (
+    foldersNow as { id: string; name: string; parentId: string | null }[]
+  ).find((f) => f.name === "Ideas" && f.parentId === trabajoId);
+  expect(ideas, "Ideas created under Trabajo").toBeTruthy();
+  const ideasId = ideas!.id;
 
   // 5. Save the active tab into that folder — the exact request the popup makes.
   const saveResp = await app.request.post(`${BASE_URL}/api/ext/quick-add`, {
