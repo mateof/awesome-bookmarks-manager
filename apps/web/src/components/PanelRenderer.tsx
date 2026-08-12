@@ -5,6 +5,7 @@ import type {
 } from "@awesome-bookmarks/shared";
 import DOMPurify from "dompurify";
 import {
+  ArrowUp,
   ChevronRight,
   CornerDownLeft,
   ExternalLink,
@@ -554,6 +555,17 @@ function Breadcrumb({
   }
   return (
     <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, color: t.muted, fontSize: 13, marginBottom: "1rem" }}>
+      {path.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onGo(path.length - 1)}
+          title="Subir de nivel"
+          aria-label="Subir de nivel"
+          style={{ background: "none", border: `1px solid ${t.border}`, borderRadius: 6, cursor: "pointer", color: t.muted, padding: "3px 6px", display: "inline-flex", alignItems: "center", fontFamily: "inherit", marginRight: 4 }}
+        >
+          <ArrowUp size={14} />
+        </button>
+      )}
       {names.map((name, i) => (
         <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
           {i > 0 && <ChevronRight size={13} />}
