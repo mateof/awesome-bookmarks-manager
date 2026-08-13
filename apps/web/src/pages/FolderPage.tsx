@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
   ArrowUp,
+  ClipboardCopy,
   Copy,
   Download,
   ExternalLink,
@@ -22,7 +23,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
+import { copyRichLink } from "../lib/clipboard.js";
 import { contrastClass, useCardTone } from "../lib/contrast.js";
+import { CopyButton } from "../components/CopyButton.js";
 import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
@@ -440,6 +443,11 @@ export function FolderPage() {
       label: t("folder.copyKebab"),
       icon: <Copy className="h-4 w-4" />,
       onClick: () => setCopyTarget({ kind: "bookmark", id: b.id }),
+    },
+    {
+      label: t("folder.copyLinkKebab"),
+      icon: <ClipboardCopy className="h-4 w-4" />,
+      onClick: () => void copyRichLink(b.title, b.url),
     },
     {
       label: t("background.kebabItem"),
@@ -1312,14 +1320,17 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
         >
           {b.title}
         </Link>
-        <a
-          href={b.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block truncate text-xs text-slate-500 hover:underline"
-        >
-          {b.url}
-        </a>
+        <div className="flex items-center gap-1">
+          <a
+            href={b.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-w-0 flex-1 truncate text-xs text-slate-500 hover:underline"
+          >
+            {b.url}
+          </a>
+          <CopyButton text={b.url} title={t("bookmark.copyUrl")} />
+        </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-[10px] uppercase tracking-wide text-slate-400">
             {b.snapshotStatus}
@@ -1379,6 +1390,11 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         {b.url}
       </a>
+      <CopyButton
+        text={b.url}
+        title={t("bookmark.copyUrl")}
+        className="hidden shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 sm:inline-flex dark:hover:bg-slate-800 dark:hover:text-slate-100"
+      />
       <TagChipList
         tagIds={b.tagIds ?? []}
         allTags={p.allTags}
@@ -1451,14 +1467,17 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
             <KebabMenu items={p.bookmarkKebab(b)} />
           </div>
         </div>
-        <a
-          href={b.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="truncate text-xs text-slate-500 hover:underline"
-        >
-          {b.url}
-        </a>
+        <div className="flex items-center gap-1">
+          <a
+            href={b.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-w-0 flex-1 truncate text-xs text-slate-500 hover:underline"
+          >
+            {b.url}
+          </a>
+          <CopyButton text={b.url} title={t("bookmark.copyUrl")} />
+        </div>
         {desc && (
           <div className="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">
             {desc}
@@ -1690,15 +1709,18 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
           {b.title}
         </Link>
       </td>
-      <td className="max-w-[30ch] truncate px-2 py-2 text-xs text-slate-500">
-        <a
-          href={b.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:underline"
-        >
-          {b.url}
-        </a>
+      <td className="px-2 py-2 text-xs text-slate-500">
+        <div className="flex max-w-[30ch] items-center gap-1">
+          <a
+            href={b.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-w-0 truncate hover:underline"
+          >
+            {b.url}
+          </a>
+          <CopyButton text={b.url} title={t("bookmark.copyUrl")} />
+        </div>
       </td>
       <td className="px-2 py-2">
         <TagChipList

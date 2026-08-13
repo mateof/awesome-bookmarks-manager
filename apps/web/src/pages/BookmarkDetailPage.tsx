@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Bookmark,
+  ClipboardCopy,
   ExternalLink,
   History,
   Image as ImageIcon,
@@ -15,7 +16,9 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { copyRichLink } from "../lib/clipboard.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
+import { CopyButton } from "../components/CopyButton.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
@@ -124,6 +127,13 @@ export function BookmarkDetailPage() {
             <ExternalLink className="h-4 w-4" /> {t("bookmark.openUrl")}
           </a>
           <button
+            onClick={() => void copyRichLink(b.title, b.url)}
+            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            title={t("folder.copyLinkKebab")}
+          >
+            <ClipboardCopy className="h-4 w-4" /> {t("bookmark.copyLink")}
+          </button>
+          <button
             onClick={() => refresh.mutate()}
             disabled={refresh.isPending || b.snapshotStatus === "running"}
             className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
@@ -178,7 +188,14 @@ export function BookmarkDetailPage() {
         </div>
       </div>
 
-      <div className="break-all text-sm text-slate-500">{b.url}</div>
+      <div className="flex items-start gap-1">
+        <div className="break-all text-sm text-slate-500">{b.url}</div>
+        <CopyButton
+          text={b.url}
+          title={t("bookmark.copyUrl")}
+          size="h-4 w-4"
+        />
+      </div>
 
       {(b.tagIds?.length ?? 0) > 0 && (
         <TagChipList
