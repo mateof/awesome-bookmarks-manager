@@ -19,6 +19,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fuzzyScoreAny } from "../fuzzy.js";
+import { PanelBackground } from "./PanelBackground.js";
 
 /**
  * Renders a panel (a folder subtree) in the shape defined by the template.
@@ -29,9 +30,12 @@ import { fuzzyScoreAny } from "../fuzzy.js";
 export function PanelRenderer({
   root,
   template,
+  displayTitle,
 }: {
   root: PanelFolder;
   template: TemplateConfig;
+  /** Overrides the panel's root heading (falls back to the folder name). */
+  displayTitle?: string | null;
 }) {
   const [sp, setSp] = useSearchParams();
   const [descBookmark, setDescBookmark] = useState<PanelBookmark | null>(null);
@@ -108,12 +112,31 @@ export function PanelRenderer({
 
   const showFilterBar = template.tagFilter !== false && allTags.size > 0;
 
+  const rootTitle = displayTitle?.trim() || root.name;
+
   return (
-    <div style={{ background: t.bg, color: t.text, fontFamily: template.font, minHeight: "100vh" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.25rem 4rem" }}>
+    <div
+      style={{
+        position: "relative",
+        background: t.bg,
+        color: t.text,
+        fontFamily: template.font,
+        minHeight: "100vh",
+      }}
+    >
+      <PanelBackground scene={template.scene} />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "2rem 1.25rem 4rem",
+        }}
+      >
         {template.header !== "hidden" && (
           <Header
-            title={filtering ? "Resultados" : path.length === 0 ? root.name : current.name}
+            title={filtering ? "Resultados" : path.length === 0 ? rootTitle : current.name}
             template={template}
             banner={template.header === "banner"}
           />
@@ -169,9 +192,19 @@ export function PanelRenderer({
             {current.subfolders.length > 0 && (
               <Section title="Carpetas" template={template}>
                 <div style={gridStyle(template, "folders")}>
-                  {current.subfolders.map((f) => (
-                    <FolderCard key={f.id} folder={f} template={template} onOpen={() => setPath([...path, f.id])} />
-                  ))}
+                  {current.subfolders.map((f) =>
+                    template.folderPreview ? (
+                      <FolderPreviewCard
+                        key={f.id}
+                        folder={f}
+                        template={template}
+                        onOpen={() => setPath([...path, f.id])}
+                        onOpenChild={(childId) => setPath([...path, f.id, childId])}
+                      />
+                    ) : (
+                      <FolderCard key={f.id} folder={f} template={template} onOpen={() => setPath([...path, f.id])} />
+                    ),
+                  )}
                 </div>
               </Section>
             )}
@@ -608,6 +641,91 @@ function FolderCard({ folder, template, onOpen }: { folder: PanelFolder; templat
         <span style={{ fontSize: 12, color: t.muted }}>{count} elementos</span>
       </span>
     </button>
+  );
+}
+
+/**
+ * A folder shown together with its immediate subfolders as a browsable list
+ * (enabled by `template.folderPreview`). Clicking the header opens the folder
+ * itself; clicking a child opens just that child.
+ */
+function FolderPreviewCard({
+  folder,
+  template,
+  onOpen,
+  onOpenChild,
+}: {
+  folder: PanelFolder;
+  template: TemplateConfig;
+  onOpen: () => void;
+  onOpenChild: (childId: string) => void;
+}) {
+  const t = template.theme;
+  const count = folder.bookmarks.length + folder.subfolders.length;
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        borderRadius: template.card.radius,
+        background: t.surface,
+        border: `1px solid ${t.border}`,
+        color: t.text,
+        boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none",
+        overflow: "hidden",
+      }}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          textAlign: "left",
+          cursor: "pointer",
+          padding: "0.85rem 1rem",
+          background: "transparent",
+          border: "none",
+          color: "inherit",
+          fontFamily: "inherit",
+        }}
+      >
+        <FolderIcon size={20} style={{ color: t.accent, flexShrink: 0 }} />
+        <span style={{ minWidth: 0 }}>
+          <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{folder.name}</span>
+          <span style={{ fontSize: 12, color: t.muted }}>{count} elementos</span>
+        </span>
+      </button>
+      {folder.subfolders.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", borderTop: `1px solid ${t.border}` }}>
+          {folder.subfolders.map((child) => (
+            <button
+              key={child.id}
+              type="button"
+              onClick={() => onOpenChild(child.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                textAlign: "left",
+                cursor: "pointer",
+                padding: "0.5rem 1rem 0.5rem 1.4rem",
+                background: "transparent",
+                border: "none",
+                borderTop: `1px solid ${t.border}55`,
+                color: t.muted,
+                fontFamily: "inherit",
+                fontSize: 13,
+              }}
+            >
+              <ChevronRight size={13} style={{ flexShrink: 0, color: t.accent }} />
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{child.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

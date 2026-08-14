@@ -1,14 +1,15 @@
-import type {
-  PanelLayout,
-  TemplateConfig,
-  TemplateItem,
+import {
+  PANEL_SCENES,
+  type PanelLayout,
+  type TemplateConfig,
+  type TemplateItem,
 } from "@awesome-bookmarks/shared";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
 import { Modal } from "./Modal.js";
-import { TemplateSwatch } from "./TemplateSwatch.js";
+import { TemplatePreview } from "./TemplatePreview.js";
 
 const BASE: TemplateConfig = {
   layout: "grid",
@@ -69,7 +70,7 @@ export function TemplateEditor({
 
   return (
     <Modal title={t("panels.templateEditorTitle")} onClose={onClose} size="lg">
-      <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-3">
           <label className="block space-y-1 text-sm">
             <span className="text-slate-500">{t("panels.templateName")}</span>
@@ -183,11 +184,43 @@ export function TemplateEditor({
               </select>
             </label>
           </div>
+
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <label className="space-y-1">
+              <span className="text-slate-500">{t("panels.sceneLabel")}</span>
+              <select
+                className={input}
+                value={config.scene ?? "none"}
+                onChange={(e) =>
+                  setConfig((c) => ({
+                    ...c,
+                    scene: e.target.value === "none" ? undefined : e.target.value,
+                  }))
+                }
+              >
+                {PANEL_SCENES.map((s) => (
+                  <option key={s} value={s}>
+                    {t(`panels.scene_${s}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-end gap-2 pb-1.5">
+              <input
+                type="checkbox"
+                checked={!!config.folderPreview}
+                onChange={(e) =>
+                  setConfig((c) => ({ ...c, folderPreview: e.target.checked }))
+                }
+              />
+              <span className="text-slate-500">{t("panels.folderPreview")}</span>
+            </label>
+          </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 lg:sticky lg:top-2 lg:self-start">
           <span className="text-xs text-slate-500">{t("panels.preview")}</span>
-          <TemplateSwatch config={config} />
+          <TemplatePreview config={config} />
         </div>
       </div>
 

@@ -41,6 +41,9 @@ export function GeneratePanelDialog({
   const [slug, setSlug] = useState(slugify(folderName));
   const [slugEdited, setSlugEdited] = useState(false);
   const [templateId, setTemplateId] = useState<string>("builtin:grid");
+  const [displayTitle, setDisplayTitle] = useState("");
+  const [tabTitle, setTabTitle] = useState("");
+  const [faviconEmoji, setFaviconEmoji] = useState("");
   const [accessMode, setAccessMode] = useState<PanelAccessMode>("public");
   const [password, setPassword] = useState("");
   const [emails, setEmails] = useState("");
@@ -56,6 +59,9 @@ export function GeneratePanelDialog({
         folderId,
         templateId,
         accessMode,
+        displayTitle: displayTitle.trim() || undefined,
+        tabTitle: tabTitle.trim() || undefined,
+        faviconEmoji: faviconEmoji.trim() || undefined,
         password: accessMode === "password" ? password : undefined,
         userEmails:
           accessMode === "users"
@@ -165,6 +171,44 @@ export function GeneratePanelDialog({
             ))}
           </div>
         </div>
+
+        <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+          <summary className="cursor-pointer text-sm text-slate-500">
+            {t("panels.identityHeading")}
+          </summary>
+          <div className="mt-2 space-y-2">
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-500">{t("panels.displayTitle")}</span>
+                <input
+                  className={input}
+                  value={displayTitle}
+                  onChange={(e) => setDisplayTitle(e.target.value)}
+                  placeholder={folderName}
+                />
+              </label>
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-500">{t("panels.faviconEmoji")}</span>
+                <input
+                  className={`${input} w-20 text-center`}
+                  value={faviconEmoji}
+                  onChange={(e) => setFaviconEmoji(e.target.value)}
+                  placeholder="🔖"
+                  maxLength={8}
+                />
+              </label>
+            </div>
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.tabTitle")}</span>
+              <input
+                className={input}
+                value={tabTitle}
+                onChange={(e) => setTabTitle(e.target.value)}
+                placeholder={t("panels.tabTitlePlaceholder")}
+              />
+            </label>
+          </div>
+        </details>
 
         <div className="space-y-2">
           <span className="text-sm text-slate-500">{t("panels.access")}</span>

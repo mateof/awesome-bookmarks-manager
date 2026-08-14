@@ -100,6 +100,11 @@ export const panels = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
     title: text("title").notNull(),
+    /** Heading shown inside the panel (null = use the folder name). */
+    displayTitle: text("display_title"),
+    /** Browser tab text / emoji favicon overrides (null = fall back). */
+    tabTitle: text("tab_title"),
+    faviconEmoji: text("favicon_emoji"),
     folderId: text("folder_id").notNull(),
     templateId: text("template_id"),
     accessMode: text("access_mode").notNull().default("public"),

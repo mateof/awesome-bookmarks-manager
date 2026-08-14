@@ -1,10 +1,42 @@
 import type { PublicPanelResponse } from "@awesome-bookmarks/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { PanelRenderer } from "../components/PanelRenderer.js";
+
+/** Emoji → inline SVG favicon data URL. */
+function emojiFaviconDataUrl(emoji: string): string {
+  const safe = emoji.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-size="82">${safe}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+/** Set the browser tab title/favicon while a panel is open; restore on leave. */
+function usePanelTabMeta(resp: PublicPanelResponse | undefined) {
+  const title = resp ? resp.tabTitle?.trim() || resp.displayTitle?.trim() || resp.title : "";
+  const favicon = resp?.faviconEmoji?.trim() || "";
+  useEffect(() => {
+    if (!title && !favicon) return;
+    const prevTitle = document.title;
+    if (title) document.title = title;
+    const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+    const prevHref = link?.getAttribute("href") ?? null;
+    const prevType = link?.getAttribute("type") ?? null;
+    if (favicon && link) {
+      link.setAttribute("type", "image/svg+xml");
+      link.setAttribute("href", emojiFaviconDataUrl(favicon));
+    }
+    return () => {
+      document.title = prevTitle;
+      if (link) {
+        if (prevType !== null) link.setAttribute("type", prevType);
+        if (prevHref !== null) link.setAttribute("href", prevHref);
+      }
+    };
+  }, [title, favicon]);
+}
 
 export function PublicPanelPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +49,7 @@ export function PublicPanelPage() {
   });
 
   const resp = unlocked ?? q.data;
+  usePanelTabMeta(resp);
 
   if (q.isLoading) {
     return <Centered>Cargando…</Centered>;
@@ -27,7 +60,13 @@ export function PublicPanelPage() {
   if (!resp) return <Centered>…</Centered>;
 
   if (resp.root) {
-    return <PanelRenderer root={resp.root} template={resp.template} />;
+    return (
+      <PanelRenderer
+        root={resp.root}
+        template={resp.template}
+        displayTitle={resp.displayTitle}
+      />
+    );
   }
   if (resp.needsPassword) {
     return <PasswordGate slug={slug!} title={resp.title} onUnlock={setUnlocked} />;

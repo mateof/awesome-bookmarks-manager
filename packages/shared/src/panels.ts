@@ -33,6 +33,25 @@ export const TemplateCardSchema = z.object({
   showTags: z.boolean(),
 });
 
+/**
+ * Built-in decorative background scenes (static or animated). Rendered as a
+ * full-bleed layer behind the panel content. `"none"` (or omitted) keeps the
+ * plain `theme.bg`. Stored as a free string (max 32) so new scenes can ship
+ * without a schema migration; an unknown value renders as no scene.
+ */
+export const PANEL_SCENES = [
+  "none",
+  "galaxy",
+  "aurora",
+  "ocean",
+  "beach",
+  "fishtank",
+  "clouds",
+  "sakura",
+  "dragonballs",
+] as const;
+export type PanelScene = (typeof PANEL_SCENES)[number];
+
 export const TemplateConfigSchema = z.object({
   layout: PanelLayoutSchema,
   columns: z.number().int().min(1).max(8).optional(),
@@ -42,6 +61,14 @@ export const TemplateConfigSchema = z.object({
   header: z.enum(["banner", "minimal", "hidden"]).optional(),
   /** Show the tag filter bar in the panel (default true). */
   tagFilter: z.boolean().optional(),
+  /** Decorative background scene id (see PANEL_SCENES). */
+  scene: z.string().max(32).optional(),
+  /**
+   * When true, each folder that itself holds subfolders lists them beneath its
+   * card so a whole level is browsable at a glance. Opening a child (or the
+   * parent) navigates to that folder alone.
+   */
+  folderPreview: z.boolean().optional(),
 });
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
 
@@ -84,6 +111,16 @@ export const PanelSlugSchema = z
   .max(64)
   .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones");
 
+/**
+ * Optional panel identity overrides. An empty string clears the override.
+ * `displayTitle` = heading shown inside the panel (falls back to the folder
+ * name); `tabTitle` = browser tab text (falls back to displayTitle/title);
+ * `faviconEmoji` = one emoji used as the tab icon.
+ */
+const DisplayTitleSchema = z.string().max(120).optional();
+const TabTitleSchema = z.string().max(120).optional();
+const FaviconEmojiSchema = z.string().max(16).optional();
+
 export const CreatePanelBodySchema = z.object({
   title: z.string().trim().min(1).max(120),
   slug: PanelSlugSchema,
@@ -92,6 +129,9 @@ export const CreatePanelBodySchema = z.object({
   accessMode: PanelAccessModeSchema,
   password: z.string().min(1).max(200).optional(),
   userEmails: z.array(EmailSchema).max(500).optional(),
+  displayTitle: DisplayTitleSchema,
+  tabTitle: TabTitleSchema,
+  faviconEmoji: FaviconEmojiSchema,
 });
 export type CreatePanelBody = z.infer<typeof CreatePanelBodySchema>;
 
@@ -103,6 +143,9 @@ export const UpdatePanelBodySchema = z.object({
   // "" clears the password; omitted keeps it; a value sets it.
   password: z.string().max(200).optional(),
   userEmails: z.array(EmailSchema).max(500).optional(),
+  displayTitle: DisplayTitleSchema,
+  tabTitle: TabTitleSchema,
+  faviconEmoji: FaviconEmojiSchema,
 });
 export type UpdatePanelBody = z.infer<typeof UpdatePanelBodySchema>;
 
@@ -117,6 +160,9 @@ export interface PanelListItem {
   userCount: number;
   status: string;
   url: string;
+  displayTitle: string | null;
+  tabTitle: string | null;
+  faviconEmoji: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -148,6 +194,11 @@ export interface PanelFolder {
 export interface PublicPanelResponse {
   title: string;
   template: TemplateConfig;
+  /** Heading shown inside the panel (falls back to the folder name). */
+  displayTitle?: string | null;
+  /** Browser tab text and icon (emoji) overrides. */
+  tabTitle?: string | null;
+  faviconEmoji?: string | null;
   /** Present only when unlocked/authorized. */
   root?: PanelFolder;
   needsPassword?: boolean;

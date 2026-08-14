@@ -88,6 +88,9 @@ export function ensureSchema() {
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       slug TEXT NOT NULL,
       title TEXT NOT NULL,
+      display_title TEXT,
+      tab_title TEXT,
+      favicon_emoji TEXT,
       folder_id TEXT NOT NULL,
       template_id TEXT,
       access_mode TEXT NOT NULL DEFAULT 'public',
@@ -293,6 +296,11 @@ export function ensureSchema() {
   tryAddColumn("folders", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "image_blob_path", "TEXT");
+  // Per-panel identity overrides: heading shown inside the panel, browser tab
+  // title and an emoji favicon.
+  tryAddColumn("panels", "display_title", "TEXT");
+  tryAddColumn("panels", "tab_title", "TEXT");
+  tryAddColumn("panels", "favicon_emoji", "TEXT");
   // Token-wrapped DEK envelope for headless API / MCP access.
   tryAddColumn("extension_tokens", "dek_wrap", "BLOB");
   // Passkeys registered before the PRF-less fallback existed default to PRF.

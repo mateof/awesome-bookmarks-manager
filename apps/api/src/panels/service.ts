@@ -30,6 +30,13 @@ function panelUrl(slug: string): string {
   return `${getEnv().PUBLIC_BASE_URL.replace(/\/$/, "")}/panel/${slug}`;
 }
 
+/** Trim an optional override; an empty string clears it (stored as null). */
+function normOverride(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const trimmed = v.trim();
+  return trimmed ? trimmed : null;
+}
+
 function bookmarkTagList(bookmarkId: string): { name: string; color: string }[] {
   return getDb()
     .select({ name: tags.name, color: tags.color })
@@ -172,6 +179,9 @@ function toListItem(row: typeof panels.$inferSelect): PanelListItem {
     userCount: row.accessMode === "users" ? allowedUserIds(row.id).length : 0,
     status: row.payloadStatus,
     url: panelUrl(row.slug),
+    displayTitle: row.displayTitle ?? null,
+    tabTitle: row.tabTitle ?? null,
+    faviconEmoji: row.faviconEmoji ?? null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -197,6 +207,9 @@ export async function createPanel(
       userId: ctx.userId,
       slug: input.slug,
       title: input.title,
+      displayTitle: normOverride(input.displayTitle),
+      tabTitle: normOverride(input.tabTitle),
+      faviconEmoji: normOverride(input.faviconEmoji),
       folderId: input.folderId,
       templateId: input.templateId ?? null,
       accessMode: input.accessMode,
@@ -256,6 +269,11 @@ export async function updatePanel(
     .set({
       title: input.title ?? row.title,
       slug: input.slug ?? row.slug,
+      displayTitle:
+        input.displayTitle === undefined ? row.displayTitle : normOverride(input.displayTitle),
+      tabTitle: input.tabTitle === undefined ? row.tabTitle : normOverride(input.tabTitle),
+      faviconEmoji:
+        input.faviconEmoji === undefined ? row.faviconEmoji : normOverride(input.faviconEmoji),
       templateId: input.templateId === undefined ? row.templateId : input.templateId,
       accessMode,
       passwordHash,
@@ -305,7 +323,13 @@ export async function resolvePublicPanel(
   const row = getDb().select().from(panels).where(eq(panels.slug, slug)).get();
   if (!row) throw NotFound("Panel not found");
   const template = resolveTemplateConfig(row.templateId, row.userId);
-  const base = { title: row.title, template };
+  const base = {
+    title: row.title,
+    template,
+    displayTitle: row.displayTitle ?? null,
+    tabTitle: row.tabTitle ?? null,
+    faviconEmoji: row.faviconEmoji ?? null,
+  };
 
   if (row.accessMode === "password") {
     if (!row.passwordHash) throw NotFound("Panel not found");

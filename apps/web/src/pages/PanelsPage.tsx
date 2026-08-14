@@ -197,6 +197,9 @@ function PanelEditModal({
         slug: val("slug"),
         templateId: val("templateId"),
         accessMode: val("accessMode"),
+        displayTitle: form.displayTitle ?? undefined,
+        tabTitle: form.tabTitle ?? undefined,
+        faviconEmoji: form.faviconEmoji ?? undefined,
         password: form.password,
         userEmails:
           val("accessMode") === "users" && emails !== null
@@ -236,6 +239,43 @@ function PanelEditModal({
               </option>
             ))}
           </select>
+          <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+            <summary className="cursor-pointer text-sm text-slate-500">
+              {t("panels.identityHeading")}
+            </summary>
+            <div className="mt-2 space-y-2">
+              <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                <label className="space-y-1 text-sm">
+                  <span className="text-slate-500">{t("panels.displayTitle")}</span>
+                  <input
+                    className={input}
+                    value={form.displayTitle ?? d.displayTitle ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, displayTitle: e.target.value }))}
+                    placeholder={d.title}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="text-slate-500">{t("panels.faviconEmoji")}</span>
+                  <input
+                    className={`${input} w-20 text-center`}
+                    value={form.faviconEmoji ?? d.faviconEmoji ?? ""}
+                    onChange={(e) => setForm((f) => ({ ...f, faviconEmoji: e.target.value }))}
+                    placeholder="🔖"
+                    maxLength={8}
+                  />
+                </label>
+              </div>
+              <label className="space-y-1 text-sm">
+                <span className="text-slate-500">{t("panels.tabTitle")}</span>
+                <input
+                  className={input}
+                  value={form.tabTitle ?? d.tabTitle ?? ""}
+                  onChange={(e) => setForm((f) => ({ ...f, tabTitle: e.target.value }))}
+                  placeholder={t("panels.tabTitlePlaceholder")}
+                />
+              </label>
+            </div>
+          </details>
           <div className="flex flex-wrap gap-2">
             {(["public", "password", "users"] as const).map((m) => (
               <button
