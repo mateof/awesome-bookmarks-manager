@@ -37,6 +37,7 @@ interface BookmarkRow {
   imageBlobPath: string | null;
   bgColor: string | null;
   shareOrigin: string | null;
+  favorite: boolean;
   snapshotHtmlPath: string | null;
   snapshotStatus: string;
   snapshotError: string | null;
@@ -63,6 +64,7 @@ function decode(
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
     shareOrigin: row.shareOrigin,
+    favorite: row.favorite,
     snapshotStatus: row.snapshotStatus as SnapshotStatus,
     snapshotError: row.snapshotError,
     hasSnapshot: !!row.snapshotHtmlPath,
@@ -140,6 +142,8 @@ export interface ListFilters {
   tagId?: string;
   q?: string;
   limit?: number;
+  /** Only starred bookmarks. */
+  favorite?: boolean;
 }
 
 export function listBookmarks(
@@ -151,6 +155,7 @@ export function listBookmarks(
     isNull(bookmarks.deletedAt),
   ];
   if (filters.folderId) conds.push(eq(bookmarks.folderId, filters.folderId));
+  if (filters.favorite) conds.push(eq(bookmarks.favorite, true));
 
   // No default limit — return everything by default, which is what makes
   // sense for a self-hosted personal app. Callers can opt into a limit when
@@ -195,6 +200,7 @@ export function listBookmarks(
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
             shareOrigin: r.shareOrigin,
+            favorite: r.favorite,
             snapshotHtmlPath: r.snapshotHtmlPath,
             snapshotStatus: r.snapshotStatus,
             snapshotError: r.snapshotError,
@@ -253,6 +259,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
       shareOrigin: row.shareOrigin,
+      favorite: row.favorite,
       snapshotHtmlPath: row.snapshotHtmlPath,
       snapshotStatus: row.snapshotStatus,
       snapshotError: row.snapshotError,
@@ -274,6 +281,7 @@ export function createBookmark(
     description?: string;
     tagIds?: string[];
     bgColor?: string | null;
+    favorite?: boolean;
     fetchSnapshot?: boolean;
     shareOrigin?: string | null;
   },
@@ -311,6 +319,7 @@ export function createBookmark(
       urlHash: urlHash(input.url, ctx.userId),
       bgColor: input.bgColor ?? null,
       shareOrigin: input.shareOrigin ?? null,
+      favorite: input.favorite ?? false,
       snapshotStatus: fetch ? "pending" : "none",
       snapshotError: null,
       position: nextPosition(ctx, folderId),
@@ -356,6 +365,7 @@ export function updateBookmark(
     description?: string | null;
     tagIds?: string[];
     bgColor?: string | null;
+    favorite?: boolean;
     /** Optimistic concurrency: reject with 409 if the row no longer has it. */
     baseRev?: number;
   },
@@ -394,6 +404,9 @@ export function updateBookmark(
   }
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
+  }
+  if (input.favorite !== undefined) {
+    update.favorite = input.favorite;
   }
 
   const where =

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Bookmark, Folder, SharedItem } from "@awesome-bookmarks/shared";
+import type { Bookmark, SharedItem } from "@awesome-bookmarks/shared";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,7 +14,6 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 
 interface Props {
-  folders: Folder[];
   bookmarks: Bookmark[];
 }
 
@@ -23,7 +22,7 @@ interface Props {
  * Each opens a single panel that uses click-to-expand (no hover flyouts) so
  * navigation is reliable on touch and never loses tracking on mouse gaps.
  */
-export function BookmarksBar({ folders, bookmarks }: Props) {
+export function BookmarksBar({ bookmarks }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<"mine" | "shared" | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -61,7 +60,7 @@ export function BookmarksBar({ folders, bookmarks }: Props) {
 
       {open === "mine" && (
         <Panel onClose={() => setOpen(null)}>
-          <MineTree folders={folders} bookmarks={bookmarks} />
+          <FavoritesList bookmarks={bookmarks} />
         </Panel>
       )}
       {open === "shared" && (
@@ -118,133 +117,28 @@ function Panel({
   );
 }
 
-// ---------- Mine ----------
+// ---------- Favourites ----------
 
-function MineTree({
-  folders,
-  bookmarks,
-}: {
-  folders: Folder[];
-  bookmarks: Bookmark[];
-}) {
+/**
+ * The starred bookmarks, flat and alphabetical. This panel is the quick-access
+ * bar, so it deliberately shows only what the user marked as favourite instead
+ * of mirroring the whole tree (that lives in the sidebar and the folder pages).
+ */
+function FavoritesList({ bookmarks }: { bookmarks: Bookmark[] }) {
   const { t } = useTranslation();
-  const rootFolders = folders.filter((f) => f.parentId === null);
-  const rootBookmarks = bookmarks.filter((b) => b.folderId === null);
-  const isEmpty = rootFolders.length === 0 && rootBookmarks.length === 0;
-  if (isEmpty) {
-    return <Empty>{t("bookmarksBar.emptyRoot")}</Empty>;
+  const favorites = bookmarks
+    .filter((b) => b.favorite)
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  if (favorites.length === 0) {
+    return <Empty>{t("bookmarksBar.emptyFavorites")}</Empty>;
   }
   return (
     <ul className="text-sm">
-      {rootFolders.map((f) => (
-        <FolderNode
-          key={f.id}
-          folder={f}
-          folders={folders}
-          bookmarks={bookmarks}
-          depth={0}
-        />
-      ))}
-      {rootBookmarks.map((b) => (
+      {favorites.map((b) => (
         <BookmarkRow key={b.id} bookmark={b} depth={0} />
       ))}
     </ul>
-  );
-}
-
-function FolderNode({
-  folder,
-  folders,
-  bookmarks,
-  depth,
-}: {
-  folder: Folder;
-  folders: Folder[];
-  bookmarks: Bookmark[];
-  depth: number;
-}) {
-  const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(depth === 0 ? false : false);
-  const childFolders = folders.filter((f) => f.parentId === folder.id);
-  const childBookmarks = bookmarks.filter((b) => b.folderId === folder.id);
-  const hasChildren = childFolders.length > 0 || childBookmarks.length > 0;
-
-  const openAll = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const stack: (string | null)[] = [folder.id];
-    const urls: string[] = [];
-    while (stack.length > 0) {
-      const cur = stack.pop()!;
-      for (const b of bookmarks) if (b.folderId === cur) urls.push(b.url);
-      for (const f of folders) if (f.parentId === cur) stack.push(f.id);
-    }
-    if (urls.length === 0) return;
-    if (
-      urls.length > 20 &&
-      !confirm(t("bookmarksBar.confirmOpenN", { count: urls.length }))
-    )
-      return;
-    for (const u of urls) window.open(u, "_blank", "noopener,noreferrer");
-  };
-
-  return (
-    <li>
-      <div
-        className="group flex items-center gap-1 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-        style={{ paddingLeft: 8 + depth * 14 }}
-      >
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          aria-label={expanded ? t("bookmarksBar.closeAria") : t("bookmarksBar.openAria")}
-          disabled={!hasChildren}
-        >
-          {hasChildren ? (
-            expanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )
-          ) : (
-            <span className="inline-block h-3 w-3" />
-          )}
-        </button>
-        <FolderClosed className="h-4 w-4 text-slate-500" />
-        <Link
-          to={`/folder/${folder.id}`}
-          data-close-on-click
-          className="flex-1 truncate"
-        >
-          {folder.name}
-        </Link>
-        {hasChildren && (
-          <button
-            onClick={openAll}
-            title={t("bookmarksBar.openAllInTabs")}
-            className="opacity-0 transition-opacity group-hover:opacity-100"
-          >
-            <ExternalLink className="h-3 w-3 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" />
-          </button>
-        )}
-      </div>
-      {expanded && hasChildren && (
-        <ul>
-          {childFolders.map((cf) => (
-            <FolderNode
-              key={cf.id}
-              folder={cf}
-              folders={folders}
-              bookmarks={bookmarks}
-              depth={depth + 1}
-            />
-          ))}
-          {childBookmarks.map((b) => (
-            <BookmarkRow key={b.id} bookmark={b} depth={depth + 1} />
-          ))}
-        </ul>
-      )}
-    </li>
   );
 }
 

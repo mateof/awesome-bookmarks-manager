@@ -50,6 +50,7 @@ export function ensureSchema() {
       snapshot_screenshot_path TEXT,
       snapshot_text_path TEXT,
       snapshot_status TEXT NOT NULL DEFAULT 'none',
+      favorite INTEGER NOT NULL DEFAULT 0,
       position INTEGER NOT NULL DEFAULT 0,
       rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
@@ -280,6 +281,8 @@ export function ensureSchema() {
   tryAddColumn("users", "two_factor_secret_ct", "BLOB");
   tryAddColumn("users", "two_factor_pending_ct", "BLOB");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
+  // Starred bookmarks ("Favoritos" bar).
+  tryAddColumn("bookmarks", "favorite", "INTEGER NOT NULL DEFAULT 0");
   // Optimistic-concurrency revision for folders/bookmarks.
   tryAddColumn("folders", "rev", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("bookmarks", "rev", "INTEGER NOT NULL DEFAULT 1");

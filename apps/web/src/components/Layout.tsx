@@ -292,10 +292,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {/* Bookmarks bar — overflow-x-auto to scroll on small screens */}
-        <BookmarksBar
-          folders={folders.data ?? []}
-          bookmarks={bookmarks.data ?? []}
-        />
+        <BookmarksBar bookmarks={bookmarks.data ?? []} />
       </header>
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}

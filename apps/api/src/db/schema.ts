@@ -299,6 +299,8 @@ export const bookmarks = sqliteTable(
     snapshotError: text("snapshot_error"),
     // Source group name when imported from a share (see folders.shareOrigin).
     shareOrigin: text("share_origin"),
+    /** Starred by the user; shown in the "Favoritos" bar. */
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     position: integer("position").notNull().default(0),
     // Optimistic-concurrency revision (see folders.rev).
     rev: integer("rev").notNull().default(1),

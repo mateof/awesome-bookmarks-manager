@@ -26,6 +26,8 @@ export const BookmarkSchema = z.object({
   snapshotStatus: SnapshotStatusSchema,
   snapshotError: z.string().nullable().optional(),
   hasSnapshot: z.boolean(),
+  /** Starred by the user; surfaced in the "Favoritos" bar. */
+  favorite: z.boolean().default(false),
   shareOrigin: z.string().nullable().default(null),
   position: z.number().int(),
   rev: z.number().int().default(1),
@@ -42,6 +44,7 @@ export const CreateBookmarkBodySchema = z.object({
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  favorite: z.boolean().optional(),
   fetchSnapshot: z.boolean().default(true),
 });
 export type CreateBookmarkBody = z.infer<typeof CreateBookmarkBodySchema>;
@@ -59,6 +62,7 @@ export const UpdateBookmarkBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  favorite: z.boolean().optional(),
   // Optimistic concurrency: the rev the client last saw (see folders).
   baseRev: z.number().int().optional(),
 });
@@ -69,6 +73,11 @@ export const ListBookmarksQuerySchema = z.object({
   tagId: z.string().uuid().optional(),
   q: z.string().max(256).optional(),
   cursor: z.string().optional(),
+  /** `?favorite=1` restricts the listing to starred bookmarks. */
+  favorite: z
+    .union([z.boolean(), z.enum(["1", "0", "true", "false"])])
+    .transform((v) => v === true || v === "1" || v === "true")
+    .optional(),
   // Optional. By default the endpoint returns *everything* — this is a
   // self-hosted personal app and there's no scenario where silently
   // truncating the user's own bookmarks is helpful. Callers that genuinely

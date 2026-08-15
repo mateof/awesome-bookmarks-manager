@@ -80,9 +80,10 @@ const es = {
     breadcrumb: "Breadcrumb",
   },
   bookmarksBar: {
-    mine: "Mis bookmarks",
+    mine: "Favoritos",
     shared: "Compartidos",
     emptyRoot: "Aún no hay bookmarks ni carpetas en la raíz.",
+    emptyFavorites: "Aún no tienes favoritos. Pulsa la estrella de un bookmark para añadirlo.",
     emptyShared: "Aún no hay nada compartido contigo.",
     loading: "Cargando…",
     closeAria: "Cerrar",
@@ -90,6 +91,11 @@ const es = {
     openAllInTabs: "Abrir todos los bookmarks de esta carpeta y subcarpetas",
     confirmOpenN: "¿Abrir {{count}} pestañas?",
     sharedByUser: "por {{email}}",
+  },
+  favorites: {
+    add: "Añadir a favoritos",
+    remove: "Quitar de favoritos",
+    title: "Favoritos",
   },
   sidebar: {
     home: "Inicio",

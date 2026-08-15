@@ -19,6 +19,7 @@ import { api } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { CopyButton } from "../components/CopyButton.js";
+import { FavoriteToggle } from "../components/FavoriteToggle.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
@@ -117,7 +118,8 @@ export function BookmarkDetailPage() {
         {!hasCover && (
           <h1 className="truncate text-xl font-semibold">{b.title}</h1>
         )}
-        <div className="ml-auto flex flex-wrap gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <FavoriteToggle bookmark={b} size="h-5 w-5" />
           <a
             href={b.url}
             target="_blank"

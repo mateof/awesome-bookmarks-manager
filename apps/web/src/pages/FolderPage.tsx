@@ -26,6 +26,7 @@ import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { contrastClass, useCardTone } from "../lib/contrast.js";
 import { CopyButton } from "../components/CopyButton.js";
+import { FavoriteToggle } from "../components/FavoriteToggle.js";
 import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
@@ -1353,6 +1354,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
+      <FavoriteToggle bookmark={b} />
       <CardDragHandle drag={drag} />
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
@@ -1414,6 +1416,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
+      <FavoriteToggle bookmark={b} />
       <CardDragHandle drag={drag} />
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
@@ -1463,6 +1466,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
                 : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             }`}
           >
+            <FavoriteToggle bookmark={b} />
             <CardDragHandle drag={drag} />
             <KebabMenu items={p.bookmarkKebab(b)} />
           </div>
@@ -1522,6 +1526,7 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
+        <FavoriteToggle bookmark={b} />
         <CardDragHandle drag={drag} />
         <KebabMenu items={p.bookmarkKebab(b)} />
       </div>
@@ -1748,6 +1753,7 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
           >
             <ExternalLink className="h-4 w-4" />
           </a>
+          <FavoriteToggle bookmark={b} />
           <KebabMenu items={p.bookmarkKebab(b)} />
         </div>
       </td>

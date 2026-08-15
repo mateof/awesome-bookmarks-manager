@@ -97,12 +97,16 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
 
   server.tool(
     "list_bookmarks",
-    "List bookmarks. Optionally filter by folderId, tagId or a text query.",
+    "List bookmarks. Optionally filter by folderId, tagId, a text query, or only the starred (favourite) ones.",
     {
       folderId: z.string().uuid().optional(),
       tagId: z.string().uuid().optional(),
       query: z.string().max(256).optional(),
       limit: z.number().int().min(1).max(1000).optional(),
+      favorite: z
+        .boolean()
+        .optional()
+        .describe("Only bookmarks the user starred as favourites."),
     },
     async (args) =>
       ok(
@@ -111,6 +115,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
           tagId: args.tagId,
           q: args.query,
           limit: args.limit,
+          favorite: args.favorite,
         }),
       ),
   );
@@ -131,6 +136,10 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
       description: z.string().max(100000).optional(),
       folderId: z.string().uuid().nullable().optional(),
       tags: z.array(z.string().min(1).max(64)).optional(),
+      favorite: z
+        .boolean()
+        .optional()
+        .describe("Star it right away (shown in the Favourites bar)."),
     },
     async (args) => {
       const tagIds = args.tags ? resolveTagIds(args.tags) : undefined;
@@ -140,6 +149,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
           title: args.title,
           description: args.description,
           folderId: args.folderId ?? null,
+          favorite: args.favorite,
           tagIds,
         }),
       );
@@ -156,6 +166,10 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
       description: z.string().max(100000).nullable().optional(),
       folderId: z.string().uuid().nullable().optional(),
       tags: z.array(z.string().min(1).max(64)).optional(),
+      favorite: z
+        .boolean()
+        .optional()
+        .describe("Star/unstar the bookmark (shown in the Favourites bar)."),
     },
     async (args) => {
       const tagIds = args.tags ? resolveTagIds(args.tags) : undefined;
@@ -165,6 +179,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
           url: args.url,
           description: args.description,
           folderId: args.folderId,
+          favorite: args.favorite,
           tagIds,
         }),
       );

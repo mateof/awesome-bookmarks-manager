@@ -80,9 +80,10 @@ const gl = {
     breadcrumb: "Migas de pan",
   },
   bookmarksBar: {
-    mine: "Os meus marcadores",
+    mine: "Favoritos",
     shared: "Compartidos",
     emptyRoot: "Aínda non hai marcadores nin cartafoles na raíz.",
+    emptyFavorites: "Aínda non tes favoritos. Preme a estrela dun marcador para engadilo.",
     emptyShared: "Aínda non hai nada compartido contigo.",
     loading: "Cargando…",
     closeAria: "Pechar",
@@ -90,6 +91,11 @@ const gl = {
     openAllInTabs: "Abrir todos os marcadores deste cartafol e subcartafoles",
     confirmOpenN: "Abrir {{count}} lapelas?",
     sharedByUser: "por {{email}}",
+  },
+  favorites: {
+    add: "Engadir a favoritos",
+    remove: "Quitar de favoritos",
+    title: "Favoritos",
   },
   sidebar: {
     home: "Inicio",
