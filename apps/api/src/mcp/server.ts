@@ -13,6 +13,7 @@ import {
 import {
   createFolder,
   listFolders,
+  updateFolder,
 } from "../folders/service.js";
 import { search } from "../search/service.js";
 import { createTag, listTags } from "../tags/service.js";
@@ -84,6 +85,10 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
         .optional()
         .describe("Parent folder id, or null/omit for the root."),
       description: z.string().max(100000).optional(),
+      favorite: z
+        .boolean()
+        .optional()
+        .describe("Star it right away (shown in the Favourites bar)."),
     },
     async (args) =>
       ok(
@@ -91,6 +96,29 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
           name: args.name,
           parentId: args.parentId ?? null,
           description: args.description,
+          favorite: args.favorite,
+        }),
+      ),
+  );
+
+  server.tool(
+    "update_folder",
+    "Update a folder's name, description, or favourite (starred) flag. Only provided fields change.",
+    {
+      id: z.string().uuid(),
+      name: z.string().min(1).max(256).optional(),
+      description: z.string().max(100000).nullable().optional(),
+      favorite: z
+        .boolean()
+        .optional()
+        .describe("Star/unstar the folder (shown in the Favourites bar)."),
+    },
+    async (args) =>
+      ok(
+        updateFolder(ctx, args.id, {
+          name: args.name,
+          description: args.description,
+          favorite: args.favorite,
         }),
       ),
   );

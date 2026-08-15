@@ -1121,12 +1121,13 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
-          selected
+          selected || sf.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <CardDragHandle drag={drag} />
+        <FavoriteToggle folder={sf} />
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-8 w-8" />
@@ -1182,6 +1183,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         {t("folder.itemsCount", { count })}
       </div>
       <CardDragHandle drag={drag} />
+      <FavoriteToggle folder={sf} />
       <KebabMenu items={p.folderKebab(sf)} />
     </div>
   );
@@ -1222,12 +1224,13 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         </div>
         <div
           className={`flex shrink-0 items-center gap-0.5 transition-opacity ${
-            selected
+            selected || sf.favorite
               ? "opacity-100"
               : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
           }`}
         >
           <CardDragHandle drag={drag} />
+          <FavoriteToggle folder={sf} />
           <KebabMenu items={p.folderKebab(sf)} />
         </div>
       </div>
@@ -1275,12 +1278,13 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
-          selected
+          selected || sf.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
         <CardDragHandle drag={drag} />
+        <FavoriteToggle folder={sf} />
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-10 w-10" />
@@ -1461,7 +1465,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
           </a>
           <div
             className={`flex shrink-0 items-center gap-0.5 transition-opacity ${
-              selected
+              selected || b.favorite
                 ? "opacity-100"
                 : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             }`}
@@ -1521,7 +1525,7 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       />
       <div
         className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
-          selected
+          selected || b.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
@@ -1675,6 +1679,7 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         {relativeTime(sf.createdAt)}
       </td>
       <td className="px-2 py-2" onClick={stopBubble}>
+        <FavoriteToggle folder={sf} />
         <KebabMenu items={p.folderKebab(sf)} />
       </td>
     </tr>

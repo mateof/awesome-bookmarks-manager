@@ -257,6 +257,8 @@ export const folders = sqliteTable(
     // Set (to the source group name) when this was imported from a group
     // share, so the UI can mark it as "shared".
     shareOrigin: text("share_origin"),
+    /** Starred by the user; shown in the "Favoritos" bar. */
+    favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     // When set, this folder is a live "symlink" portal to a group share: it
     // has no real children; opening it renders the share's current content.
     linkedShareId: text("linked_share_id"),

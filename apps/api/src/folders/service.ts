@@ -28,6 +28,7 @@ interface FolderRow {
   imageBlobPath: string | null;
   bgColor: string | null;
   shareOrigin: string | null;
+  favorite: boolean;
   linkedShareId: string | null;
   position: number;
   rev: number;
@@ -47,6 +48,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
     shareOrigin: row.shareOrigin,
+    favorite: row.favorite,
     linkedShareId: row.linkedShareId,
     position: row.position,
     rev: row.rev,
@@ -95,6 +97,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
             shareOrigin: r.shareOrigin,
+            favorite: r.favorite,
             linkedShareId: r.linkedShareId,
             position: r.position,
             rev: r.rev,
@@ -139,6 +142,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
       shareOrigin: row.shareOrigin,
+      favorite: row.favorite,
       linkedShareId: row.linkedShareId,
       position: row.position,
       rev: row.rev,
@@ -202,6 +206,7 @@ export function createFolder(
     description?: string;
     tagIds?: string[];
     bgColor?: string | null;
+    favorite?: boolean;
     shareOrigin?: string | null;
     linkedShareId?: string | null;
   },
@@ -225,6 +230,7 @@ export function createFolder(
         : null,
       bgColor: input.bgColor ?? null,
       shareOrigin: input.shareOrigin ?? null,
+      favorite: input.favorite ?? false,
       linkedShareId: input.linkedShareId ?? null,
       position: nextPosition(ctx, parentId),
     })
@@ -251,6 +257,7 @@ export function updateFolder(
     description?: string | null;
     tagIds?: string[];
     bgColor?: string | null;
+    favorite?: boolean;
     /** Optimistic concurrency: reject with 409 if the row no longer has it. */
     baseRev?: number;
   },
@@ -273,6 +280,9 @@ export function updateFolder(
   }
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
+  }
+  if (input.favorite !== undefined) {
+    update.favorite = input.favorite;
   }
 
   // When baseRev is supplied the update is conditional on the stored rev still

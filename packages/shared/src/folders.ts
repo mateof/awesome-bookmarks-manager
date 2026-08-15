@@ -16,6 +16,8 @@ export const FolderSchema = z.object({
   imageBlobPath: z.string().nullable(),
   bgColor: z.string().nullable().optional(),
   shareOrigin: z.string().nullable().default(null),
+  /** Starred by the user; surfaced in the "Favoritos" bar. */
+  favorite: z.boolean().default(false),
   // When set, this folder is a live portal ("symlink") to a group share.
   linkedShareId: z.string().nullable().default(null),
   position: z.number().int(),
@@ -32,6 +34,7 @@ export const CreateFolderBodySchema = z.object({
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  favorite: z.boolean().optional(),
 });
 export type CreateFolderBody = z.infer<typeof CreateFolderBodySchema>;
 
@@ -40,6 +43,7 @@ export const UpdateFolderBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  favorite: z.boolean().optional(),
   // Optimistic concurrency: the rev the client last saw. When present and it
   // no longer matches the stored row, the update is rejected with 409.
   baseRev: z.number().int().optional(),

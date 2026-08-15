@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Bookmark, SharedItem } from "@awesome-bookmarks/shared";
+import type { Bookmark, Folder, SharedItem } from "@awesome-bookmarks/shared";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 
 interface Props {
+  folders: Folder[];
   bookmarks: Bookmark[];
 }
 
@@ -22,7 +23,7 @@ interface Props {
  * Each opens a single panel that uses click-to-expand (no hover flyouts) so
  * navigation is reliable on touch and never loses tracking on mouse gaps.
  */
-export function BookmarksBar({ bookmarks }: Props) {
+export function BookmarksBar({ folders, bookmarks }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState<"mine" | "shared" | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -60,7 +61,7 @@ export function BookmarksBar({ bookmarks }: Props) {
 
       {open === "mine" && (
         <Panel onClose={() => setOpen(null)}>
-          <FavoritesList bookmarks={bookmarks} />
+          <FavoritesList folders={folders} bookmarks={bookmarks} />
         </Panel>
       )}
       {open === "shared" && (
@@ -120,22 +121,45 @@ function Panel({
 // ---------- Favourites ----------
 
 /**
- * The starred bookmarks, flat and alphabetical. This panel is the quick-access
- * bar, so it deliberately shows only what the user marked as favourite instead
- * of mirroring the whole tree (that lives in the sidebar and the folder pages).
+ * The starred folders and bookmarks, flat and alphabetical (folders first).
+ * This panel is the quick-access bar, so it deliberately shows only what the
+ * user marked as favourite instead of mirroring the whole tree (that lives in
+ * the sidebar and the folder pages).
  */
-function FavoritesList({ bookmarks }: { bookmarks: Bookmark[] }) {
+function FavoritesList({
+  folders,
+  bookmarks,
+}: {
+  folders: Folder[];
+  bookmarks: Bookmark[];
+}) {
   const { t } = useTranslation();
-  const favorites = bookmarks
+  const favFolders = folders
+    .filter((f) => f.favorite)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const favBookmarks = bookmarks
     .filter((b) => b.favorite)
     .sort((a, b) => a.title.localeCompare(b.title));
 
-  if (favorites.length === 0) {
+  if (favFolders.length === 0 && favBookmarks.length === 0) {
     return <Empty>{t("bookmarksBar.emptyFavorites")}</Empty>;
   }
   return (
     <ul className="text-sm">
-      {favorites.map((b) => (
+      {favFolders.map((f) => (
+        <li key={f.id}>
+          <Link
+            to={`/folder/${f.id}`}
+            data-close-on-click
+            className="flex items-center gap-2 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+            style={{ paddingLeft: 8 + 17 }}
+          >
+            <FolderClosed className="h-4 w-4 shrink-0 text-slate-500" />
+            <span className="truncate">{f.name}</span>
+          </Link>
+        </li>
+      ))}
+      {favBookmarks.map((b) => (
         <BookmarkRow key={b.id} bookmark={b} depth={0} />
       ))}
     </ul>

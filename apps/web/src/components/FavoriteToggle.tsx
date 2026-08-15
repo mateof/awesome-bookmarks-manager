@@ -1,37 +1,64 @@
-import type { Bookmark } from "@awesome-bookmarks/shared";
+import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 
+type Target =
+  | { kind: "bookmark"; item: Bookmark }
+  | { kind: "folder"; item: Folder };
+
 /**
- * Star button that adds/removes a bookmark from favourites. Optimistic: the
- * star fills immediately and rolls back if the request fails, because this is
- * a one-click action where waiting for a round trip feels broken.
+ * Star button that adds/removes a bookmark or folder from favourites.
+ * Optimistic: the star fills immediately and rolls back if the request fails,
+ * because this is a one-click action where waiting for a round trip feels
+ * broken.
  */
 export function FavoriteToggle({
   bookmark,
+  folder,
   className = "",
   size = "h-4 w-4",
 }: {
-  bookmark: Bookmark;
+  bookmark?: Bookmark;
+  folder?: Folder;
   className?: string;
   size?: string;
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const on = !!bookmark.favorite;
+
+  const target: Target | null = bookmark
+    ? { kind: "bookmark", item: bookmark }
+    : folder
+      ? { kind: "folder", item: folder }
+      : null;
+
+  const on = !!target?.item.favorite;
+  const listKey = target?.kind === "folder" ? "folders" : "bookmarks";
 
   const toggle = useMutation({
-    mutationFn: () => api.updateBookmark(bookmark.id, { favorite: !on }),
+    mutationFn: async () => {
+      if (!target) throw new Error("FavoriteToggle needs a bookmark or a folder");
+      if (target.kind === "bookmark") {
+        await api.updateBookmark(target.item.id, { favorite: !on });
+      } else {
+        await api.updateFolder(target.item.id, { favorite: !on });
+      }
+    },
     onMutate: async () => {
-      await qc.cancelQueries({ queryKey: ["bookmarks"] });
-      const previous = qc.getQueriesData<Bookmark[]>({ queryKey: ["bookmarks"] });
+      if (!target) return { previous: [] as [readonly unknown[], unknown][] };
+      await qc.cancelQueries({ queryKey: [listKey] });
+      const previous = qc.getQueriesData<(Bookmark | Folder)[]>({
+        queryKey: [listKey],
+      });
       for (const [key, list] of previous) {
         if (!Array.isArray(list)) continue;
         qc.setQueryData(
           key,
-          list.map((b) => (b.id === bookmark.id ? { ...b, favorite: !on } : b)),
+          list.map((it) =>
+            it.id === target.item.id ? { ...it, favorite: !on } : it,
+          ),
         );
       }
       return { previous };
@@ -43,10 +70,12 @@ export function FavoriteToggle({
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["bookmarks"] });
-      qc.invalidateQueries({ queryKey: ["bookmark", bookmark.id] });
-      qc.invalidateQueries({ queryKey: ["favorites"] });
+      qc.invalidateQueries({ queryKey: ["folders"] });
+      if (target) qc.invalidateQueries({ queryKey: [target.kind, target.item.id] });
     },
   });
+
+  if (!target) return null;
 
   return (
     <button

@@ -59,3 +59,44 @@ test("favoritos: añadir, listar en la barra y quitar", async ({ browser }) => {
   const none = await (await req.get("/api/bookmarks?favorite=1")).json();
   expect(none).toHaveLength(0);
 });
+
+test("favoritos: también funcionan con carpetas", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "favorites.folders.e2e@example.com",
+    nickname: "favfoldersuser",
+    password: "StarredFolders2024",
+  });
+  const req = page.request;
+
+  await req.post("/api/folders", { data: { name: "CarpetaFav" } });
+  await req.post("/api/folders", { data: { name: "CarpetaNormal" } });
+
+  await page.goto("/");
+  const folderCard = page
+    .locator("div.group.relative")
+    .filter({ hasText: "CarpetaFav" })
+    .first();
+
+  await folderCard.getByRole("button", { name: "Añadir a favoritos" }).click();
+  await expect(
+    folderCard.getByRole("button", { name: "Quitar de favoritos" }),
+  ).toBeVisible();
+
+  // The starred folder shows in the Favoritos bar; the other one does not.
+  await page.getByRole("button", { name: "Favoritos", exact: true }).click();
+  const panel = page.locator("div.absolute.left-0.top-full");
+  await expect(panel.getByText("CarpetaFav", { exact: true })).toBeVisible();
+  await expect(panel.getByText("CarpetaNormal", { exact: true })).toHaveCount(0);
+
+  // And it links to the folder.
+  await panel.getByText("CarpetaFav", { exact: true }).click();
+  await expect(page).toHaveURL(/\/folder\//);
+
+  // The API reports it as favourite.
+  const folders = await (await req.get("/api/folders")).json();
+  const fav = folders.filter((f: { favorite: boolean }) => f.favorite);
+  expect(fav.map((f: { name: string }) => f.name)).toEqual(["CarpetaFav"]);
+});
