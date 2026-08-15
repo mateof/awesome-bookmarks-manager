@@ -7,13 +7,20 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { readBlob } from "../storage/blobs.js";
+import { openPanelBgAsset, storePanelBgAsset } from "../storage/panel-assets.js";
+import { BadRequest, NotFound } from "../util/errors.js";
+import { imageEtag } from "../util/image.js";
 import {
+  clearPanelBgAsset,
   createPanel,
   deletePanel,
   getPanel,
   listPanels,
+  panelBgForPublic,
   regeneratePanel,
   resolvePublicPanel,
+  setPanelBgAsset,
   updatePanel,
 } from "./service.js";
 import {
@@ -65,6 +72,24 @@ export const panelRoutes: FastifyPluginAsync = async (app) => {
     reply.code(204);
   });
 
+  // Custom background asset (static image, GIF or short video).
+  app.post("/panels/:id/background", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
+    const file = await req.file();
+    if (!file) throw BadRequest("file part missing");
+    getPanel(ctx, id); // ownership check (throws NotFound)
+    const { path, mime } = await storePanelBgAsset(ctx.userId, id, file);
+    return setPanelBgAsset(ctx, id, path, mime);
+  });
+
+  app.delete("/panels/:id/background", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return clearPanelBgAsset(ctx, id);
+  });
+
   // Templates (built-ins + the user's own).
   app.get("/panel-templates", async (req) => listTemplates(requireAuth(req)));
 
@@ -106,5 +131,25 @@ export const publicPanelRoutes: FastifyPluginAsync = async (app) => {
       password: body.password,
       viewerUserId: req.session.get("userId"),
     });
+  });
+
+  // Stream the custom background asset for a public panel (no DEK needed; the
+  // blob is MASTER_KEY-sealed). Decorative, so it is served for public/password
+  // panels and gated only for "users" panels.
+  app.get("/public/panel/:slug/background", async (req, reply) => {
+    const { slug } = SlugParam.parse(req.params);
+    const info = panelBgForPublic(slug, req.session.get("userId"));
+    if (!info) throw NotFound("Background not set");
+    const etag = imageEtag(info.updatedAt);
+    reply.header("etag", etag);
+    reply.header("cache-control", "public, max-age=300");
+    if (req.headers["if-none-match"] === etag) {
+      reply.code(304).send();
+      return;
+    }
+    const sealed = await readBlob(info.path);
+    const bytes = openPanelBgAsset(info.ownerId, sealed);
+    reply.header("content-type", info.mime);
+    return reply.send(bytes);
   });
 };

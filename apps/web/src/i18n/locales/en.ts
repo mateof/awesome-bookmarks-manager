@@ -161,6 +161,10 @@ const en = {
     tabTitle: "Browser tab title",
     tabTitlePlaceholder: "Browser tab text",
     faviconEmoji: "Icon (emoji)",
+    customBg: "Custom background",
+    uploadBg: "Upload background",
+    removeBg: "Remove background",
+    customBgHint: "Image, GIF or short video (MP4/WebM), up to 25 MB. Overrides the theme background.",
   },
   tags: {
     pageTitle: "Tags",

@@ -105,6 +105,9 @@ export const panels = sqliteTable(
     /** Browser tab text / emoji favicon overrides (null = fall back). */
     tabTitle: text("tab_title"),
     faviconEmoji: text("favicon_emoji"),
+    /** Custom background asset: MASTER_KEY-sealed blob path + its MIME type. */
+    bgBlobPath: text("bg_blob_path"),
+    bgMime: text("bg_mime"),
     folderId: text("folder_id").notNull(),
     templateId: text("template_id"),
     accessMode: text("access_mode").notNull().default("public"),

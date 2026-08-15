@@ -608,6 +608,24 @@ export const api = {
     request<void>(`/panels/${id}`, { method: "DELETE" }),
   regeneratePanel: (id: string) =>
     request<PanelDetail>(`/panels/${id}/regenerate`, { method: "POST" }),
+  // Custom panel background asset (image/gif/video). URL is public (served
+  // MASTER_KEY-sealed); pass the panel's updatedAt as `v` to bust the cache.
+  panelBgUrl: (slug: string, v?: string) =>
+    `${BASE}/public/panel/${encodeURIComponent(slug)}/background${v ? `?v=${encodeURIComponent(v)}` : ""}`,
+  uploadPanelBgAsset: async (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/panels/${id}/background`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) throw await iconError(res);
+    return res.json() as Promise<PanelDetail>;
+  },
+  clearPanelBgAsset: (id: string) =>
+    request<PanelDetail>(`/panels/${id}/background`, { method: "DELETE" }),
 
   // panel templates
   listTemplates: () => request<TemplateItem[]>("/panel-templates"),

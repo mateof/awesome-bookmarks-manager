@@ -161,6 +161,10 @@ const es = {
     tabTitle: "Título de la pestaña",
     tabTitlePlaceholder: "Texto de la pestaña del navegador",
     faviconEmoji: "Icono (emoji)",
+    customBg: "Fondo personalizado",
+    uploadBg: "Subir fondo",
+    removeBg: "Quitar fondo",
+    customBgHint: "Imagen, GIF o vídeo corto (MP4/WebM), hasta 25 MB. Sustituye al fondo del tema.",
   },
   tags: {
     pageTitle: "Tags",

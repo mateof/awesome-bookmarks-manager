@@ -172,6 +172,7 @@ function PanelEditModal({
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const accessLabel = (m: "public" | "password" | "users") =>
     m === "public"
       ? t("panels.access_public")
@@ -182,6 +183,38 @@ function PanelEditModal({
     queryKey: ["panel", panelId],
     queryFn: () => api.getPanel(panelId),
   });
+  const bgFileRef = useRef<HTMLInputElement>(null);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgErr, setBgErr] = useState<string | null>(null);
+
+  const afterBgChange = async () => {
+    await detail.refetch();
+    qc.invalidateQueries({ queryKey: ["panels"] });
+  };
+  const uploadBg = async (file: File) => {
+    setBgBusy(true);
+    setBgErr(null);
+    try {
+      await api.uploadPanelBgAsset(panelId, file);
+      await afterBgChange();
+    } catch (e) {
+      setBgErr(e instanceof ApiError ? e.message : t("common.error"));
+    } finally {
+      setBgBusy(false);
+    }
+  };
+  const removeBg = async () => {
+    setBgBusy(true);
+    setBgErr(null);
+    try {
+      await api.clearPanelBgAsset(panelId);
+      await afterBgChange();
+    } catch (e) {
+      setBgErr(e instanceof ApiError ? e.message : t("common.error"));
+    } finally {
+      setBgBusy(false);
+    }
+  };
   const templates = useQuery({ queryKey: ["panel-templates"], queryFn: api.listTemplates });
   const [form, setForm] = useState<Partial<PanelDetail> & { password?: string }>({});
   const [emails, setEmails] = useState<string | null>(null);
@@ -274,6 +307,67 @@ function PanelEditModal({
                   placeholder={t("panels.tabTitlePlaceholder")}
                 />
               </label>
+            </div>
+          </details>
+          <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+            <summary className="cursor-pointer text-sm text-slate-500">
+              {t("panels.customBg")}
+            </summary>
+            <div className="mt-2 space-y-2">
+              {d.bgAssetKind && (
+                <div className="h-28 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                  {d.bgAssetKind === "video" ? (
+                    <video
+                      src={api.panelBgUrl(d.slug, d.updatedAt)}
+                      className="h-full w-full object-cover"
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={api.panelBgUrl(d.slug, d.updatedAt)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  )}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className={btn}
+                  disabled={bgBusy}
+                  onClick={() => bgFileRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" /> {t("panels.uploadBg")}
+                </button>
+                {d.bgAssetKind && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+                    disabled={bgBusy}
+                    onClick={() => void removeBg()}
+                  >
+                    <Trash2 className="h-4 w-4" /> {t("panels.removeBg")}
+                  </button>
+                )}
+                {bgBusy && <span className="text-xs text-slate-400">{t("common.saving")}</span>}
+              </div>
+              <p className="text-xs text-slate-400">{t("panels.customBgHint")}</p>
+              {bgErr && <div className="text-sm text-red-600">{bgErr}</div>}
+              <input
+                ref={bgFileRef}
+                type="file"
+                accept="image/*,video/mp4,video/webm"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadBg(f);
+                  e.target.value = "";
+                }}
+              />
             </div>
           </details>
           <div className="flex flex-wrap gap-2">

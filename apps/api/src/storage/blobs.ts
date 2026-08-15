@@ -18,6 +18,10 @@ export function folderBlobDir(userId: string, folderId: string): string {
   return join(userBlobDir(userId), "folders", folderId);
 }
 
+export function panelBlobDir(userId: string, panelId: string): string {
+  return join(userBlobDir(userId), "panels", panelId);
+}
+
 /**
  * Write bytes (already encrypted by caller) to disk.
  * Returns a stable storage path (relative to DATA_DIR/blobs) suitable for DB.

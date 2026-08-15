@@ -1,4 +1,5 @@
 import type {
+  PanelBgKind,
   PanelBookmark,
   PanelFolder,
   TemplateConfig,
@@ -31,11 +32,16 @@ export function PanelRenderer({
   root,
   template,
   displayTitle,
+  bgAssetUrl,
+  bgAssetKind,
 }: {
   root: PanelFolder;
   template: TemplateConfig;
   /** Overrides the panel's root heading (falls back to the folder name). */
   displayTitle?: string | null;
+  /** Custom uploaded background; takes precedence over the template scene. */
+  bgAssetUrl?: string | null;
+  bgAssetKind?: PanelBgKind | null;
 }) {
   const [sp, setSp] = useSearchParams();
   const [descBookmark, setDescBookmark] = useState<PanelBookmark | null>(null);
@@ -124,7 +130,11 @@ export function PanelRenderer({
         minHeight: "100vh",
       }}
     >
-      <PanelBackground scene={template.scene} />
+      {bgAssetUrl ? (
+        <AssetBackground url={bgAssetUrl} kind={bgAssetKind} />
+      ) : (
+        <PanelBackground scene={template.scene} />
+      )}
       <div
         style={{
           position: "relative",
@@ -642,6 +652,23 @@ function FolderCard({ folder, template, onOpen }: { folder: PanelFolder; templat
       </span>
     </button>
   );
+}
+
+/** Full-bleed custom background (uploaded image/gif/video) behind the panel. */
+function AssetBackground({ url, kind }: { url: string; kind?: PanelBgKind | null }) {
+  const style: React.CSSProperties = {
+    position: "fixed",
+    inset: 0,
+    zIndex: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    pointerEvents: "none",
+  };
+  if (kind === "video") {
+    return <video style={style} src={url} autoPlay muted loop playsInline aria-hidden />;
+  }
+  return <img style={style} src={url} alt="" aria-hidden />;
 }
 
 /**

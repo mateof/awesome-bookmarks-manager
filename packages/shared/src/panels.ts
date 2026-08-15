@@ -103,6 +103,9 @@ export interface TemplateItem {
 export const PanelAccessModeSchema = z.enum(["public", "password", "users"]);
 export type PanelAccessMode = z.infer<typeof PanelAccessModeSchema>;
 
+/** Kind of custom panel background asset. `image` covers static images + GIFs. */
+export type PanelBgKind = "image" | "video";
+
 export const PanelSlugSchema = z
   .string()
   .trim()
@@ -163,6 +166,8 @@ export interface PanelListItem {
   displayTitle: string | null;
   tabTitle: string | null;
   faviconEmoji: string | null;
+  /** Set when the panel has an uploaded custom background (image/gif/video). */
+  bgAssetKind: PanelBgKind | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -199,6 +204,13 @@ export interface PublicPanelResponse {
   /** Browser tab text and icon (emoji) overrides. */
   tabTitle?: string | null;
   faviconEmoji?: string | null;
+  /**
+   * Custom uploaded background. `bgAssetVersion` is a cache-busting token
+   * (the panel's updatedAt); the asset is fetched from
+   * `/public/panel/:slug/background`.
+   */
+  bgAssetKind?: PanelBgKind | null;
+  bgAssetVersion?: string | null;
   /** Present only when unlocked/authorized. */
   root?: PanelFolder;
   needsPassword?: boolean;

@@ -23,6 +23,8 @@ import {
   users,
 } from "../db/schema.js";
 import { getEnv } from "../env.js";
+import { deleteBlob } from "../storage/blobs.js";
+import { panelBgKind } from "../storage/panel-assets.js";
 import { BadRequest, Conflict, NotFound, Unauthorized } from "../util/errors.js";
 import { resolveTemplateConfig } from "./templates.js";
 
@@ -182,6 +184,7 @@ function toListItem(row: typeof panels.$inferSelect): PanelListItem {
     displayTitle: row.displayTitle ?? null,
     tabTitle: row.tabTitle ?? null,
     faviconEmoji: row.faviconEmoji ?? null,
+    bgAssetKind: panelBgKind(row.bgMime),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -329,6 +332,8 @@ export async function resolvePublicPanel(
     displayTitle: row.displayTitle ?? null,
     tabTitle: row.tabTitle ?? null,
     faviconEmoji: row.faviconEmoji ?? null,
+    bgAssetKind: panelBgKind(row.bgMime),
+    bgAssetVersion: row.bgBlobPath ? row.updatedAt : null,
   };
 
   if (row.accessMode === "password") {
@@ -349,4 +354,68 @@ export async function resolvePublicPanel(
   }
   const json = masterUnwrap(row.userId, Buffer.from(row.payloadCt)).toString("utf8");
   return { ...base, root: JSON.parse(json) };
+}
+
+/** Persist a freshly stored background asset (path already written to disk). */
+export function setPanelBgAsset(
+  ctx: AuthedContext,
+  id: string,
+  path: string,
+  mime: string,
+): PanelDetail {
+  const row = getDb()
+    .select({ id: panels.id, bgBlobPath: panels.bgBlobPath })
+    .from(panels)
+    .where(and(eq(panels.id, id), eq(panels.userId, ctx.userId)))
+    .get();
+  if (!row) throw NotFound("Panel not found");
+  const previous = row.bgBlobPath;
+  getDb()
+    .update(panels)
+    .set({ bgBlobPath: path, bgMime: mime, updatedAt: new Date().toISOString() })
+    .where(eq(panels.id, id))
+    .run();
+  // Drop the old file if it was stored at a different path (defensive; we reuse
+  // the same filename today, so this is usually a no-op).
+  if (previous && previous !== path) void deleteBlob(previous);
+  return getPanel(ctx, id);
+}
+
+/** Remove a panel's custom background asset (clears the row + deletes the file). */
+export function clearPanelBgAsset(ctx: AuthedContext, id: string): PanelDetail {
+  const row = getDb()
+    .select({ id: panels.id, bgBlobPath: panels.bgBlobPath })
+    .from(panels)
+    .where(and(eq(panels.id, id), eq(panels.userId, ctx.userId)))
+    .get();
+  if (!row) throw NotFound("Panel not found");
+  getDb()
+    .update(panels)
+    .set({ bgBlobPath: null, bgMime: null, updatedAt: new Date().toISOString() })
+    .where(eq(panels.id, id))
+    .run();
+  if (row.bgBlobPath) void deleteBlob(row.bgBlobPath);
+  return getPanel(ctx, id);
+}
+
+/**
+ * Resolve a panel's background asset for public streaming. Mirrors the payload
+ * access model but is decorative: `public`/`password` panels serve it freely
+ * (a browser can't attach a password to an <img>/<video> request), while
+ * `users` panels require an authorized session. Returns null when there is no
+ * asset or the viewer isn't allowed (the route then answers 404).
+ */
+export function panelBgForPublic(
+  slug: string,
+  viewerUserId?: string,
+): { path: string; mime: string; updatedAt: string; ownerId: string } | null {
+  const row = getDb().select().from(panels).where(eq(panels.slug, slug)).get();
+  if (!row || !row.bgBlobPath || !row.bgMime) return null;
+  if (row.accessMode === "users") {
+    const allowed =
+      !!viewerUserId &&
+      (viewerUserId === row.userId || allowedUserIds(row.id).includes(viewerUserId));
+    if (!allowed) return null;
+  }
+  return { path: row.bgBlobPath, mime: row.bgMime, updatedAt: row.updatedAt, ownerId: row.userId };
 }

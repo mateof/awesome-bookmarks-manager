@@ -16,8 +16,9 @@ import {
 } from "../folders/service.js";
 import { search } from "../search/service.js";
 import { createTag, listTags } from "../tags/service.js";
+import { registerPanelTools } from "./panels-tools.js";
 
-const MCP_VERSION = "0.6.0";
+const MCP_VERSION = "0.7.0";
 
 function ok(data: unknown) {
   return {
@@ -230,6 +231,8 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
     async (args) =>
       ok(createTag(ctx, { name: args.name, color: args.color ?? "#64748b" })),
   );
+
+  registerPanelTools(server, ctx);
 
   return server;
 }

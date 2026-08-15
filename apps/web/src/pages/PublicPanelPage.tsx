@@ -60,11 +60,17 @@ export function PublicPanelPage() {
   if (!resp) return <Centered>…</Centered>;
 
   if (resp.root) {
+    const bgAssetUrl =
+      resp.bgAssetKind && slug
+        ? api.panelBgUrl(slug, resp.bgAssetVersion ?? undefined)
+        : null;
     return (
       <PanelRenderer
         root={resp.root}
         template={resp.template}
         displayTitle={resp.displayTitle}
+        bgAssetUrl={bgAssetUrl}
+        bgAssetKind={resp.bgAssetKind}
       />
     );
   }

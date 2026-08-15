@@ -161,6 +161,10 @@ const gl = {
     tabTitle: "Título da lapela",
     tabTitlePlaceholder: "Texto da lapela do navegador",
     faviconEmoji: "Icona (emoji)",
+    customBg: "Fondo personalizado",
+    uploadBg: "Subir fondo",
+    removeBg: "Quitar fondo",
+    customBgHint: "Imaxe, GIF ou vídeo curto (MP4/WebM), ata 25 MB. Substitúe o fondo do tema.",
   },
   tags: {
     pageTitle: "Etiquetas",
