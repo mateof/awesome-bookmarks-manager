@@ -165,6 +165,10 @@ const en = {
     uploadBg: "Upload background",
     removeBg: "Remove background",
     customBgHint: "Image, GIF or short video (MP4/WebM), up to 25 MB. Overrides the theme background.",
+    passwordLabel: "Password",
+    emailsLabel: "Users with access",
+    previewDesktop: "Desktop",
+    previewMobile: "Mobile",
   },
   tags: {
     pageTitle: "Tags",

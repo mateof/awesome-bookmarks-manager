@@ -69,8 +69,8 @@ export function TemplateEditor({
     setConfig((c) => ({ ...c, card: { ...c.card, [k]: v } }));
 
   return (
-    <Modal title={t("panels.templateEditorTitle")} onClose={onClose} size="lg">
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <Modal title={t("panels.templateEditorTitle")} onClose={onClose} size="xl">
+      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <div className="space-y-3">
           <label className="block space-y-1 text-sm">
             <span className="text-slate-500">{t("panels.templateName")}</span>
@@ -220,7 +220,11 @@ export function TemplateEditor({
 
         <div className="space-y-2 lg:sticky lg:top-2 lg:self-start">
           <span className="text-xs text-slate-500">{t("panels.preview")}</span>
-          <TemplatePreview config={config} />
+          <TemplatePreview
+            config={config}
+            desktopLabel={t("panels.previewDesktop")}
+            mobileLabel={t("panels.previewMobile")}
+          />
         </div>
       </div>
 

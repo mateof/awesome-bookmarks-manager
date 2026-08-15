@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
+import { useBackdropDismiss } from "../lib/overlay.js";
 
 type Result =
   | { kind: "folder"; id: string; title: string; sub: string }
@@ -18,6 +19,7 @@ type Result =
 export function Spotlight({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
   const nav = useNavigate();
+  const backdrop = useBackdropDismiss(onClose);
   const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
   const bookmarks = useQuery({
     queryKey: ["bookmarks", "all"],
@@ -103,7 +105,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-40 flex items-start justify-center bg-black/40 p-3 backdrop-blur-sm motion-safe:animate-[spotFade_.12s_ease-out]"
-      onClick={onClose}
+      {...backdrop}
     >
       <div
         className="mt-[12vh] w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl motion-safe:animate-[spotPop_.14s_ease-out] dark:border-slate-700 dark:bg-slate-900"

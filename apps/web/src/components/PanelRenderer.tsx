@@ -20,6 +20,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fuzzyScoreAny } from "../fuzzy.js";
+import { useBackdropDismiss } from "../lib/overlay.js";
 import { PanelBackground } from "./PanelBackground.js";
 
 /**
@@ -253,6 +254,7 @@ function PanelSearch({
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const backdrop = useBackdropDismiss(onClose);
 
   const results = useMemo(() => {
     const query = q.trim();
@@ -307,7 +309,7 @@ function PanelSearch({
 
   return (
     <div
-      onClick={onClose}
+      {...backdrop}
       className="fixed inset-0 z-50 flex items-start justify-center p-3 backdrop-blur-sm motion-safe:animate-[spotFade_.12s_ease-out] sm:p-4"
       style={{ background: "rgba(0,0,0,0.5)" }}
     >
@@ -921,6 +923,7 @@ function BookmarkRow({
 
 function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template: TemplateConfig; onClose: () => void }) {
   const t = template.theme;
+  const backdrop = useBackdropDismiss(onClose);
   const safe = useMemo(
     () => DOMPurify.sanitize(b.description ?? "", { ADD_ATTR: ["target", "rel"] }),
     [b.description],
@@ -976,7 +979,7 @@ function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template
 
   return (
     <div
-      onClick={onClose}
+      {...backdrop}
       className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4"
       style={{ background: `rgba(0,0,0,${dragging ? Math.max(0.2, 0.55 - dragY / 800) : 0.55})` }}
     >

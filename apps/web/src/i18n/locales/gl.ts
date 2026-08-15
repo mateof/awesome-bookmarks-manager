@@ -165,6 +165,10 @@ const gl = {
     uploadBg: "Subir fondo",
     removeBg: "Quitar fondo",
     customBgHint: "Imaxe, GIF ou vídeo curto (MP4/WebM), ata 25 MB. Substitúe o fondo do tema.",
+    passwordLabel: "Contrasinal",
+    emailsLabel: "Usuarios con acceso",
+    previewDesktop: "Escritorio",
+    previewMobile: "Móbil",
   },
   tags: {
     pageTitle: "Etiquetas",

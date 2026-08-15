@@ -1,20 +1,23 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { useBackdropDismiss } from "../lib/overlay.js";
 
 interface Props {
   title: string;
   children: React.ReactNode;
   onClose: () => void;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const SIZE = {
   sm: "max-w-sm",
   md: "max-w-md",
   lg: "max-w-2xl",
+  xl: "max-w-5xl",
 };
 
 export function Modal({ title, children, onClose, size = "md" }: Props) {
+  const backdrop = useBackdropDismiss(onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -26,7 +29,7 @@ export function Modal({ title, children, onClose, size = "md" }: Props) {
   return (
     <div
       className="fixed inset-0 z-30 flex items-end sm:items-center justify-center bg-black/40"
-      onClick={onClose}
+      {...backdrop}
     >
       <div
         className={`w-full ${SIZE[size]} max-h-[90vh] overflow-auto space-y-3 rounded-t-lg sm:rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}

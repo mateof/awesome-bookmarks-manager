@@ -106,11 +106,12 @@ test("editor de plantilla: la previsualización refleja el fondo elegido", async
   await page.getByRole("button", { name: "Nueva", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Editor de plantilla" })).toBeVisible();
 
-  // The live preview renders a sample panel; no scene by default.
-  await expect(page.getByText("Mi panel", { exact: true })).toBeVisible();
+  // The live preview renders sample panels (desktop + mobile); no scene yet.
+  await expect(page.getByText("Mis enlaces", { exact: true }).first()).toBeVisible();
   await expect(page.locator(".pbg-galaxy")).toHaveCount(0);
 
-  // Choosing the Galaxy scene makes the preview draw it immediately.
+  // Choosing the Galaxy scene makes both previews draw it immediately.
   await page.locator('select:has(option[value="galaxy"])').selectOption("galaxy");
-  await expect(page.locator(".pbg-galaxy")).toBeVisible();
+  await expect(page.locator(".pbg-galaxy")).toHaveCount(2);
+  await expect(page.locator(".pbg-galaxy").first()).toBeVisible();
 });

@@ -250,28 +250,37 @@ function PanelEditModal({
       ) : (
         <div className="space-y-3">
           <div className="grid gap-2 sm:grid-cols-2">
-            <input
-              className={input}
-              value={val("title") ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-            />
-            <input
-              className={input}
-              value={val("slug") ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))}
-            />
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.name")}</span>
+              <input
+                className={input}
+                value={val("title") ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              />
+            </label>
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.slug")}</span>
+              <input
+                className={input}
+                value={val("slug") ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))}
+              />
+            </label>
           </div>
-          <select
-            className={input}
-            value={val("templateId") ?? "builtin:grid"}
-            onChange={(e) => setForm((f) => ({ ...f, templateId: e.target.value }))}
-          >
-            {(templates.data ?? []).map((tpl) => (
-              <option key={tpl.id} value={tpl.id}>
-                {tpl.name}
-              </option>
-            ))}
-          </select>
+          <label className="space-y-1 text-sm">
+            <span className="text-slate-500">{t("panels.template")}</span>
+            <select
+              className={input}
+              value={val("templateId") ?? "builtin:grid"}
+              onChange={(e) => setForm((f) => ({ ...f, templateId: e.target.value }))}
+            >
+              {(templates.data ?? []).map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {tpl.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <details className="rounded-lg border border-slate-200 p-2 dark:border-slate-800">
             <summary className="cursor-pointer text-sm text-slate-500">
               {t("panels.identityHeading")}
@@ -370,6 +379,7 @@ function PanelEditModal({
               />
             </div>
           </details>
+          <div className="text-sm text-slate-500">{t("panels.access")}</div>
           <div className="flex flex-wrap gap-2">
             {(["public", "password", "users"] as const).map((m) => (
               <button
@@ -387,21 +397,27 @@ function PanelEditModal({
             ))}
           </div>
           {val("accessMode") === "password" && (
-            <input
-              type="password"
-              className={input}
-              placeholder={t("panels.passwordChangePlaceholder")}
-              value={form.password ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-            />
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.passwordLabel")}</span>
+              <input
+                type="password"
+                className={input}
+                placeholder={t("panels.passwordChangePlaceholder")}
+                value={form.password ?? ""}
+                onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              />
+            </label>
           )}
           {val("accessMode") === "users" && (
-            <textarea
-              className={`${input} h-20`}
-              value={emails ?? d.userEmails.join(", ")}
-              onChange={(e) => setEmails(e.target.value)}
-              placeholder={t("panels.emailsPlaceholder")}
-            />
+            <label className="space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.emailsLabel")}</span>
+              <textarea
+                className={`${input} h-20`}
+                value={emails ?? d.userEmails.join(", ")}
+                onChange={(e) => setEmails(e.target.value)}
+                placeholder={t("panels.emailsPlaceholder")}
+              />
+            </label>
           )}
           {err && <div className="text-sm text-red-600">{err}</div>}
           <div className="flex justify-end gap-2">

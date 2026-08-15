@@ -165,6 +165,10 @@ const es = {
     uploadBg: "Subir fondo",
     removeBg: "Quitar fondo",
     customBgHint: "Imagen, GIF o vídeo corto (MP4/WebM), hasta 25 MB. Sustituye al fondo del tema.",
+    passwordLabel: "Contraseña",
+    emailsLabel: "Usuarios con acceso",
+    previewDesktop: "Escritorio",
+    previewMobile: "Móvil",
   },
   tags: {
     pageTitle: "Tags",
