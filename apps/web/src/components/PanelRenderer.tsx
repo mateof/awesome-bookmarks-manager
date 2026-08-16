@@ -15,6 +15,7 @@ import {
   Folder as FolderIcon,
   Home,
   Info,
+  Download,
   Search,
   X,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { fuzzyScoreAny } from "../fuzzy.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
+import { downloadPanelBookmarks } from "../lib/panelExport.js";
 import { PanelBackground } from "./PanelBackground.js";
 
 /**
@@ -204,6 +206,30 @@ export function PanelRenderer({
         >
           <Search size={16} /> Buscar en el panel…
         </button>
+        )}
+
+        {template.showDownload !== false && (
+          <button
+            type="button"
+            onClick={() => downloadPanelBookmarks(root, rootTitle)}
+            title="Descarga un fichero que puedes importar en los marcadores del navegador"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "0.35rem 0.7rem",
+              marginBottom: "1rem",
+              borderRadius: "0.6rem",
+              background: "transparent",
+              border: `1px solid ${t.border}`,
+              color: t.muted,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 13,
+            }}
+          >
+            <Download size={14} /> Descargar marcadores
+          </button>
         )}
 
         {template.showBreadcrumb !== false && (

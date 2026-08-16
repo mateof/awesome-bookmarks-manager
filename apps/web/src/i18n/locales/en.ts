@@ -186,6 +186,7 @@ const en = {
     showSearch: "Search box",
     showBreadcrumb: "Breadcrumb",
     showSectionTitles: "Section titles",
+    showDownload: "Download button",
   },
   tags: {
     pageTitle: "Tags",

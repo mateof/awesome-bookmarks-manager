@@ -277,6 +277,7 @@ export function TemplateEditor({
                   ["showSearch", t("panels.showSearch")],
                   ["showBreadcrumb", t("panels.showBreadcrumb")],
                   ["showSectionTitles", t("panels.showSectionTitles")],
+                  ["showDownload", t("panels.showDownload")],
                 ] as const
               ).map(([k, label]) => (
                 <label key={k} className="flex items-center gap-1">

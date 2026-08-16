@@ -85,6 +85,8 @@ export const TemplateConfigSchema = z.object({
   showBreadcrumb: z.boolean().optional(),
   /** Show the section headings ("Carpetas" / "Enlaces"), default true. */
   showSectionTitles: z.boolean().optional(),
+  /** Offer the "download for the browser" bookmarks file (default true). */
+  showDownload: z.boolean().optional(),
 });
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
 
@@ -97,6 +99,7 @@ export const PANEL_LAYOUT_DEFAULTS = {
   showSearch: true,
   showBreadcrumb: true,
   showSectionTitles: true,
+  showDownload: true,
 };
 
 /* ------------------------------------------------------------------ */

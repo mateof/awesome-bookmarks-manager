@@ -1,5 +1,5 @@
 import { PANEL_LAYOUT_DEFAULTS, type TemplateConfig } from "@awesome-bookmarks/shared";
-import { ChevronRight, Filter, Folder as FolderIcon, Home, Search } from "lucide-react";
+import { ChevronRight, Download, Filter, Folder as FolderIcon, Home, Search } from "lucide-react";
 import { PanelBackground } from "./PanelBackground.js";
 
 /**
@@ -310,6 +310,24 @@ export function TemplatePreviewFrame({
         >
           <Search size={mobile ? 12 : 14} /> Buscar en el panel…
         </div>
+        )}
+
+        {config.showDownload !== false && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 4,
+              padding: "3px 8px",
+              marginBottom: 8,
+              borderRadius: 8,
+              border: `1px solid ${t.border}`,
+              color: t.muted,
+              fontSize: mobile ? 9 : 10,
+            }}
+          >
+            <Download size={mobile ? 10 : 11} /> Descargar marcadores
+          </div>
         )}
 
         {/* breadcrumb */}
