@@ -53,6 +53,20 @@ function buildBookmark(
   dek: Buffer,
   row: typeof bookmarks.$inferSelect,
 ): PanelBookmark {
+  if (row.aliasOf) {
+    const target = getDb()
+      .select()
+      .from(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.id, row.aliasOf),
+          eq(bookmarks.userId, userId),
+          isNull(bookmarks.deletedAt),
+        ),
+      )
+      .get();
+    if (target) row = target;
+  }
   return {
     id: row.id,
     title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
@@ -68,8 +82,10 @@ function buildFolder(
   userId: string,
   dek: Buffer,
   folderId: string,
+  /** Guards against a symlink cycle while materialising the tree. */
+  visiting: Set<string> = new Set(),
 ): PanelFolder {
-  const row = getDb()
+  let row = getDb()
     .select()
     .from(folders)
     .where(
@@ -81,12 +97,35 @@ function buildFolder(
     )
     .get();
   if (!row) throw NotFound("Folder not found");
+  // A symlink contributes the *target's* live content, which is what makes a
+  // panel built from linked folders stay up to date with the originals.
+  if (row.aliasOf) {
+    if (visiting.has(row.aliasOf)) {
+      return { id: row.id, name: "", description: null, bookmarks: [], subfolders: [] };
+    }
+    const target = getDb()
+      .select()
+      .from(folders)
+      .where(
+        and(
+          eq(folders.id, row.aliasOf),
+          eq(folders.userId, userId),
+          isNull(folders.deletedAt),
+        ),
+      )
+      .get();
+    if (!target) {
+      return { id: row.id, name: "", description: null, bookmarks: [], subfolders: [] };
+    }
+    visiting.add(row.aliasOf);
+    row = target;
+  }
   const childFolders = getDb()
     .select({ id: folders.id })
     .from(folders)
     .where(
       and(
-        eq(folders.parentId, folderId),
+        eq(folders.parentId, row.id),
         eq(folders.userId, userId),
         isNull(folders.deletedAt),
       ),
@@ -97,7 +136,7 @@ function buildFolder(
     .from(bookmarks)
     .where(
       and(
-        eq(bookmarks.folderId, folderId),
+        eq(bookmarks.folderId, row.id),
         eq(bookmarks.userId, userId),
         isNull(bookmarks.deletedAt),
       ),
@@ -110,7 +149,7 @@ function buildFolder(
       ? openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt))
       : null,
     bookmarks: childBookmarks.map((b) => buildBookmark(userId, dek, b)),
-    subfolders: childFolders.map((f) => buildFolder(userId, dek, f.id)),
+    subfolders: childFolders.map((f) => buildFolder(userId, dek, f.id, new Set(visiting))),
   };
 }
 

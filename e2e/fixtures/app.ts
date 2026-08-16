@@ -35,10 +35,13 @@ export async function shot(
   });
 }
 
-/** A user is "home" when the authenticated toolbar (the + Bookmark button) shows. */
+/**
+ * A user is "home" when the authenticated toolbar shows. The quick-add
+ * bookmark button is icon-only, so it is identified by its aria-label.
+ */
 async function expectHome(page: Page) {
   await expect(
-    page.getByRole("button", { name: "Bookmark", exact: true }),
+    page.getByRole("button", { name: "Nuevo bookmark", exact: true }),
   ).toBeVisible({ timeout: 20_000 });
 }
 
@@ -87,7 +90,7 @@ export async function openFolder(page: Page, name: string) {
 }
 
 export async function createBookmark(page: Page, b: BookmarkSeed) {
-  await page.getByRole("button", { name: "Bookmark", exact: true }).click();
+  await page.getByRole("button", { name: "Nuevo bookmark", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nuevo bookmark" })).toBeVisible();
   await page.getByPlaceholder("https://…", { exact: true }).fill(b.url);
   await page.getByPlaceholder(/^Título/).fill(b.title);

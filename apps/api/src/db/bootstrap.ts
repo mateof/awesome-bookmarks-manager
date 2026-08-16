@@ -29,6 +29,7 @@ export function ensureSchema() {
       icon_blob_path TEXT,
       image_blob_path TEXT,
       favorite INTEGER NOT NULL DEFAULT 0,
+      alias_of TEXT,
       position INTEGER NOT NULL DEFAULT 0,
       rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
@@ -52,6 +53,7 @@ export function ensureSchema() {
       snapshot_text_path TEXT,
       snapshot_status TEXT NOT NULL DEFAULT 'none',
       favorite INTEGER NOT NULL DEFAULT 0,
+      alias_of TEXT,
       position INTEGER NOT NULL DEFAULT 0,
       rev INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (current_timestamp),
@@ -285,6 +287,9 @@ export function ensureSchema() {
   // Starred bookmarks ("Favoritos" bar).
   tryAddColumn("bookmarks", "favorite", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("folders", "favorite", "INTEGER NOT NULL DEFAULT 0");
+  // Symlinks: an alias row points at the real folder/bookmark it mirrors.
+  tryAddColumn("folders", "alias_of", "TEXT");
+  tryAddColumn("bookmarks", "alias_of", "TEXT");
   // Optimistic-concurrency revision for folders/bookmarks.
   tryAddColumn("folders", "rev", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("bookmarks", "rev", "INTEGER NOT NULL DEFAULT 1");

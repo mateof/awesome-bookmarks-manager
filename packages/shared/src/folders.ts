@@ -18,6 +18,8 @@ export const FolderSchema = z.object({
   shareOrigin: z.string().nullable().default(null),
   /** Starred by the user; surfaced in the "Favoritos" bar. */
   favorite: z.boolean().default(false),
+  /** Symlink: id of the real folder this row mirrors (null = a real folder). */
+  aliasOf: z.string().nullable().default(null),
   // When set, this folder is a live portal ("symlink") to a group share.
   linkedShareId: z.string().nullable().default(null),
   position: z.number().int(),

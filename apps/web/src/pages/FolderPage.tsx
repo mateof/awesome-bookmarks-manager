@@ -12,6 +12,7 @@ import {
   GripVertical,
   History,
   LayoutDashboard,
+  Link2,
   Palette,
   PencilLine,
   Plus,
@@ -27,6 +28,7 @@ import { copyRichLink } from "../lib/clipboard.js";
 import { contrastClass, useCardTone } from "../lib/contrast.js";
 import { CopyButton } from "../components/CopyButton.js";
 import { FavoriteToggle } from "../components/FavoriteToggle.js";
+import { LetterIcon } from "../components/LetterIcon.js";
 import { AppearanceDialog } from "../components/AppearanceDialog.js";
 import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
@@ -137,6 +139,10 @@ export function FolderPage() {
     id: string;
   } | null>(null);
   const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
+  const [linkTarget, setLinkTarget] = useState<{
+    kind: "folder" | "bookmark";
+    id: string;
+  } | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["folders"] });
@@ -406,6 +412,15 @@ export function FolderPage() {
       icon: <Copy className="h-4 w-4" />,
       onClick: () => setCopyTarget({ kind: "folder", id: f.id }),
     },
+    ...(f.aliasOf
+      ? []
+      : [
+          {
+            label: t("folder.linkKebab"),
+            icon: <Link2 className="h-4 w-4" />,
+            onClick: () => setLinkTarget({ kind: "folder", id: f.id }),
+          },
+        ]),
     {
       label: t("panels.generateKebab"),
       icon: <LayoutDashboard className="h-4 w-4" />,
@@ -445,6 +460,15 @@ export function FolderPage() {
       icon: <Copy className="h-4 w-4" />,
       onClick: () => setCopyTarget({ kind: "bookmark", id: b.id }),
     },
+    ...(b.aliasOf
+      ? []
+      : [
+          {
+            label: t("folder.linkKebab"),
+            icon: <Link2 className="h-4 w-4" />,
+            onClick: () => setLinkTarget({ kind: "bookmark", id: b.id }),
+          },
+        ]),
     {
       label: t("folder.copyLinkKebab"),
       icon: <ClipboardCopy className="h-4 w-4" />,
@@ -545,10 +569,20 @@ export function FolderPage() {
         ]}
       />
       <button
-        onClick={() => setShowAddBookmark(true)}
-        className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
+        onClick={() => setShowAddFolder(true)}
+        title={t("folder.quickAddFolder")}
+        aria-label={t("folder.quickAddFolder")}
+        className="rounded border border-slate-300 p-1.5 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
       >
-        <Plus className="h-4 w-4" /> {t("folder.addBookmark")}
+        <FolderPlus className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => setShowAddBookmark(true)}
+        title={t("folder.quickAddBookmark")}
+        aria-label={t("folder.quickAddBookmark")}
+        className="rounded bg-slate-900 p-1.5 text-white dark:bg-slate-100 dark:text-slate-900"
+      >
+        <Plus className="h-4 w-4" />
       </button>
     </>
   );
@@ -673,7 +707,12 @@ export function FolderPage() {
         bookmarkKebab={bookmarkKebab}
         onNavFolder={(id) => {
           const sf = subfolders.find((f) => f.id === id);
-          nav(sf?.linkedShareId ? `/linked/${id}` : `/folder/${id}`);
+          if (sf?.linkedShareId) {
+            nav(`/linked/${id}`);
+            return;
+          }
+          // A symlink opens the real folder, so its contents are the live ones.
+          nav(`/folder/${sf?.aliasOf ?? id}`);
         }}
       />
 
@@ -766,6 +805,28 @@ export function FolderPage() {
             invalidate();
             setCopyTarget(null);
             if (r.type === "folder") nav(`/folder/${r.id}`);
+          }}
+        />
+      )}
+      {linkTarget && (
+        <MoveToDialog
+          folders={folders.data ?? []}
+          movingFolderIds={
+            linkTarget.kind === "folder" ? [linkTarget.id] : []
+          }
+          count={1}
+          title={t("linkDialog.title")}
+          description={t("linkDialog.description")}
+          confirmLabel={t("linkDialog.confirm")}
+          onClose={() => setLinkTarget(null)}
+          onConfirm={async (dest) => {
+            await api.createAlias({
+              targetType: linkTarget.kind,
+              targetId: linkTarget.id,
+              parentId: dest,
+            });
+            invalidate();
+            setLinkTarget(null);
           }}
         />
       )}
@@ -942,7 +1003,7 @@ function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
   const s: React.CSSProperties = {};
   if (b.bgColor) s.backgroundColor = b.bgColor;
   if (b.imageBlobPath) {
-    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.id, b.updatedAt)}')`;
+    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.aliasOf ?? b.id, b.updatedAt)}')`;
     s.backgroundSize = "cover";
     s.backgroundPosition = "center";
   }
@@ -954,7 +1015,7 @@ function folderBgUrl(f: Folder): string | null {
 }
 
 function bookmarkBgUrl(b: Bookmark): string | null {
-  return b.imageBlobPath ? api.bookmarkBgImageUrl(b.id, b.updatedAt) : null;
+  return b.imageBlobPath ? api.bookmarkBgImageUrl(b.aliasOf ?? b.id, b.updatedAt) : null;
 }
 
 /** Extra class that forces readable text when a card has a custom background;
@@ -968,16 +1029,33 @@ function useBookmarkContrast(b: Bookmark): string {
 }
 
 function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
-  if (sf.iconBlobPath) {
-    return (
-      <img
-        src={api.folderIconUrl(sf.id, sf.updatedAt)}
-        alt=""
-        className={`${size} rounded object-cover`}
-      />
-    );
-  }
-  return <FolderClosed className={`${size} text-slate-500`} />;
+  const inner = sf.iconBlobPath ? (
+    <img
+      src={api.folderIconUrl(sf.aliasOf ?? sf.id, sf.updatedAt)}
+      alt=""
+      className={`${size} rounded object-cover`}
+    />
+  ) : (
+    <FolderClosed className={`${size} text-slate-500`} />
+  );
+  if (!sf.aliasOf) return inner;
+  return <AliasBadge>{inner}</AliasBadge>;
+}
+
+/** Marks a card as a symlink to the real folder/bookmark. */
+function AliasBadge({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <span className="relative inline-flex">
+      {children}
+      <span
+        title={t("folder.aliasBadge")}
+        className="absolute -bottom-1 -right-1 rounded-full bg-slate-700 p-0.5 text-white ring-2 ring-white dark:ring-slate-900"
+      >
+        <Link2 className="h-2 w-2" />
+      </span>
+    </span>
+  );
 }
 
 /**
@@ -1013,13 +1091,26 @@ function BookmarkIcon({ b, size }: { b: Bookmark; size: string }) {
   const { t } = useTranslation();
   const inner = b.iconBlobPath ? (
     <img
-      src={api.bookmarkIconUrl(b.id, b.updatedAt)}
+      src={api.bookmarkIconUrl(b.aliasOf ?? b.id, b.updatedAt)}
       alt=""
       className={`${size} shrink-0 rounded object-cover`}
     />
   ) : (
-    <ExternalLink className={`${size} shrink-0 text-slate-400`} />
+    <LetterIcon label={b.title || b.url} seed={b.url || b.title} size={size} />
   );
+  if (b.aliasOf) {
+    return (
+      <span className="relative inline-flex">
+        {inner}
+        <span
+          title={t("folder.aliasBadge")}
+          className="absolute -bottom-1 -right-1 rounded-full bg-slate-700 p-0.5 text-white ring-2 ring-white dark:ring-slate-900"
+        >
+          <Link2 className="h-2 w-2" />
+        </span>
+      </span>
+    );
+  }
   if (!b.shareOrigin) return inner;
   return (
     <span className="relative inline-flex">

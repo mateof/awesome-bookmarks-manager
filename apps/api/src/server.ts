@@ -30,6 +30,7 @@ import { folderRoutes } from "./folders/routes.js";
 import { iconRoutes } from "./icons/routes.js";
 import { importRoutes } from "./imports/routes.js";
 import { jobRoutes } from "./jobs/routes.js";
+import { aliasRoutes } from "./aliases/routes.js";
 import { mcpRoutes } from "./mcp/routes.js";
 import { reawakenForUser } from "./jobs/queue.js";
 import { startWorker, stopWorker } from "./jobs/worker.js";
@@ -142,7 +143,8 @@ export async function buildServer() {
       await api.register(adminRoutes);
       await api.register(jobRoutes);
       await api.register(panelRoutes);
-      await api.register(publicPanelRoutes);
+      await api.register(aliasRoutes);
+  await api.register(publicPanelRoutes);
     },
     { prefix: "/api" },
   );

@@ -29,6 +29,7 @@ interface FolderRow {
   bgColor: string | null;
   shareOrigin: string | null;
   favorite: boolean;
+  aliasOf: string | null;
   linkedShareId: string | null;
   position: number;
   rev: number;
@@ -49,6 +50,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     bgColor: row.bgColor,
     shareOrigin: row.shareOrigin,
     favorite: row.favorite,
+    aliasOf: row.aliasOf,
     linkedShareId: row.linkedShareId,
     position: row.position,
     rev: row.rev,
@@ -98,6 +100,7 @@ export function listFolders(ctx: AuthedContext): Folder[] {
             bgColor: r.bgColor,
             shareOrigin: r.shareOrigin,
             favorite: r.favorite,
+            aliasOf: r.aliasOf,
             linkedShareId: r.linkedShareId,
             position: r.position,
             rev: r.rev,
@@ -114,7 +117,31 @@ export function listFolders(ctx: AuthedContext): Folder[] {
       );
     }
   }
-  return out;
+  return applyFolderAliases(out);
+}
+
+/**
+ * Alias rows mirror another folder: overlay the target's display fields so the
+ * link always shows the original's current name/appearance. Identity fields
+ * (id, parent, position, aliasOf) stay the alias's own.
+ */
+function applyFolderAliases(list: Folder[]): Folder[] {
+  if (!list.some((f) => f.aliasOf)) return list;
+  const byId = new Map(list.map((f) => [f.id, f]));
+  return list.map((f) => {
+    if (!f.aliasOf) return f;
+    const target = byId.get(f.aliasOf);
+    if (!target) return f; // dangling link: keep the stored placeholder name
+    return {
+      ...f,
+      name: target.name,
+      description: target.description,
+      iconBlobPath: target.iconBlobPath,
+      imageBlobPath: target.imageBlobPath,
+      bgColor: target.bgColor,
+      tagIds: target.tagIds,
+    };
+  });
 }
 
 export function getFolder(ctx: AuthedContext, id: string): Folder {
@@ -143,6 +170,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       bgColor: row.bgColor,
       shareOrigin: row.shareOrigin,
       favorite: row.favorite,
+      aliasOf: row.aliasOf,
       linkedShareId: row.linkedShareId,
       position: row.position,
       rev: row.rev,

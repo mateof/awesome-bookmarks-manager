@@ -591,6 +591,17 @@ export const api = {
   folderActivity: (id: string) =>
     request<ActivityEntry[]>(`/folders/${id}/activity`),
 
+  // symlinks (aliases) to an existing folder/bookmark
+  createAlias: (body: {
+    targetType: "folder" | "bookmark";
+    targetId: string;
+    parentId: string | null;
+  }) =>
+    request<Folder | Bookmark>("/aliases", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
   // panels
   listPanels: () => request<PanelListItem[]>("/panels"),
   getPanel: (id: string) => request<PanelDetail>(`/panels/${id}`),

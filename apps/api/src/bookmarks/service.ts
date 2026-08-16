@@ -38,6 +38,7 @@ interface BookmarkRow {
   bgColor: string | null;
   shareOrigin: string | null;
   favorite: boolean;
+  aliasOf: string | null;
   snapshotHtmlPath: string | null;
   snapshotStatus: string;
   snapshotError: string | null;
@@ -65,6 +66,7 @@ function decode(
     bgColor: row.bgColor,
     shareOrigin: row.shareOrigin,
     favorite: row.favorite,
+    aliasOf: row.aliasOf,
     snapshotStatus: row.snapshotStatus as SnapshotStatus,
     snapshotError: row.snapshotError,
     hasSnapshot: !!row.snapshotHtmlPath,
@@ -201,6 +203,7 @@ export function listBookmarks(
             bgColor: r.bgColor,
             shareOrigin: r.shareOrigin,
             favorite: r.favorite,
+            aliasOf: r.aliasOf,
             snapshotHtmlPath: r.snapshotHtmlPath,
             snapshotStatus: r.snapshotStatus,
             snapshotError: r.snapshotError,
@@ -220,6 +223,8 @@ export function listBookmarks(
     }
   }
 
+  result = applyBookmarkAliases(ctx, result);
+
   if (filters.q) {
     const q = filters.q.toLowerCase();
     result = result.filter(
@@ -231,6 +236,42 @@ export function listBookmarks(
   }
 
   return result;
+}
+
+/**
+ * Alias rows mirror another bookmark: overlay the target's live fields. When a
+ * target is outside the current page (e.g. listing a single folder) it is
+ * fetched on demand.
+ */
+function applyBookmarkAliases(ctx: AuthedContext, list: Bookmark[]): Bookmark[] {
+  const aliases = list.filter((b) => b.aliasOf);
+  if (aliases.length === 0) return list;
+  const byId = new Map(list.map((b) => [b.id, b]));
+  for (const a of aliases) {
+    if (byId.has(a.aliasOf!)) continue;
+    try {
+      byId.set(a.aliasOf!, getBookmark(ctx, a.aliasOf!));
+    } catch {
+      /* dangling link: fall back to the stored placeholder */
+    }
+  }
+  return list.map((b) => {
+    if (!b.aliasOf) return b;
+    const target = byId.get(b.aliasOf);
+    if (!target) return b;
+    return {
+      ...b,
+      title: target.title,
+      url: target.url,
+      description: target.description,
+      iconBlobPath: target.iconBlobPath,
+      imageBlobPath: target.imageBlobPath,
+      bgColor: target.bgColor,
+      tagIds: target.tagIds,
+      snapshotStatus: target.snapshotStatus,
+      hasSnapshot: target.hasSnapshot,
+    };
+  });
 }
 
 export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
@@ -260,6 +301,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       bgColor: row.bgColor,
       shareOrigin: row.shareOrigin,
       favorite: row.favorite,
+      aliasOf: row.aliasOf,
       snapshotHtmlPath: row.snapshotHtmlPath,
       snapshotStatus: row.snapshotStatus,
       snapshotError: row.snapshotError,

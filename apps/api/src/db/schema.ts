@@ -257,6 +257,8 @@ export const folders = sqliteTable(
     // Set (to the source group name) when this was imported from a group
     // share, so the UI can mark it as "shared".
     shareOrigin: text("share_origin"),
+    /** Symlink: when set, this row is an alias of another folder. */
+    aliasOf: text("alias_of"),
     /** Starred by the user; shown in the "Favoritos" bar. */
     favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     // When set, this folder is a live "symlink" portal to a group share: it
@@ -301,6 +303,8 @@ export const bookmarks = sqliteTable(
     snapshotError: text("snapshot_error"),
     // Source group name when imported from a share (see folders.shareOrigin).
     shareOrigin: text("share_origin"),
+    /** Symlink: when set, this row is an alias of another bookmark. */
+    aliasOf: text("alias_of"),
     /** Starred by the user; shown in the "Favoritos" bar. */
     favorite: integer("favorite", { mode: "boolean" }).notNull().default(false),
     position: integer("position").notNull().default(0),

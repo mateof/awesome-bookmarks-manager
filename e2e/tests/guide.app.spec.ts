@@ -77,7 +77,7 @@ test("03 · añadir bookmarks y una subcarpeta", async () => {
 
   // Capture the new-bookmark dialog on the first one.
   const b0 = researchBookmarks[0]!;
-  await pageA.getByRole("button", { name: "Bookmark", exact: true }).click();
+  await pageA.getByRole("button", { name: "Nuevo bookmark", exact: true }).click();
   await expect(pageA.getByRole("heading", { name: "Nuevo bookmark" })).toBeVisible();
   await pageA.getByPlaceholder("https://…", { exact: true }).fill(b0.url);
   await pageA.getByPlaceholder(/^Título/).fill(b0.title);

@@ -28,6 +28,8 @@ export const BookmarkSchema = z.object({
   hasSnapshot: z.boolean(),
   /** Starred by the user; surfaced in the "Favoritos" bar. */
   favorite: z.boolean().default(false),
+  /** Symlink: id of the real bookmark this row mirrors (null = a real one). */
+  aliasOf: z.string().nullable().default(null),
   shareOrigin: z.string().nullable().default(null),
   position: z.number().int(),
   rev: z.number().int().default(1),
