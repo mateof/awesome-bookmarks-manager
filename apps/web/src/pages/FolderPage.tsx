@@ -196,6 +196,13 @@ export function FolderPage() {
   };
   const clearSelection = () => setSelection(new Set());
 
+  // Navigating to another folder starts a fresh selection. The page component
+  // stays mounted across /folder/:id changes, so without this the action bar
+  // would linger referring to items that are no longer on screen.
+  useEffect(() => {
+    setSelection(new Set());
+  }, [folderId]);
+
   const selectedFolderIds = useMemo(
     () =>
       [...selection]
