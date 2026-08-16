@@ -398,7 +398,7 @@ function PanelSearch({
                   background: i === sel ? `${t.accent}22` : "transparent",
                 }}
               >
-                <Favicon url={b.url} accent={t.accent} size={20} />
+                <Favicon url={b.url} title={b.title} accent={t.accent} size={20} />
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <span style={{ display: "block", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</span>
                   <span style={{ display: "block", fontSize: 12, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
@@ -799,7 +799,18 @@ function FolderPreviewCard({
   );
 }
 
-function Favicon({ url, accent, size = 22 }: { url: string; accent: string; size?: number }) {
+function Favicon({
+  url,
+  title,
+  accent,
+  size = 22,
+}: {
+  url: string;
+  /** Used for the fallback letter, so it matches what the card shows. */
+  title?: string;
+  accent: string;
+  size?: number;
+}) {
   const [failed, setFailed] = useState(false);
   let host = "";
   let origin = "";
@@ -810,10 +821,13 @@ function Favicon({ url, accent, size = 22 }: { url: string; accent: string; size
   } catch {
     // ignore
   }
-  const letter = (host || url || "?").replace(/^www\./, "").charAt(0).toUpperCase();
+  // Prefer the bookmark's name: "Hacker News" reads as H, not as the N of
+  // news.ycombinator.com. The host is only a fallback for untitled entries.
+  const source = title?.trim() || host || url || "?";
+  const letter = [...source.replace(/^https?:\/\//, "").replace(/^www\./, "")][0] ?? "?";
   if (failed || !origin) {
     return (
-      <span style={{ width: size, height: size, borderRadius: 6, background: accent, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, fontWeight: 700, flexShrink: 0 }}>{letter}</span>
+      <span style={{ width: size, height: size, borderRadius: 6, background: accent, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, fontWeight: 700, flexShrink: 0 }}>{letter.toUpperCase()}</span>
     );
   }
   return <img src={`${origin}/favicon.ico`} alt="" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />;
@@ -907,7 +921,7 @@ function BookmarkCard({
       style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8, padding: "1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, textDecoration: "none", boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none", minHeight: template.cardMinHeight || undefined }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {template.card.showIcon && <Favicon url={b.url} accent={t.accent} />}
+        {template.card.showIcon && <Favicon url={b.url} title={b.title} accent={t.accent} />}
         <span style={{ fontWeight: 600, minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</span>
         <InfoButton b={b} template={template} onDesc={onDesc} />
       </div>
@@ -946,7 +960,7 @@ function BookmarkRow({
       style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: terminal ? "0.4rem 0.5rem" : "0.7rem 0.9rem", borderRadius: template.card.radius, background: terminal ? "transparent" : t.surface, border: terminal ? "none" : `1px solid ${t.border}`, color: t.text, textDecoration: "none" }}
     >
       {terminal && <span style={{ color: t.accent, lineHeight: "1.4" }}>$</span>}
-      {template.card.showIcon && !terminal && <Favicon url={b.url} accent={t.accent} size={20} />}
+      {template.card.showIcon && !terminal && <Favicon url={b.url} title={b.title} accent={t.accent} size={20} />}
       <span style={{ minWidth: 0, flex: 1 }}>
         <span style={{ fontWeight: terminal ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{terminal ? `open ${b.title}` : b.title}</span>
         {template.card.showUrl && (
