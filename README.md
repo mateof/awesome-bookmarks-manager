@@ -33,7 +33,14 @@ one port.
 ## Features
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
-  (Tiptap editor), custom icons, and tags.
+  (Tiptap editor), custom icons, and tags. Bookmarks with no icon fall back to
+  a coloured letter tile derived from the name.
+- **Favourites** — star any folder or bookmark; the "Favoritos" bar in the
+  header is a flat, quick-access list of everything you starred.
+- **Symlinks** — place a link to a folder or bookmark that lives elsewhere.
+  The link always shows the original's current content, so one folder can
+  gather items scattered across the tree (handy for building custom panels)
+  and editing the original updates every link.
 - **Tags** with color picker, autocomplete, in-line creation, and a
   dedicated `/tag/:id` view.
 - **Page snapshots** (Wallabag-style) — a background worker fetches each
@@ -64,9 +71,25 @@ one port.
 - **Public share links** with optional password and expiration.
 - **Panels** — turn any folder into a shareable, template-styled dashboard
   (homepage-style) at `/panel/{slug}`. Navigable subfolders, clickable tag
-  chips and a live tag filter, five built-in templates (Grid, Bento, Terminal,
-  Minimal, Dashboard) plus a template editor with JSON import/export. Each
-  panel can be public, password-protected, or shared with specific users.
+  chips and a live tag filter. Each panel can be public, password-protected,
+  or shared with specific users, and **rebuilds itself in the background**
+  when its content changes (symlinked content included).
+  - **Themes**: eleven built-in templates (Grid, Bento, Terminal, Minimal,
+    Dashboard, Galaxy, Ocean, Beach, Aquarium, Dragon Ball, Doraemon) plus a
+    template editor with JSON import/export.
+  - **Animated backgrounds**: pick a built-in scene (galaxy, aurora, ocean,
+    beach, fish tank, clouds, sakura, dragon balls) rendered in pure CSS, or
+    upload your own image, GIF or short video per panel.
+  - **Live preview** in the template editor, at desktop and phone widths, with
+    a colour picker and layout controls (max width, card gap, minimum card
+    height, section order, and toggles for the search box, breadcrumb, section
+    titles and download button).
+  - **Per-panel identity**: override the heading shown inside the panel, the
+    browser tab title and the tab icon (emoji favicon).
+  - **Optional subfolder listing**: each folder can list its children beneath
+    it so a whole level is browsable at a glance.
+  - **Download for the browser**: visitors can export the panel as a Netscape
+    bookmarks file and import it into Chrome / Firefox / Edge.
 - **Two-factor authentication (TOTP)** — optional per user, enforceable for
   everyone by the admin, with a trusted-network bypass for the LAN.
 - **Passkeys (WebAuthn)** — optional passwordless login (needs a domain over
@@ -74,6 +97,9 @@ one port.
   like Bitwarden.
 - **Cloud backups** to Google Drive, OneDrive, or Synology (WebDAV) — manual
   or scheduled.
+- **MCP server** at `/api/mcp` so an AI client (Claude and friends) can manage
+  bookmarks, folders, tags, favourites, panels and panel templates with an API
+  token. See [doc/mcp.md](doc/mcp.md).
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
 - **Importer** for the standard HTML bookmarks export of Chrome / Firefox / Edge.
 - **PWA-ready** responsive UI that also works on mobile.

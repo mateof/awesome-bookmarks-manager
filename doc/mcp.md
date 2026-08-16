@@ -127,27 +127,62 @@ a `bin` named `awesomebookmarks-mcp`.
 
 | tool | what it does |
 |------|--------------|
+### Folders, bookmarks and tags
+
+| tool | what it does |
+|------|--------------|
 | `list_folders` | list all folders |
-| `create_folder` | create a folder (`name`, optional `parentId`, `description`) |
-| `list_bookmarks` | list/filter bookmarks (`folderId`, `tagId`, `query`, `limit`) |
+| `create_folder` | create a folder (`name`, optional `parentId`, `description`, `favorite`) |
+| `update_folder` | update a folder's `name`, `description` or `favorite` flag |
+| `list_bookmarks` | list/filter bookmarks (`folderId`, `tagId`, `query`, `limit`, `favorite`) |
 | `get_bookmark` | fetch one bookmark by id |
-| `add_bookmark` | add a bookmark (`url`, optional `title`, `description`, `folderId`, `tags` by name) |
-| `update_bookmark` | update fields of a bookmark |
+| `add_bookmark` | add a bookmark (`url`, optional `title`, `description`, `folderId`, `tags` by name, `favorite`) |
+| `update_bookmark` | update fields of a bookmark, including `favorite` |
 | `move_bookmark` | move a bookmark to a folder/position |
 | `delete_bookmark` | delete a bookmark |
 | `search_bookmarks` | full-text + fuzzy search (`query`, optional `folderId`, `limit`) |
 | `list_tags` | list all tags |
 | `create_tag` | create a tag (`name`, optional hex `color`) |
 
+### Panels and templates
+
+| tool | what it does |
+|------|--------------|
+| `list_panels` | list your panels (slug, title, template, access, public url) |
+| `get_panel` | fetch one panel by id, including its allowed-user emails |
+| `create_panel` | publish a folder as a panel (`title`, `slug`, `folderId`, `accessMode`, optional `templateId`, `password`, `userEmails`, `displayTitle`, `tabTitle`, `faviconEmoji`) |
+| `update_panel` | update a panel; an empty string clears an override |
+| `regenerate_panel` | re-snapshot a panel from the current folder tree |
+| `delete_panel` | delete a panel |
+| `list_panel_templates` | list templates: the built-ins plus your own |
+| `create_panel_template` | create a template from a full `config` |
+| `update_panel_template` | update one of your templates (built-ins are read-only) |
+| `delete_panel_template` | delete one of your templates |
+| `list_panel_scenes` | list the animated background scenes usable as `config.scene` |
+
 `add_bookmark` / `update_bookmark` take **tag names** (not ids) for
 convenience — missing tags are created automatically. All tools return the
 JSON result as text.
+
+A template's `config` carries the whole look: `layout`, `theme` colours, `card`
+options, the optional animated `scene`, `folderPreview` (list each folder's
+subfolders beneath it) and the layout knobs (`maxWidth`, `gap`,
+`cardMinHeight`, `sectionOrder`, `showSearch`, `showBreadcrumb`,
+`showSectionTitles`, `showDownload`).
+
+Panels rebuild themselves in the background when their content changes, so
+`regenerate_panel` is only needed to force it.
 
 ## Example prompts
 
 - "Save https://ziglang.org to my Programming folder and tag it languages, systems."
 - "Search my bookmarks for anything about kubernetes and list the titles."
 - "Create a folder called Recipes and move the last bookmark I added into it."
+- "Star my three most-used bookmarks so they show up in Favourites."
+- "Make me a panel from the Recipes folder at /panel/cocina, using the Doraemon
+  template, titled 'Mi recetario' with a 🍳 as the tab icon."
+- "Create a template like Terminal but with the galaxy background, wider cards
+  and no breadcrumb, then apply it to my Programming panel."
 
 ## Security
 

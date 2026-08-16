@@ -236,6 +236,90 @@ test("06 · panel protegido con contraseña", async ({ browser }) => {
   await ctxD.close();
 });
 
+test("07 · favoritos y enlaces simbólicos", async () => {
+  await pageA.goto("/");
+
+  // Star a bookmark from its card, then show the "Favoritos" bar.
+  await openFolder(pageA, folders.research);
+  const card = pageA
+    .locator("div.group.relative")
+    .filter({ hasText: researchBookmarks[0]!.title })
+    .first();
+  await card.getByRole("button", { name: "Añadir a favoritos" }).click();
+  await expect(
+    card.getByRole("button", { name: "Quitar de favoritos" }),
+  ).toBeVisible();
+  await shot(pageA, "25-favorite-star");
+
+  await pageA.getByRole("button", { name: "Favoritos", exact: true }).click();
+  await expect(
+    pageA.getByText(researchBookmarks[0]!.title, { exact: true }).first(),
+  ).toBeVisible();
+  await shot(pageA, "26-favorites-bar");
+  await pageA.keyboard.press("Escape");
+
+  // Symlink the research folder into a new "Escritorio" folder.
+  await pageA.goto("/");
+  await createFolder(pageA, "Escritorio");
+  await openFolderCardKebab(pageA, folders.research);
+  await pageA.getByRole("button", { name: "Crear enlace en…" }).click();
+  await expect(
+    pageA.getByRole("heading", { name: "Crear enlace simbólico" }),
+  ).toBeVisible();
+  await shot(pageA, "27-symlink-dialog");
+  await pageA.getByRole("button", { name: "Escritorio", exact: true }).click();
+  await pageA.getByRole("button", { name: "Crear enlace" }).click();
+
+  await openFolder(pageA, "Escritorio");
+  await expect(
+    pageA.getByText(folders.research, { exact: true }).first(),
+  ).toBeVisible();
+  await shot(pageA, "28-symlink-folder");
+});
+
+test("08 · personalizar el aspecto de un panel", async () => {
+  await pageA.goto("/panels");
+  await pageA.getByRole("button", { name: "Plantillas" }).click();
+  await shot(pageA, "29-templates-list");
+
+  // The editor: live preview at desktop and phone widths, plus the knobs.
+  await pageA.getByRole("button", { name: "Nueva", exact: true }).click();
+  await expect(
+    pageA.getByRole("heading", { name: "Editor de plantilla" }),
+  ).toBeVisible();
+  await pageA.locator('select:has(option[value="galaxy"])').selectOption("galaxy");
+  await expect(pageA.locator(".pbg-galaxy").first()).toBeVisible();
+  await shot(pageA, "30-template-editor");
+  await pageA.getByRole("button", { name: "Cancelar" }).click();
+
+  // A public panel using one of the themed built-ins, scene included.
+  await pageA.goto("/");
+  await openFolderCardKebab(pageA, folders.recipes);
+  await pageA.getByRole("button", { name: "Generar panel" }).click();
+  await expect(pageA.getByRole("heading", { name: "Generar panel" })).toBeVisible();
+  await pageA.getByLabel("Nombre", { exact: true }).fill("Cocina");
+  await pageA.getByLabel("URL (slug)").fill("cocina");
+  // Galaxia for the docs: screenshots freeze animations, and this scene is
+  // already visible on its first frame (stars and planets), unlike scenes that
+  // start off-screen.
+  const themed = pageA.getByRole("button", { name: /Galaxia/ });
+  if (await themed.count()) await themed.first().click();
+  await pageA.getByRole("button", { name: "Generar", exact: true }).click();
+  await expect(pageA.getByRole("heading", { name: "Panel creado" })).toBeVisible();
+  const slug = await readSlugFromCreated(pageA, "cocina");
+  await pageA.getByRole("button", { name: "Cerrar" }).last().click();
+
+  const themedPage = await ctxA.newPage();
+  await expect(async () => {
+    await themedPage.goto(`/panel/${slug}`);
+    await expect(
+      themedPage.getByRole("button", { name: /Descargar marcadores/ }),
+    ).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
+  await shot(themedPage, "31-panel-themed", { full: true });
+  await themedPage.close();
+});
+
 /** Click the "Más acciones" kebab of a specific folder card by its name. */
 async function openFolderCardKebab(page: Page, folderName: string) {
   const card = page.getByRole("link", {

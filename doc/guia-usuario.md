@@ -19,6 +19,10 @@ paneles y guardar pestañas desde la extensión de Chrome.
 6. [Panel protegido con contraseña](#6-panel-protegido-con-contraseña)
 7. [Extensión de Chrome](#7-extensión-de-chrome)
 8. [Apariencia: iconos, fondos y banner](#8-apariencia-iconos-fondos-y-banner)
+9. [Favoritos](#9-favoritos)
+10. [Enlaces simbólicos](#10-enlaces-simbólicos)
+11. [Personalizar el aspecto de un panel](#11-personalizar-el-aspecto-de-un-panel)
+12. [Llevarte un panel a los marcadores del navegador](#12-llevarte-un-panel-a-los-marcadores-del-navegador)
 
 ---
 
@@ -181,6 +185,111 @@ Cuando una carpeta o un bookmark tiene fondo o imagen, al abrirlo se muestra un
 **banner** de cabecera (estilo siyuan) con el icono y el título encima:
 
 ![Banner de cabecera de una carpeta](images/23-folder-banner.png)
+
+## 9. Favoritos
+
+Cada carpeta y cada bookmark tiene una **estrella**. Al pulsarla, el elemento
+pasa a la barra **Favoritos** de la cabecera, que es una lista plana de acceso
+rápido: primero las carpetas y después los enlaces, ambos por orden alfabético.
+
+![Estrella de favorito en una tarjeta](images/25-favorite-star.png)
+
+La estrella de un elemento marcado se ve siempre, sin necesidad de pasar el
+ratón por encima, para que distingas tus favoritos de un vistazo.
+
+![Barra de favoritos desplegada](images/26-favorites-bar.png)
+
+---
+
+## 10. Enlaces simbólicos
+
+Un **enlace simbólico** coloca una carpeta o un bookmark en otro sitio sin
+duplicarlo. Es útil para reunir en una sola carpeta cosas repartidas por rutas
+distintas, por ejemplo para construir un panel a medida.
+
+Desde el menú de tres puntos de cualquier carpeta o bookmark, elige
+**Crear enlace en…** y selecciona el destino:
+
+![Diálogo para crear un enlace simbólico](images/27-symlink-dialog.png)
+
+El enlace se marca con un icono de cadena y muestra **siempre el contenido
+actual del original**: si renombras o cambias el original, el cambio se ve en
+todos sus enlaces. Al abrir una carpeta enlazada vas a la carpeta real.
+
+![Carpeta con un enlace simbólico dentro](images/28-symlink-folder.png)
+
+Detalles a tener en cuenta:
+
+- Borrar un enlace **no** borra el original.
+- No se puede enlazar una carpeta dentro de sí misma, ni encadenar enlaces a
+  otros enlaces.
+- Los paneles resuelven los enlaces al generarse, así que un panel construido
+  sobre una carpeta de enlaces muestra el contenido real.
+
+---
+
+## 11. Personalizar el aspecto de un panel
+
+Los paneles se dibujan con una **plantilla**. En *Paneles → Plantillas* tienes
+las integradas (Cuadrícula, Bento, Terminal, Lista minimal, Dashboard, Galaxia,
+Océano, Playa, Pecera, Dragon Ball y Doraemon) y puedes duplicar cualquiera
+para partir de ella.
+
+![Lista de plantillas](images/29-templates-list.png)
+
+El editor muestra una **previsualización en vivo** con datos de ejemplo, a la
+vez en escritorio y en móvil, que reacciona al instante a cada cambio:
+
+![Editor de plantilla con previsualización](images/30-template-editor.png)
+
+Qué puedes ajustar:
+
+- **Colores** del tema, con muestra visual y selector de color. El campo de
+  texto sigue disponible para valores que el selector nativo no sabe expresar,
+  como `rgba(...)` o degradados.
+- **Fondo**: una escena integrada (galaxia, aurora, océano, playa, pecera,
+  nubes, sakura o bolas de dragón), dibujada con CSS y animada. Respeta la
+  preferencia del sistema de *reducir movimiento*.
+- **Layout**: ancho máximo, separación entre tarjetas, alto mínimo de tarjeta,
+  orden de las secciones y mostrar u ocultar buscador, migas, títulos de
+  sección y botón de descarga.
+- **Listar subcarpetas**: cada carpeta enseña su primer nivel debajo, y al
+  pulsar un hijo se abre solo esa carpeta.
+
+Así queda un panel público con una escena animada:
+
+![Panel público con escena de galaxia](images/31-panel-themed.png)
+
+Además, en *Paneles → editar* cada panel concreto puede llevar:
+
+- **Fondo propio**: una imagen, un GIF o un vídeo corto (MP4/WebM, hasta 25 MB)
+  que sustituye a la escena de la plantilla.
+- **Título, pestaña e icono**: el título que se ve dentro del panel, el texto
+  de la pestaña del navegador y un emoji como favicon.
+
+Los paneles se **regeneran solos** en segundo plano cuando cambias su contenido,
+así que no hace falta pulsar *Regenerar* después de cada edición.
+
+---
+
+## 12. Llevarte un panel a los marcadores del navegador
+
+Todo panel incluye un botón **Descargar marcadores** que genera un fichero HTML
+en el formato estándar que importan Chrome, Firefox y Edge, respetando la
+jerarquía de carpetas. Después, en el navegador: *Administrador de marcadores →
+Importar marcadores*.
+
+No es posible que una página web escriba directamente en los marcadores del
+navegador: esa capacidad está reservada a las extensiones, así que la
+importación manual es la vía que funciona sin instalar nada.
+
+Dos avisos prácticos:
+
+- Importar dos veces **duplica**, porque el navegador siempre añade. Si vas a
+  repetir el volcado, borra antes la carpeta anterior.
+- Los iconos no viajan: Chrome ignora los del fichero y busca los suyos.
+
+---
 
 ## Cómo se regeneran estas capturas
 

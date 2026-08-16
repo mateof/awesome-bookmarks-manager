@@ -100,6 +100,7 @@ A folder:
 ```json
 { "id": "…", "parentId": null, "name": "Work", "description": null,
   "iconBlobPath": null, "imageBlobPath": null, "bgColor": null,
+  "favorite": false, "aliasOf": null,
   "position": 0, "tagIds": [], "createdAt": "…", "updatedAt": "…" }
 ```
 
@@ -161,6 +162,7 @@ List bookmarks. Query params (all optional):
 | `tagId` | uuid | only bookmarks with this tag |
 | `q` | string | substring filter over title/url/description |
 | `limit` | int | cap the count |
+| `favorite` | bool | only starred bookmarks (`?favorite=1`) |
 
 ```bash
 auth "$HOST/api/v1/bookmarks?folderId=$FID&limit=50"
@@ -202,6 +204,40 @@ Re-queue favicon + snapshot capture. → `{ "ok": true }`.
 
 ### `DELETE /bookmarks/:id`
 Soft-delete. → `204`.
+
+---
+
+## Favourites
+
+Folders and bookmarks carry a `favorite` boolean. Set it through the normal
+update endpoints:
+
+```bash
+auth -X PATCH "$HOST/api/v1/bookmarks/$BID" -d '{"favorite":true}'
+auth -X PATCH "$HOST/api/v1/folders/$FID"   -d '{"favorite":true}'
+```
+
+List only the starred bookmarks with `GET /bookmarks?favorite=1`.
+
+---
+
+## Symlinks
+
+A symlink is a row that lives in one folder but mirrors a folder/bookmark that
+lives elsewhere. Reads resolve the target's current content, so editing the
+original is reflected everywhere it is linked. Alias rows expose `aliasOf` with
+the target's id.
+
+### `POST /aliases`
+```json
+{ "targetType": "folder" | "bookmark", "targetId": "…", "parentId": "…" | null }
+```
+Creates the link inside `parentId` (root when null) and returns the new row.
+Rejected with `400` when it would create a cycle (linking a folder into its own
+subtree) or when the target is itself a link.
+
+Delete a link with the usual `DELETE /folders/:id` or `DELETE /bookmarks/:id`;
+the original is untouched.
 
 ---
 
@@ -269,6 +305,8 @@ Returns the panel when viewable, or a gate flag:
 
 ```json
 { "title": "My links", "template": { "layout": "grid", "theme": { … }, … },
+  "displayTitle": "Mi panel", "tabTitle": "Enlaces", "faviconEmoji": "🔖",
+  "bgAssetKind": "image", "bgAssetVersion": "2026-08-16T…",
   "root": { "id": "…", "name": "…", "description": null,
             "bookmarks": [ { "id": "…", "title": "…", "url": "…",
                             "description": "<p>…</p>",
@@ -280,13 +318,24 @@ Gate flags (no `root`): `{ "needsPassword": true }`,
 `{ "needsAuth": true }` (the viewer must log in — send the session cookie), or
 `{ "forbidden": true }`. `description` is sanitized rich-text HTML.
 
+`displayTitle`, `tabTitle` and `faviconEmoji` are optional per-panel overrides
+(heading inside the panel, browser tab text, emoji favicon). `bgAssetKind` is
+`"image"` or `"video"` when the panel has a custom uploaded background.
+
 ### `POST /api/public/panel/:slug`
 Body `{ "password": string }` to unlock a password-protected panel; returns the
 same shape with `root` on success.
 
-> Panel/template **management** (create, edit, regenerate, delete) is only
-> available through the session-cookie API the web app uses, not via bearer
-> tokens.
+### `GET /api/public/panel/:slug/background`
+Streams the panel's custom background (image, GIF or video) with an `ETag`.
+`404` when the panel has none. Panels shared with specific users require the
+session cookie; public and password-protected ones serve it directly, since the
+asset is decorative and the content itself stays gated.
+
+> Panel/template **management** over REST (create, edit, regenerate, delete)
+> uses the session-cookie API the web app uses, not bearer tokens. For
+> token-based automation use the [MCP server](mcp.md), whose `*_panel` and
+> `*_panel_template` tools cover the same operations.
 
 ---
 
