@@ -20,8 +20,7 @@ test("modal: arrastrar desde dentro y soltar fuera no lo cierra", async ({ brows
   await signup(page, user);
 
   // Open the "new folder" dialog.
-  await page.getByRole("button", { name: "Más acciones" }).first().click();
-  await page.getByRole("button", { name: "Carpeta", exact: true }).click();
+  await page.getByRole("button", { name: "Nueva carpeta", exact: true }).click();
   const heading = page.getByRole("heading", { name: "Nueva carpeta" });
   await expect(heading).toBeVisible();
 

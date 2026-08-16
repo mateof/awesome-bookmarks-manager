@@ -551,11 +551,6 @@ export function FolderPage() {
                 },
               ]
             : []),
-          {
-            label: t("folder.addFolder"),
-            icon: <FolderPlus className="h-4 w-4" />,
-            onClick: () => setShowAddFolder(true),
-          },
           ...(folder
             ? [
                 {

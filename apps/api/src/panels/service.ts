@@ -153,6 +153,23 @@ function buildFolder(
   };
 }
 
+/**
+ * Rebuild one panel's snapshot from the owner's live tree. Used by the
+ * background job that keeps panels current when their content changes.
+ */
+export function rebuildPanelPayload(userId: string, dek: Buffer, panelId: string) {
+  const row = getDb().select().from(panels).where(eq(panels.id, panelId)).get();
+  if (!row) throw new Error("Panel not found");
+  if (row.userId !== userId) throw new Error("Job user does not match panel owner");
+  const tree = buildFolder(userId, dek, row.folderId);
+  const sealed = masterWrap(userId, Buffer.from(JSON.stringify(tree), "utf8"));
+  getDb()
+    .update(panels)
+    .set({ payloadCt: sealed, payloadStatus: "ready", updatedAt: new Date().toISOString() })
+    .where(eq(panels.id, panelId))
+    .run();
+}
+
 /** Decrypt the folder subtree and seal it with the master key. */
 function materialize(ctx: AuthedContext, panelId: string, folderId: string) {
   const tree = buildFolder(ctx.userId, ctx.dek, folderId);

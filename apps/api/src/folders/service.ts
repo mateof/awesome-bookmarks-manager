@@ -6,6 +6,7 @@ import { openField, sealField } from "../auth/encryption.js";
 import { getDb, getSqlite } from "../db/client.js";
 import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
 import { resealSharesForFolderTree } from "../groups/resync.js";
+import { rebuildPanelsForFolderTree } from "../panels/resync.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { type FolderSnapshot, recordVersion } from "../versions/service.js";
@@ -274,6 +275,7 @@ export function createFolder(
   recordVersion(ctx, "folder", id, created.rev, folderSnapshot(created));
   // A new subfolder inside a shared folder must reach members.
   resealSharesForFolderTree(ctx, parentId);
+  rebuildPanelsForFolderTree(ctx, parentId);
   return created;
 }
 
@@ -308,6 +310,8 @@ export function updateFolder(
   }
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
+    // Picking a colour drops any background image (and vice versa).
+    if (input.bgColor) update.imageBlobPath = null;
   }
   if (input.favorite !== undefined) {
     update.favorite = input.favorite;
@@ -343,6 +347,7 @@ export function updateFolder(
   recordVersion(ctx, "folder", id, updated.rev, folderSnapshot(updated));
   // Rename/description/bg changes on a folder that is (or is inside) a share.
   resealSharesForFolderTree(ctx, id);
+  rebuildPanelsForFolderTree(ctx, id);
   return updated;
 }
 
@@ -407,7 +412,9 @@ export function moveFolder(
     .run();
   // Moving in or out of a shared subtree changes what members should see.
   resealSharesForFolderTree(ctx, oldParentId);
+  rebuildPanelsForFolderTree(ctx, oldParentId);
   resealSharesForFolderTree(ctx, newParentId);
+  rebuildPanelsForFolderTree(ctx, newParentId);
 }
 
 /** All alive folder ids in the subtree rooted at rootId (including itself). */
@@ -470,6 +477,7 @@ export function deleteFolder(ctx: AuthedContext, id: string) {
   tx();
   // If a shared folder contained this subtree, the removal must reach members.
   resealSharesForFolderTree(ctx, parentId);
+  rebuildPanelsForFolderTree(ctx, parentId);
 }
 
 export function setFolderIconPath(
@@ -493,7 +501,12 @@ export function setFolderBgImagePath(
   assertFolderOwnedAndAlive(ctx, id);
   getDb()
     .update(folders)
-    .set({ imageBlobPath: path, updatedAt: new Date().toISOString() })
+    // Colour and image are mutually exclusive: setting one clears the other.
+    .set({
+      imageBlobPath: path,
+      ...(path ? { bgColor: null } : {}),
+      updatedAt: new Date().toISOString(),
+    })
     .where(eq(folders.id, id))
     .run();
 }

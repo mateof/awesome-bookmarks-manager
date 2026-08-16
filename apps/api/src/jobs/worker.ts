@@ -4,6 +4,7 @@ import { getEnv } from "../env.js";
 import { runBackupJob } from "./handlers/backup.js";
 import { runFaviconJob } from "./handlers/favicon.js";
 import { runGroupShareSealJob } from "./handlers/group_share_seal.js";
+import { runPanelRebuildJob } from "./handlers/panel_rebuild.js";
 import { runImportJob } from "./handlers/import.js";
 import { runShareSealJob } from "./handlers/share_seal.js";
 import { markSnapshotError, runSnapshotJob } from "./handlers/snapshot.js";
@@ -193,6 +194,12 @@ async function dispatch(job: ClaimedJob): Promise<void> {
         dek,
         job.payload as { groupShareId: string },
       );
+      return;
+    }
+    case "panel_rebuild": {
+      const dek = keyCache.get(job.userId);
+      if (!dek) throw new Error("DEK not in cache");
+      await runPanelRebuildJob(job.userId, dek, job.payload as { panelId: string });
       return;
     }
     case "backup": {

@@ -26,8 +26,7 @@ test("campos: primer clic selecciona todo, segundo coloca el cursor", async ({ b
   const page = await ctx.newPage();
   await signup(page, user);
 
-  await page.getByRole("button", { name: "Más acciones" }).first().click();
-  await page.getByRole("button", { name: "Carpeta", exact: true }).click();
+  await page.getByRole("button", { name: "Nueva carpeta", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nueva carpeta" })).toBeVisible();
 
   const field = page.getByPlaceholder("Nombre", { exact: true });
@@ -63,8 +62,7 @@ test("campos: arrastrar selecciona solo el fragmento", async ({ browser }) => {
     password: "SelectDragOnly2024",
   });
 
-  await page.getByRole("button", { name: "Más acciones" }).first().click();
-  await page.getByRole("button", { name: "Carpeta", exact: true }).click();
+  await page.getByRole("button", { name: "Nueva carpeta", exact: true }).click();
   const field = page.getByPlaceholder("Nombre", { exact: true });
   await field.fill("AAAAAAAAAAAAAAAAAAAA");
   await page.getByRole("heading", { name: "Nueva carpeta" }).click();

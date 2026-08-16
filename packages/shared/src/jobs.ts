@@ -7,6 +7,7 @@ export const JobTypeSchema = z.enum([
   "import",
   "share_seal",
   "group_share_seal",
+  "panel_rebuild",
 ]);
 export type JobType = z.infer<typeof JobTypeSchema>;
 

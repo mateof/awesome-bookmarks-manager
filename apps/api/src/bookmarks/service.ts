@@ -10,6 +10,7 @@ import {
   resealSharesForBookmark,
   resealSharesForFolderTree,
 } from "../groups/resync.js";
+import { rebuildPanelsForFolderTree } from "../panels/resync.js";
 import { enqueue } from "../jobs/queue.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
@@ -394,6 +395,7 @@ export function createBookmark(
   recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
   // A new bookmark inside a shared folder must reach members.
   resealSharesForBookmark(ctx, id, saved.folderId);
+  rebuildPanelsForFolderTree(ctx, saved.folderId);
   return saved;
 }
 
@@ -446,6 +448,8 @@ export function updateBookmark(
   }
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
+    // Picking a colour drops any background image (and vice versa).
+    if (input.bgColor) update.imageBlobPath = null;
   }
   if (input.favorite !== undefined) {
     update.favorite = input.favorite;
@@ -491,8 +495,10 @@ export function updateBookmark(
   // Reflect edits (title/url/description) to members; also cover the old
   // folder if the bookmark was moved out of a shared subtree.
   resealSharesForBookmark(ctx, id, saved.folderId);
+  rebuildPanelsForFolderTree(ctx, saved.folderId);
   if (input.folderId !== undefined && existing.folderId !== saved.folderId) {
     resealSharesForFolderTree(ctx, existing.folderId);
+    rebuildPanelsForFolderTree(ctx, existing.folderId);
   }
   return saved;
 }
@@ -542,7 +548,9 @@ export function moveBookmark(
     .run();
   // Moving in or out of a shared folder changes what members should see.
   resealSharesForBookmark(ctx, id, newFolderId);
+  rebuildPanelsForFolderTree(ctx, newFolderId);
   resealSharesForFolderTree(ctx, oldFolderId);
+  rebuildPanelsForFolderTree(ctx, oldFolderId);
 }
 
 export function deleteBookmark(ctx: AuthedContext, id: string) {
@@ -560,6 +568,7 @@ export function deleteBookmark(ctx: AuthedContext, id: string) {
     .run();
   // The removal must reach members of a share covering this bookmark.
   resealSharesForBookmark(ctx, id, folderId);
+  rebuildPanelsForFolderTree(ctx, folderId);
 }
 
 export function refreshSnapshot(ctx: AuthedContext, id: string) {
@@ -602,7 +611,12 @@ export function setBookmarkBgImagePath(
   assertBookmarkOwnedAndAlive(ctx, id);
   getDb()
     .update(bookmarks)
-    .set({ imageBlobPath: path, updatedAt: new Date().toISOString() })
+    // Colour and image are mutually exclusive: setting one clears the other.
+    .set({
+      imageBlobPath: path,
+      ...(path ? { bgColor: null } : {}),
+      updatedAt: new Date().toISOString(),
+    })
     .where(eq(bookmarks.id, id))
     .run();
 }

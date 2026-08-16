@@ -52,8 +52,7 @@ test("01 · registro del primer usuario (admin)", async ({ browser }) => {
 
 test("02 · crear carpetas", async () => {
   // Open the create-folder dialog manually to capture it before submitting.
-  await pageA.getByRole("button", { name: "Más acciones" }).first().click();
-  await pageA.getByRole("button", { name: "Carpeta", exact: true }).click();
+  await pageA.getByRole("button", { name: "Nueva carpeta", exact: true }).click();
   await expect(pageA.getByRole("heading", { name: "Nueva carpeta" })).toBeVisible();
   await pageA.getByPlaceholder("Nombre", { exact: true }).fill(folders.research);
   const editor = pageA.getByRole("textbox", { name: "Descripción" });

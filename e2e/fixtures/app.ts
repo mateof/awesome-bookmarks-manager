@@ -72,8 +72,7 @@ export async function createFolder(
   name: string,
   description?: string,
 ) {
-  await openToolbarKebab(page);
-  await page.getByRole("button", { name: "Carpeta", exact: true }).click();
+  await page.getByRole("button", { name: "Nueva carpeta", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nueva carpeta" })).toBeVisible();
   await page.getByPlaceholder("Nombre", { exact: true }).fill(name);
   if (description) {
