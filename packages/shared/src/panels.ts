@@ -69,8 +69,35 @@ export const TemplateConfigSchema = z.object({
    * parent) navigates to that folder alone.
    */
   folderPreview: z.boolean().optional(),
+
+  /* ---- Layout fine-tuning. All optional; omitted = current defaults. ---- */
+  /** Content column width in px (default 1200). */
+  maxWidth: z.number().int().min(480).max(2400).optional(),
+  /** Gap between cards in px (default 12). */
+  gap: z.number().int().min(0).max(64).optional(),
+  /** Minimum card height in px; 0/omitted = hug the content. */
+  cardMinHeight: z.number().int().min(0).max(400).optional(),
+  /** Which section comes first (default "folders"). */
+  sectionOrder: z.enum(["folders", "links"]).optional(),
+  /** Show the panel search box (default true). */
+  showSearch: z.boolean().optional(),
+  /** Show the breadcrumb trail (default true). */
+  showBreadcrumb: z.boolean().optional(),
+  /** Show the section headings ("Carpetas" / "Enlaces"), default true. */
+  showSectionTitles: z.boolean().optional(),
 });
 export type TemplateConfig = z.infer<typeof TemplateConfigSchema>;
+
+/** Resolved layout defaults, so renderer and preview never drift apart. */
+export const PANEL_LAYOUT_DEFAULTS = {
+  maxWidth: 1200,
+  gap: 12,
+  cardMinHeight: 0,
+  sectionOrder: "folders" as const,
+  showSearch: true,
+  showBreadcrumb: true,
+  showSectionTitles: true,
+};
 
 /* ------------------------------------------------------------------ */
 /* Templates                                                           */

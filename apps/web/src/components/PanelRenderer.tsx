@@ -1,8 +1,9 @@
-import type {
-  PanelBgKind,
-  PanelBookmark,
-  PanelFolder,
-  TemplateConfig,
+import {
+  PANEL_LAYOUT_DEFAULTS,
+  type PanelBgKind,
+  type PanelBookmark,
+  type PanelFolder,
+  type TemplateConfig,
 } from "@awesome-bookmarks/shared";
 import DOMPurify from "dompurify";
 import {
@@ -121,6 +122,34 @@ export function PanelRenderer({
 
   const rootTitle = displayTitle?.trim() || root.name;
 
+  // Built up front so the template can swap their order.
+  const foldersSection =
+    current.subfolders.length > 0 ? (
+      <Section key="folders" title="Carpetas" template={template}>
+        <div style={gridStyle(template, "folders")}>
+          {current.subfolders.map((f) =>
+            template.folderPreview ? (
+              <FolderPreviewCard
+                key={f.id}
+                folder={f}
+                template={template}
+                onOpen={() => setPath([...path, f.id])}
+                onOpenChild={(childId) => setPath([...path, f.id, childId])}
+              />
+            ) : (
+              <FolderCard key={f.id} folder={f} template={template} onOpen={() => setPath([...path, f.id])} />
+            ),
+          )}
+        </div>
+      </Section>
+    ) : null;
+  const linksSection =
+    current.bookmarks.length > 0 ? (
+      <Section key="links" title="Enlaces" template={template}>
+        <BookmarksView bookmarks={current.bookmarks} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDescBookmark} />
+      </Section>
+    ) : null;
+
   return (
     <div
       style={{
@@ -140,7 +169,7 @@ export function PanelRenderer({
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 1200,
+          maxWidth: template.maxWidth ?? PANEL_LAYOUT_DEFAULTS.maxWidth,
           margin: "0 auto",
           padding: "2rem 1.25rem 4rem",
         }}
@@ -153,6 +182,7 @@ export function PanelRenderer({
           />
         )}
 
+        {template.showSearch !== false && (
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
@@ -174,13 +204,16 @@ export function PanelRenderer({
         >
           <Search size={16} /> Buscar en el panel…
         </button>
+        )}
 
-        <Breadcrumb
-          root={root}
-          path={path}
-          template={template}
-          onGo={(i) => setPath(path.slice(0, i))}
-        />
+        {template.showBreadcrumb !== false && (
+          <Breadcrumb
+            root={root}
+            path={path}
+            template={template}
+            onGo={(i) => setPath(path.slice(0, i))}
+          />
+        )}
 
         {showFilterBar && (
           <TagFilterBar
@@ -200,32 +233,12 @@ export function PanelRenderer({
           </Section>
         ) : (
           <>
-            {current.subfolders.length > 0 && (
-              <Section title="Carpetas" template={template}>
-                <div style={gridStyle(template, "folders")}>
-                  {current.subfolders.map((f) =>
-                    template.folderPreview ? (
-                      <FolderPreviewCard
-                        key={f.id}
-                        folder={f}
-                        template={template}
-                        onOpen={() => setPath([...path, f.id])}
-                        onOpenChild={(childId) => setPath([...path, f.id, childId])}
-                      />
-                    ) : (
-                      <FolderCard key={f.id} folder={f} template={template} onOpen={() => setPath([...path, f.id])} />
-                    ),
-                  )}
-                </div>
-              </Section>
-            )}
-            {current.bookmarks.length > 0 ? (
-              <Section title="Enlaces" template={template}>
-                <BookmarksView bookmarks={current.bookmarks} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDescBookmark} />
-              </Section>
-            ) : current.subfolders.length === 0 ? (
+            {(template.sectionOrder ?? PANEL_LAYOUT_DEFAULTS.sectionOrder) === "links"
+              ? [linksSection, foldersSection]
+              : [foldersSection, linksSection]}
+            {current.subfolders.length === 0 && current.bookmarks.length === 0 && (
               <p style={{ color: t.muted, marginTop: "2rem" }}>Sin enlaces.</p>
-            ) : null}
+            )}
           </>
         )}
       </div>
@@ -428,7 +441,7 @@ function gridStyle(template: TemplateConfig, kind: "folders" | "bookmarks"): Rea
       display: "grid",
       gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
       gridAutoFlow: "dense",
-      gap: 12,
+      gap: template.gap ?? PANEL_LAYOUT_DEFAULTS.gap,
     };
   }
   const cols = kind === "folders" ? Math.min(template.columns ?? 4, 6) : template.columns ?? 4;
@@ -436,7 +449,7 @@ function gridStyle(template: TemplateConfig, kind: "folders" | "bookmarks"): Rea
   return {
     display: "grid",
     gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${base}px), 1fr))`,
-    gap: 12,
+    gap: template.gap ?? PANEL_LAYOUT_DEFAULTS.gap,
   };
 }
 
@@ -632,7 +645,9 @@ function Section({ title, template, children }: { title: string; template: Templ
   const t = template.theme;
   return (
     <div style={{ marginTop: "1.5rem" }}>
-      <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: t.muted, marginBottom: 10, fontWeight: 600 }}>{title}</div>
+      {template.showSectionTitles !== false && (
+        <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: t.muted, marginBottom: 10, fontWeight: 600 }}>{title}</div>
+      )}
       {children}
     </div>
   );
@@ -645,7 +660,7 @@ function FolderCard({ folder, template, onOpen }: { folder: PanelFolder; templat
     <button
       type="button"
       onClick={onOpen}
-      style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer", padding: "0.85rem 1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none", fontFamily: "inherit" }}
+      style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer", padding: "0.85rem 1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none", fontFamily: "inherit", minHeight: template.cardMinHeight || undefined }}
     >
       <FolderIcon size={20} style={{ color: t.accent, flexShrink: 0 }} />
       <span style={{ minWidth: 0 }}>
@@ -863,7 +878,7 @@ function BookmarkCard({
       href={b.url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8, padding: "1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, textDecoration: "none", boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none" }}
+      style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 8, padding: "1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, textDecoration: "none", boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none", minHeight: template.cardMinHeight || undefined }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {template.card.showIcon && <Favicon url={b.url} accent={t.accent} />}

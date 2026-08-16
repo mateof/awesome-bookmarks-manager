@@ -1,4 +1,4 @@
-import type { TemplateConfig } from "@awesome-bookmarks/shared";
+import { PANEL_LAYOUT_DEFAULTS, type TemplateConfig } from "@awesome-bookmarks/shared";
 import { ChevronRight, Filter, Folder as FolderIcon, Home, Search } from "lucide-react";
 import { PanelBackground } from "./PanelBackground.js";
 
@@ -105,9 +105,162 @@ export function TemplatePreviewFrame({
   const cardCols = mobile ? 1 : Math.min(config.columns ?? 4, 3);
   const bookmarkCount = mobile ? 3 : rows ? 4 : cardCols * 2;
   const pad = mobile ? 10 : 16;
+  // Scale the real gap/min-height down so the miniature stays proportional.
+  const gap = Math.max(2, Math.round((config.gap ?? PANEL_LAYOUT_DEFAULTS.gap) * 0.65));
+  const minH = config.cardMinHeight
+    ? Math.round(config.cardMinHeight * (mobile ? 0.4 : 0.5))
+    : undefined;
+  const linksFirst =
+    (config.sectionOrder ?? PANEL_LAYOUT_DEFAULTS.sectionOrder) === "links";
+  const titles = config.showSectionTitles !== false;
+
+  const foldersBlock = (
+    <>
+            {titles && <SectionTitle muted={t.muted}>Carpetas</SectionTitle>}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${folderCols}, minmax(0,1fr))`,
+                gap,
+                marginBottom: 12,
+              }}
+            >
+              {FOLDERS.slice(0, mobile ? 2 : 3).map((f) => (
+                <div
+                  key={f.name}
+                  style={{
+                    borderRadius: config.card.radius,
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    boxShadow: config.card.shadow ? "0 4px 14px rgba(0,0,0,0.12)" : "none",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 10px" }}>
+                    <FolderIcon size={mobile ? 15 : 17} style={{ color: t.accent, flexShrink: 0 }} />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
+                      <span style={{ fontSize: mobile ? 9 : 10, color: t.muted }}>{f.count} elementos</span>
+                    </span>
+                  </div>
+                  {config.folderPreview &&
+                    f.children.map((c) => (
+                      <div
+                        key={c}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "4px 10px 4px 16px",
+                          borderTop: `1px solid ${t.border}55`,
+                          color: t.muted,
+                          fontSize: mobile ? 10 : 11,
+                        }}
+                      >
+                        <ChevronRight size={11} style={{ color: t.accent, flexShrink: 0 }} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c}</span>
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </div>
+    </>
+  );
+
+  const linksBlock = (
+    <>
+            {titles && <SectionTitle muted={t.muted}>Enlaces</SectionTitle>}
+            <div
+              style={
+                rows
+                  ? { display: "flex", flexDirection: "column", gap: Math.max(2, gap - 3) }
+                  : { display: "grid", gridTemplateColumns: `repeat(${cardCols}, minmax(0,1fr))`, gap }
+              }
+            >
+              {BOOKMARKS.slice(0, bookmarkCount).map((b) => (
+                <div
+                  key={b.title}
+                  style={{
+                    display: "flex",
+                    flexDirection: rows ? "row" : "column",
+                    alignItems: rows ? "flex-start" : "stretch",
+                    gap: 6,
+                    padding: terminal ? "3px 4px" : "8px 10px",
+                    borderRadius: config.card.radius,
+                    background: terminal ? "transparent" : t.surface,
+                    border: terminal ? "none" : `1px solid ${t.border}`,
+                    boxShadow: !rows && config.card.shadow ? "0 4px 14px rgba(0,0,0,0.12)" : "none",
+                    minWidth: 0,
+                    minHeight: rows ? undefined : minH,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: rows ? 1 : undefined }}>
+                    {terminal && <span style={{ color: t.accent }}>$</span>}
+                    {config.card.showIcon && !terminal && (
+                      <LetterTile label={b.title} accent={t.accent} size={mobile ? 16 : 20} />
+                    )}
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ display: "block", fontWeight: terminal ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {terminal ? `open ${b.title}` : b.title}
+                      </span>
+                      {rows && config.card.showUrl && (
+                        <span style={{ display: "block", fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {b.url}
+                        </span>
+                      )}
+                      {rows && config.card.showDescription && !terminal && (
+                        <span style={{ display: "block", fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {b.desc}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {!rows && config.card.showUrl && (
+                    <span style={{ fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
+                  )}
+                  {!rows && config.card.showDescription && (
+                    <span
+                      style={{
+                        fontSize: mobile ? 9 : 10,
+                        color: t.muted,
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {b.desc}
+                    </span>
+                  )}
+                  {config.card.showTags && (
+                    <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {b.tags.map((tag) => (
+                        <span
+                          key={tag.name}
+                          style={{
+                            fontSize: mobile ? 8 : 9,
+                            padding: "1px 6px",
+                            borderRadius: 999,
+                            background: `${tag.color}22`,
+                            color: tag.color,
+                            border: `1px solid ${tag.color}55`,
+                          }}
+                        >
+                          {tag.name}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+    </>
+  );
 
   return (
     <div
+      data-testid="template-preview"
+      data-variant={mobile ? "mobile" : "desktop"}
       style={{
         position: "relative",
         overflow: "hidden",
@@ -141,6 +294,7 @@ export function TemplatePreviewFrame({
         )}
 
         {/* search bar */}
+        {config.showSearch !== false && (
         <div
           style={{
             display: "flex",
@@ -156,11 +310,14 @@ export function TemplatePreviewFrame({
         >
           <Search size={mobile ? 12 : 14} /> Buscar en el panel…
         </div>
+        )}
 
         {/* breadcrumb */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4, color: t.muted, marginBottom: 8 }}>
-          <Home size={mobile ? 11 : 12} /> Inicio
-        </div>
+        {config.showBreadcrumb !== false && (
+          <div style={{ display: "flex", alignItems: "center", gap: 4, color: t.muted, marginBottom: 8 }}>
+            <Home size={mobile ? 11 : 12} /> Inicio
+          </div>
+        )}
 
         {config.tagFilter !== false && (
           <div
@@ -195,139 +352,8 @@ export function TemplatePreviewFrame({
           </div>
         )}
 
-        <SectionTitle muted={t.muted}>Carpetas</SectionTitle>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${folderCols}, minmax(0,1fr))`,
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          {FOLDERS.slice(0, mobile ? 2 : 3).map((f) => (
-            <div
-              key={f.name}
-              style={{
-                borderRadius: config.card.radius,
-                background: t.surface,
-                border: `1px solid ${t.border}`,
-                boxShadow: config.card.shadow ? "0 4px 14px rgba(0,0,0,0.12)" : "none",
-                overflow: "hidden",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 10px" }}>
-                <FolderIcon size={mobile ? 15 : 17} style={{ color: t.accent, flexShrink: 0 }} />
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</span>
-                  <span style={{ fontSize: mobile ? 9 : 10, color: t.muted }}>{f.count} elementos</span>
-                </span>
-              </div>
-              {config.folderPreview &&
-                f.children.map((c) => (
-                  <div
-                    key={c}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      padding: "4px 10px 4px 16px",
-                      borderTop: `1px solid ${t.border}55`,
-                      color: t.muted,
-                      fontSize: mobile ? 10 : 11,
-                    }}
-                  >
-                    <ChevronRight size={11} style={{ color: t.accent, flexShrink: 0 }} />
-                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c}</span>
-                  </div>
-                ))}
-            </div>
-          ))}
-        </div>
-
-        <SectionTitle muted={t.muted}>Enlaces</SectionTitle>
-        <div
-          style={
-            rows
-              ? { display: "flex", flexDirection: "column", gap: 5 }
-              : { display: "grid", gridTemplateColumns: `repeat(${cardCols}, minmax(0,1fr))`, gap: 8 }
-          }
-        >
-          {BOOKMARKS.slice(0, bookmarkCount).map((b) => (
-            <div
-              key={b.title}
-              style={{
-                display: "flex",
-                flexDirection: rows ? "row" : "column",
-                alignItems: rows ? "flex-start" : "stretch",
-                gap: 6,
-                padding: terminal ? "3px 4px" : "8px 10px",
-                borderRadius: config.card.radius,
-                background: terminal ? "transparent" : t.surface,
-                border: terminal ? "none" : `1px solid ${t.border}`,
-                boxShadow: !rows && config.card.shadow ? "0 4px 14px rgba(0,0,0,0.12)" : "none",
-                minWidth: 0,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flex: rows ? 1 : undefined }}>
-                {terminal && <span style={{ color: t.accent }}>$</span>}
-                {config.card.showIcon && !terminal && (
-                  <LetterTile label={b.title} accent={t.accent} size={mobile ? 16 : 20} />
-                )}
-                <span style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: "block", fontWeight: terminal ? 400 : 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {terminal ? `open ${b.title}` : b.title}
-                  </span>
-                  {rows && config.card.showUrl && (
-                    <span style={{ display: "block", fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {b.url}
-                    </span>
-                  )}
-                  {rows && config.card.showDescription && !terminal && (
-                    <span style={{ display: "block", fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {b.desc}
-                    </span>
-                  )}
-                </span>
-              </div>
-              {!rows && config.card.showUrl && (
-                <span style={{ fontSize: mobile ? 9 : 10, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
-              )}
-              {!rows && config.card.showDescription && (
-                <span
-                  style={{
-                    fontSize: mobile ? 9 : 10,
-                    color: t.muted,
-                    display: "-webkit-box",
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: "vertical",
-                    overflow: "hidden",
-                  }}
-                >
-                  {b.desc}
-                </span>
-              )}
-              {config.card.showTags && (
-                <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {b.tags.map((tag) => (
-                    <span
-                      key={tag.name}
-                      style={{
-                        fontSize: mobile ? 8 : 9,
-                        padding: "1px 6px",
-                        borderRadius: 999,
-                        background: `${tag.color}22`,
-                        color: tag.color,
-                        border: `1px solid ${tag.color}55`,
-                      }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
+        {linksFirst ? linksBlock : foldersBlock}
+        {linksFirst ? foldersBlock : linksBlock}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import {
+  PANEL_LAYOUT_DEFAULTS,
   PANEL_SCENES,
   type PanelLayout,
   type TemplateConfig,
@@ -8,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
+import { ColorField } from "./ColorField.js";
 import { Modal } from "./Modal.js";
 import { TemplatePreview } from "./TemplatePreview.js";
 
@@ -109,18 +111,16 @@ export function TemplateEditor({
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
             {(
               ["bg", "surface", "text", "muted", "accent", "border"] as const
             ).map((k) => (
-              <label key={k} className="space-y-1">
-                <span className="text-slate-500">{k}</span>
-                <input
-                  className={input}
-                  value={config.theme[k]}
-                  onChange={(e) => setTheme(k, e.target.value)}
-                />
-              </label>
+              <ColorField
+                key={k}
+                label={k}
+                value={config.theme[k]}
+                onChange={(v) => setTheme(k, v)}
+              />
             ))}
           </div>
 
@@ -216,6 +216,82 @@ export function TemplateEditor({
               <span className="text-slate-500">{t("panels.folderPreview")}</span>
             </label>
           </div>
+
+          {/* ---- Layout fine-tuning ---- */}
+          <div className="space-y-2 rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              {t("panels.layoutHeading")}
+            </div>
+
+            <Slider
+              label={t("panels.maxWidth")}
+              min={480}
+              max={2400}
+              step={20}
+              suffix="px"
+              value={config.maxWidth ?? PANEL_LAYOUT_DEFAULTS.maxWidth}
+              onChange={(v) => setConfig((c) => ({ ...c, maxWidth: v }))}
+            />
+            <Slider
+              label={t("panels.gap")}
+              min={0}
+              max={48}
+              step={2}
+              suffix="px"
+              value={config.gap ?? PANEL_LAYOUT_DEFAULTS.gap}
+              onChange={(v) => setConfig((c) => ({ ...c, gap: v }))}
+            />
+            <Slider
+              label={t("panels.cardMinHeight")}
+              min={0}
+              max={320}
+              step={10}
+              suffix="px"
+              hint={
+                (config.cardMinHeight ?? 0) === 0 ? t("panels.autoHeight") : undefined
+              }
+              value={config.cardMinHeight ?? PANEL_LAYOUT_DEFAULTS.cardMinHeight}
+              onChange={(v) => setConfig((c) => ({ ...c, cardMinHeight: v }))}
+            />
+
+            <label className="block space-y-1 text-sm">
+              <span className="text-slate-500">{t("panels.sectionOrder")}</span>
+              <select
+                className={input}
+                value={config.sectionOrder ?? PANEL_LAYOUT_DEFAULTS.sectionOrder}
+                onChange={(e) =>
+                  setConfig((c) => ({
+                    ...c,
+                    sectionOrder: e.target.value as "folders" | "links",
+                  }))
+                }
+              >
+                <option value="folders">{t("panels.foldersFirst")}</option>
+                <option value="links">{t("panels.linksFirst")}</option>
+              </select>
+            </label>
+
+            <div className="flex flex-wrap gap-3 text-sm">
+              {(
+                [
+                  ["showSearch", t("panels.showSearch")],
+                  ["showBreadcrumb", t("panels.showBreadcrumb")],
+                  ["showSectionTitles", t("panels.showSectionTitles")],
+                ] as const
+              ).map(([k, label]) => (
+                <label key={k} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={config[k] !== false}
+                    onChange={(e) =>
+                      setConfig((c) => ({ ...c, [k]: e.target.checked }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2 lg:sticky lg:top-2 lg:self-start">
@@ -242,5 +318,46 @@ export function TemplateEditor({
         </button>
       </div>
     </Modal>
+  );
+}
+
+/** Range input with its current value shown, for the layout knobs. */
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  hint,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix?: string;
+  hint?: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="block space-y-1 text-sm">
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-slate-500">{label}</span>
+        <span className="tabular-nums text-xs text-slate-400">
+          {hint ?? `${value}${suffix ?? ""}`}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-blue-600"
+      />
+    </label>
   );
 }
