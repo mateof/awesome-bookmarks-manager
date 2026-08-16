@@ -911,6 +911,9 @@ const gl = {
   background: {
     dialogTitle: "Aparencia",
     kebabItem: "Aparencia",
+    modeNone: "Sen fondo",
+    modeColor: "Cor",
+    modeImage: "Imaxe",
     colorLabel: "Cor de fondo",
     defaults: "Fondos",
     useDefault: "Usar este fondo",

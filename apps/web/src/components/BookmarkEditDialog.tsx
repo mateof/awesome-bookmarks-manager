@@ -74,6 +74,7 @@ export function BookmarkEditDialog({ bookmark, onClose, onSaved }: Props) {
           className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
         />
         <IconPicker
+          fallbackLabel={title || url}
           currentUrl={
             bookmark.iconBlobPath
               ? api.bookmarkIconUrl(bookmark.id, bookmark.updatedAt)

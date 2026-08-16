@@ -117,7 +117,7 @@ export function TagPicker({ value, onChange }: Props) {
           className="flex-1 min-w-[8rem] bg-transparent text-sm focus:outline-none"
         />
       </div>
-      {open && (input.trim().length > 0 || matching.length > 0) && (
+      {open && input.trim().length > 0 && (
         <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800">
           {matching.map((tg) => (
             <button

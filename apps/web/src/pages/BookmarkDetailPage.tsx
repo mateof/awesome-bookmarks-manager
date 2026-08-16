@@ -20,6 +20,7 @@ import { copyRichLink } from "../lib/clipboard.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { CopyButton } from "../components/CopyButton.js";
 import { FavoriteToggle } from "../components/FavoriteToggle.js";
+import { LetterIcon } from "../components/LetterIcon.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
@@ -90,9 +91,11 @@ export function BookmarkDetailPage() {
                 className="h-14 w-14 shrink-0 rounded-xl object-cover shadow-md ring-2 ring-white/70"
               />
             ) : (
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/85 shadow-md ring-2 ring-white/70 dark:bg-slate-800">
-                <Bookmark className="h-7 w-7 text-slate-500" />
-              </div>
+              <LetterIcon
+                label={b.title || b.url}
+                seed={b.url || b.title}
+                size="h-14 w-14 shrink-0 rounded-xl shadow-md ring-2 ring-white/70"
+              />
             )
           }
         />
@@ -113,7 +116,7 @@ export function BookmarkDetailPage() {
               className="h-8 w-8 rounded object-cover"
             />
           ) : (
-            <ImageIcon className="h-6 w-6 text-slate-400" />
+            <LetterIcon label={b.title || b.url} seed={b.url || b.title} size="h-8 w-8" />
           ))}
         {!hasCover && (
           <h1 className="truncate text-xl font-semibold">{b.title}</h1>

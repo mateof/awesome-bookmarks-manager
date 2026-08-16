@@ -909,6 +909,9 @@ const es = {
   background: {
     dialogTitle: "Apariencia",
     kebabItem: "Apariencia",
+    modeNone: "Sin fondo",
+    modeColor: "Color",
+    modeImage: "Imagen",
     colorLabel: "Color de fondo",
     defaults: "Fondos",
     useDefault: "Usar este fondo",

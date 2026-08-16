@@ -908,6 +908,9 @@ const en = {
   background: {
     dialogTitle: "Appearance",
     kebabItem: "Appearance",
+    modeNone: "No background",
+    modeColor: "Colour",
+    modeImage: "Image",
     colorLabel: "Background color",
     defaults: "Backgrounds",
     useDefault: "Use this background",

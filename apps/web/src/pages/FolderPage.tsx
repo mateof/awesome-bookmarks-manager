@@ -1923,6 +1923,7 @@ function BookmarkDialog({
         />
         <IconPicker
           currentUrl={null}
+          fallbackLabel={title || url}
           onPick={async (file) => setIconFile(file)}
           autoFetchUrl={url}
         />
@@ -2028,6 +2029,7 @@ function FolderDialog({
         />
         <IconPicker
           currentUrl={folder?.iconBlobPath ? api.folderIconUrl(folder.id, folder.updatedAt) : null}
+          fallbackLabel={name}
           onPick={async (file) => setIconFile(file)}
         />
         <RichTextEditor value={description} onChange={setDescription} />

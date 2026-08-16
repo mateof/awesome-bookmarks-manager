@@ -10,9 +10,12 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../api.js";
 import { IconLibraryPicker } from "./IconLibraryPicker.js";
+import { LetterIcon } from "./LetterIcon.js";
 
 interface Props {
   currentUrl: string | null;
+  /** Name used for the letter fallback when there is no icon yet. */
+  fallbackLabel?: string;
   onPick: (file: File) => Promise<void> | void;
   onClear?: () => Promise<void> | void;
   autoFetchUrl?: string;
@@ -30,7 +33,7 @@ function extFromMime(ct: string): string {
   return ".ico";
 }
 
-export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props) {
+export function IconPicker({ currentUrl, fallbackLabel, onPick, onClear, autoFetchUrl }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -216,6 +219,10 @@ export function IconPicker({ currentUrl, onPick, onClear, autoFetchUrl }: Props)
               alt={t("iconPicker.iconAlt")}
               className="h-10 w-10 rounded object-cover"
             />
+          ) : fallbackLabel?.trim() ? (
+            // Same letter tile the cards show, so the dialog previews the real
+            // fallback instead of an empty placeholder.
+            <LetterIcon label={fallbackLabel} seed={fallbackLabel} size="h-10 w-10" />
           ) : (
             <ImageIcon className="h-5 w-5 text-slate-400" />
           )}

@@ -23,6 +23,8 @@ const PALETTE = [
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
+type BgMode = "none" | "color" | "image";
+
 interface Props {
   /** CSS color: hex (`#rrggbb` / `#rrggbbaa`) or `rgba(...)`. */
   bgColor: string | null;
@@ -102,6 +104,12 @@ export function BackgroundPicker({
 
   const parsed = useMemo(() => parseColor(bgColor), [bgColor]);
 
+  // Colour and image are mutually exclusive (the API enforces it too), so the
+  // dialog offers one or the other instead of showing both at once.
+  const [mode, setMode] = useState<BgMode>(
+    currentImageUrl ? "image" : bgColor ? "color" : "none",
+  );
+
   const setHex = (hex: string) => {
     onBgColorChange(buildColor(hex, parsed.alpha));
   };
@@ -175,6 +183,13 @@ export function BackgroundPicker({
     }
   };
 
+  const switchMode = async (next: BgMode) => {
+    if (next === mode) return;
+    setMode(next);
+    if (next !== "image" && preview) await clearImage();
+    if (next !== "color" && bgColor) onBgColorChange(null);
+  };
+
   const clearImage = async () => {
     if (!onImageClear) return;
     setBusy(true);
@@ -191,12 +206,34 @@ export function BackgroundPicker({
     }
   };
 
+  const MODES: { key: BgMode; label: string }[] = [
+    { key: "none", label: t("background.modeNone") },
+    { key: "color", label: t("background.modeColor") },
+    ...(onImagePick ? [{ key: "image" as const, label: t("background.modeImage") }] : []),
+  ];
+
   return (
     <div className="space-y-3 rounded border border-slate-200 p-3 dark:border-slate-700">
+      <div className="flex flex-wrap gap-1">
+        {MODES.map((m) => (
+          <button
+            key={m.key}
+            type="button"
+            disabled={busy}
+            onClick={() => void switchMode(m.key)}
+            className={`rounded-full border px-3 py-1 text-xs disabled:opacity-50 ${
+              mode === m.key
+                ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
+                : "border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "color" && (
       <div className="space-y-2">
-        <div className="text-xs font-medium text-slate-500">
-          {t("background.colorLabel")}
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           {PALETTE.map((c) => (
             <button
@@ -249,9 +286,10 @@ export function BackgroundPicker({
           aria-label="preview"
         />
       </div>
+      )}
 
-      {onImagePick && (
-        <div className="space-y-2 border-t border-slate-200 pt-3 dark:border-slate-700">
+      {mode === "image" && onImagePick && (
+        <div className="space-y-2">
           <div className="text-xs font-medium text-slate-500">
             {t("background.imageLabel")}
           </div>

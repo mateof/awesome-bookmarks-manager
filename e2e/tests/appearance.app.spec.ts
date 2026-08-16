@@ -35,7 +35,9 @@ test("apariencia: icono de librería + fondo por defecto + banner", async ({
   await page.getByRole("button", { name: "Biblioteca" }).click();
   await page.getByRole("button", { name: "Star", exact: true }).first().click();
 
-  // Default background: pick the first tile.
+  // Backgrounds live under the "Imagen" mode now that colour and image are
+  // mutually exclusive: choose it, then pick the first preset tile.
+  await page.getByRole("button", { name: "Imagen", exact: true }).click();
   await page.getByRole("button", { name: "Usar este fondo" }).first().click();
   await shot(page, "24-appearance-dialog");
 
