@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Filter, FolderClosed, X } from "lucide-react";
-import { useMemo } from "react";
+import { ExternalLink, Filter, FolderClosed, Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -92,7 +92,33 @@ export function TagFilterPage() {
     return map;
   }, [folders, bookmarks]);
 
-  const usableTags = allTags.filter((tg) => (counts.get(tg.id) ?? 0) > 0 || selected.includes(tg.id));
+  const [tagQuery, setTagQuery] = useState("");
+
+  /** Accent- and case-insensitive, so "diseno" finds "diseño". */
+  const norm = (v: string) =>
+    v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  const usableTags = useMemo(() => {
+    const q = norm(tagQuery.trim());
+    return allTags
+      .filter((tg) => (counts.get(tg.id) ?? 0) > 0 || selected.includes(tg.id))
+      // A selected tag stays visible even when the search would hide it, so the
+      // active filter never disappears from view while you look for the next one.
+      .filter((tg) => !q || selected.includes(tg.id) || norm(tg.name).includes(q))
+      .sort((a, b) => {
+        const aSel = selected.includes(a.id) ? 0 : 1;
+        const bSel = selected.includes(b.id) ? 0 : 1;
+        if (aSel !== bSel) return aSel - bSel;
+        // Then the most used first: with hundreds of tags the common ones
+        // should be reachable without typing.
+        const diff = (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      });
+  }, [allTags, counts, selected, tagQuery]);
+
+  const hiddenByQuery =
+    allTags.filter((tg) => (counts.get(tg.id) ?? 0) > 0).length -
+    usableTags.filter((tg) => (counts.get(tg.id) ?? 0) > 0).length;
 
   return (
     <div className="space-y-4">
@@ -110,9 +136,40 @@ export function TagFilterPage() {
       </div>
 
       {/* Tag picker + match mode */}
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+      <div className="space-y-2 rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+        <div className="flex items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
+            <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <input
+              value={tagQuery}
+              onChange={(e) => setTagQuery(e.target.value)}
+              placeholder={t("tags.searchTags")}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+            {tagQuery && (
+              <button
+                type="button"
+                onClick={() => setTagQuery("")}
+                title={t("common.remove")}
+                aria-label={t("common.remove")}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {hiddenByQuery > 0 && (
+            <span className="shrink-0 text-xs text-slate-400">
+              {t("tags.hiddenBySearch", { count: hiddenByQuery })}
+            </span>
+          )}
+        </div>
+
+        <div className="flex max-h-40 flex-wrap items-center gap-1.5 overflow-y-auto">
         {usableTags.length === 0 && (
-          <span className="px-1 text-sm text-slate-400">{t("tags.empty")}</span>
+          <span className="px-1 text-sm text-slate-400">
+            {tagQuery ? t("tags.noTagMatches") : t("tags.empty")}
+          </span>
         )}
         {usableTags.map((tg) => {
           const on = selected.includes(tg.id);
@@ -135,8 +192,11 @@ export function TagFilterPage() {
           );
         })}
 
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
         {selected.length > 1 && (
-          <div className="ml-auto flex items-center gap-1">
+          <div className="mr-auto flex items-center gap-1">
             <button
               type="button"
               onClick={() => setMatchAll(true)}
@@ -172,6 +232,7 @@ export function TagFilterPage() {
             <X className="h-3 w-3" /> {t("tags.clearFilter")}
           </button>
         )}
+        </div>
       </div>
 
       {selected.length === 0 && (
