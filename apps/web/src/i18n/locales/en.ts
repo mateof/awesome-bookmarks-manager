@@ -109,6 +109,8 @@ const en = {
   spotlight: {
     placeholder: "Search folders and bookmarks…",
     hint: "Type to search your folders and bookmarks.",
+    inCurrentFolder: "In this folder",
+    elsewhere: "Elsewhere",
     noResults: "No results.",
   },
   panels: {

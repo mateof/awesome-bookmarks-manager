@@ -109,6 +109,8 @@ const gl = {
   spotlight: {
     placeholder: "Buscar cartafoles e marcadores…",
     hint: "Escribe para buscar nos teus cartafoles e marcadores.",
+    inCurrentFolder: "Neste cartafol",
+    elsewhere: "No resto",
     noResults: "Sen resultados.",
   },
   panels: {

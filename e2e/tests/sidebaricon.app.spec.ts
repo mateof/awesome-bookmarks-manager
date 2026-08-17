@@ -101,4 +101,14 @@ test("buscador: primero los resultados de la carpeta actual", async ({ browser }
   const idxLejos = order.indexOf("manzana lejos");
   expect(idxCerca).toBeLessThan(idxLejos);
   expect(idxHija).toBeLessThan(idxLejos);
+
+  // The boost is visible, not just implied by the order: scoped results sit
+  // under their own heading and carry an accent border.
+  await expect(page.getByText("En esta carpeta")).toBeVisible();
+  await expect(page.getByText("En el resto")).toBeVisible();
+  const scopedRow = page.locator("[data-idx]").filter({ hasText: "manzana cerca" });
+  await expect(scopedRow).toHaveClass(/border-blue-500/);
+
+  // Icons are the real ones: a bookmark with no icon shows its letter tile.
+  await expect(scopedRow.getByText("M", { exact: true })).toBeVisible();
 });

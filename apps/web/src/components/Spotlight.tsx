@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
+import { LetterIcon } from "./LetterIcon.js";
 import { useActiveFolderId } from "../hooks.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
 
-type Result =
+type Result = { near: boolean; iconUrl: string | null } & (
   | { kind: "folder"; id: string; title: string; sub: string }
-  | { kind: "bookmark"; id: string; title: string; url: string; sub: string };
+  | { kind: "bookmark"; id: string; title: string; url: string; sub: string }
+);
 
 /**
  * Spotlight-style global search: a modal bar near the top with live results
@@ -75,6 +77,10 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
           id: f.id,
           title: f.name,
           sub: pathOf(f.parentId),
+          near: inScope(f.parentId, f.id),
+          iconUrl: f.iconBlobPath
+            ? api.folderIconUrl(f.aliasOf ?? f.id, f.updatedAt)
+            : null,
           _s: s,
           _near: inScope(f.parentId, f.id) ? 0 : 1,
         });
@@ -88,6 +94,10 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
           title: b.title,
           url: b.url,
           sub: pathOf(b.folderId),
+          near: inScope(b.folderId),
+          iconUrl: b.iconBlobPath
+            ? api.bookmarkIconUrl(b.aliasOf ?? b.id, b.updatedAt)
+            : null,
           _s: s,
           _near: inScope(b.folderId) ? 0 : 1,
         });
@@ -172,28 +182,51 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
             </div>
           ) : (
             results.map((r, i) => (
-              <button
-                key={`${r.kind}:${r.id}`}
-                data-idx={i}
-                onMouseMove={() => setSel(i)}
-                onClick={() => activate(r)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
-                  i === sel ? "bg-slate-100 dark:bg-slate-800" : ""
-                }`}
-              >
-                {r.kind === "folder" ? (
-                  <FolderClosed className="h-4 w-4 shrink-0 text-slate-400" />
-                ) : (
-                  <ExternalLink className="h-4 w-4 shrink-0 text-blue-500" />
+              <div key={`${r.kind}:${r.id}`}>
+                {/* Headers split "what's here" from the rest, so the boost is
+                    visible rather than just implied by the order. */}
+                {i === 0 && r.near && (
+                  <div className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                    {t("spotlight.inCurrentFolder")}
+                  </div>
                 )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{r.title}</span>
-                  <span className="block truncate text-xs text-slate-400">{r.sub}</span>
-                </span>
-                {i === sel && (
-                  <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                {!r.near && results[i - 1]?.near && (
+                  <div className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                    {t("spotlight.elsewhere")}
+                  </div>
                 )}
-              </button>
+                <button
+                  data-idx={i}
+                  onMouseMove={() => setSel(i)}
+                  onClick={() => activate(r)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+                    r.near ? "border-l-2 border-blue-500 bg-blue-50/40 dark:bg-blue-500/10" : ""
+                  } ${i === sel ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+                >
+                  {r.iconUrl ? (
+                    <img
+                      src={r.iconUrl}
+                      alt=""
+                      className="h-5 w-5 shrink-0 rounded object-cover"
+                    />
+                  ) : r.kind === "folder" ? (
+                    <FolderClosed className="h-4 w-4 shrink-0 text-slate-400" />
+                  ) : (
+                    <LetterIcon
+                      label={r.title || r.url}
+                      seed={r.url || r.title}
+                      size="h-5 w-5"
+                    />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{r.title}</span>
+                    <span className="block truncate text-xs text-slate-400">{r.sub}</span>
+                  </span>
+                  {i === sel && (
+                    <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  )}
+                </button>
+              </div>
             ))
           )}
         </div>

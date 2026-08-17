@@ -109,6 +109,8 @@ const es = {
   spotlight: {
     placeholder: "Buscar carpetas y bookmarks…",
     hint: "Escribe para buscar en tus carpetas y bookmarks.",
+    inCurrentFolder: "En esta carpeta",
+    elsewhere: "En el resto",
     noResults: "Sin resultados.",
   },
   panels: {
