@@ -98,6 +98,8 @@ const gl = {
     title: "Favoritos",
   },
   sidebar: {
+    changeIcon: "Cambiar icona",
+    changeIconTitle: "Icona de {{name}}",
     home: "Inicio",
     groups: "Grupos",
     tags: "Etiquetas",
@@ -890,6 +892,7 @@ const gl = {
   iconLib: {
     library: "Biblioteca",
     search: "Buscar iconas…",
+    emoji: "Emojis",
     common: "Comúns",
     cat: {
       general: "Xeral",

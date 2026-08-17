@@ -147,6 +147,18 @@ export const ICON_TILE_COLORS: string[] = [
  * onto a rounded coloured tile, returning a standalone 128x128 SVG string.
  * The glyph is scaled 3x and centred; stroke is white for contrast.
  */
+/**
+ * Same tile as a glyph icon, but with an emoji drawn on it. Emojis are colour
+ * fonts, so they are rendered as text rather than as a stroked path.
+ */
+export function composeEmojiSvg(emoji: string, tileColor: string): string {
+  const safe = emoji
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="${tileColor}"/><text x="64" y="64" dominant-baseline="central" text-anchor="middle" font-size="76">${safe}</text></svg>`;
+}
+
 export function composeIconSvg(glyphInner: string, tileColor: string): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="${tileColor}"/><g transform="translate(28 28) scale(3.17)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${glyphInner}</g></svg>`;
 }

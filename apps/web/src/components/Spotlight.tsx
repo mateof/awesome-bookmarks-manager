@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
+import { useActiveFolderId } from "../hooks.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
 
 type Result =
@@ -25,6 +26,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
     queryKey: ["bookmarks", "all"],
     queryFn: () => api.listBookmarks({}),
   });
+  const activeFolderId = useActiveFolderId();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
@@ -46,21 +48,56 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
       }
       return parts.join(" / ") || t("sidebar.home");
     };
+    // Searching from inside a folder, its own contents come first: that is
+    // almost always what you meant. Everything else still shows, just below.
+    const scope = new Set<string>();
+    if (activeFolderId) {
+      const stack = [activeFolderId];
+      let guard = 0;
+      while (stack.length && guard++ < 5000) {
+        const cur = stack.pop()!;
+        if (scope.has(cur)) continue;
+        scope.add(cur);
+        for (const f of fs) if (f.parentId === cur) stack.push(f.id);
+      }
+    }
+    const inScope = (folderId: string | null, ownId?: string) =>
+      scope.size > 0 &&
+      ((folderId !== null && scope.has(folderId)) || (!!ownId && scope.has(ownId)));
+
     // Levenshtein-tolerant scoring: exact substring first, typos after.
-    const scored: Array<Result & { _s: number }> = [];
+    const scored: Array<Result & { _s: number; _near: number }> = [];
     for (const f of fs) {
       const s = fuzzyScore(query, f.name);
       if (s !== null)
-        scored.push({ kind: "folder", id: f.id, title: f.name, sub: pathOf(f.parentId), _s: s });
+        scored.push({
+          kind: "folder",
+          id: f.id,
+          title: f.name,
+          sub: pathOf(f.parentId),
+          _s: s,
+          _near: inScope(f.parentId, f.id) ? 0 : 1,
+        });
     }
     for (const b of bookmarks.data ?? []) {
       const s = fuzzyScoreAny(query, b.title, b.url);
       if (s !== null)
-        scored.push({ kind: "bookmark", id: b.id, title: b.title, url: b.url, sub: pathOf(b.folderId), _s: s });
+        scored.push({
+          kind: "bookmark",
+          id: b.id,
+          title: b.title,
+          url: b.url,
+          sub: pathOf(b.folderId),
+          _s: s,
+          _near: inScope(b.folderId) ? 0 : 1,
+        });
     }
-    scored.sort((a, b) => a._s - b._s || (a.kind === "folder" ? -1 : 1));
-    return scored.slice(0, 25).map(({ _s, ...r }) => r);
-  }, [q, folders.data, bookmarks.data, t]);
+    scored.sort(
+      (a, b) =>
+        a._near - b._near || a._s - b._s || (a.kind === "folder" ? -1 : 1),
+    );
+    return scored.slice(0, 25).map(({ _s, _near, ...r }) => r);
+  }, [q, folders.data, bookmarks.data, t, activeFolderId]);
 
   useEffect(() => setSel(0), [q]);
 

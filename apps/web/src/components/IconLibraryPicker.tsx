@@ -2,9 +2,11 @@ import { type MouseEvent, type ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ICON_TILE_COLORS,
+  composeEmojiSvg,
   composeIconSvg,
   svgFile,
 } from "../lib/appearance.js";
+import { LIBRARY_EMOJIS } from "../lib/emojiLibrary.js";
 import {
   COMMON_ICONS,
   ICON_CATEGORIES,
@@ -58,6 +60,18 @@ export function IconLibraryPicker({
     return ICON_CATEGORIES.find((c) => c.key === cat)?.icons ?? [];
   }, [q, cat]);
 
+  const pickEmoji = async (emoji: string) => {
+    await onPick(svgFile(composeEmojiSvg(emoji, color), "icon.svg"));
+  };
+
+  const emojiResults = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return LIBRARY_EMOJIS;
+    return LIBRARY_EMOJIS.filter(
+      (it) => it.k.includes(query) || it.e === query,
+    );
+  }, [q]);
+
   const pick = async (e: MouseEvent<HTMLButtonElement>) => {
     const svgEl = e.currentTarget.querySelector("svg");
     if (!svgEl) return;
@@ -95,6 +109,9 @@ export function IconLibraryPicker({
           <Chip active={cat === "__common"} onClick={() => setCat("__common")}>
             {t("iconLib.common")}
           </Chip>
+          <Chip active={cat === "__emoji"} onClick={() => setCat("__emoji")}>
+            {t("iconLib.emoji")}
+          </Chip>
           {ICON_CATEGORIES.map((c) => (
             <Chip
               key={c.key}
@@ -107,6 +124,25 @@ export function IconLibraryPicker({
         </div>
       )}
 
+      {(cat === "__emoji" && !q.trim()) || (q.trim() && emojiResults.length > 0) ? (
+        <div className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto">
+          {emojiResults.map((it) => (
+            <button
+              key={it.e}
+              type="button"
+              title={it.k.split(" ")[0]}
+              disabled={busy}
+              onClick={() => void pickEmoji(it.e)}
+              className="flex items-center justify-center rounded-lg p-1.5 text-xl leading-none transition hover:scale-105 hover:ring-2 hover:ring-slate-300 disabled:opacity-50 dark:hover:ring-slate-600"
+              style={{ backgroundColor: color }}
+            >
+              {it.e}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {cat !== "__emoji" && (
       <div className="grid max-h-44 grid-cols-8 gap-1 overflow-y-auto">
         {icons.map(({ name, Icon }) => (
           <button
@@ -122,6 +158,7 @@ export function IconLibraryPicker({
           </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

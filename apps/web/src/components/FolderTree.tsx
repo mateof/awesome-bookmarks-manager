@@ -10,8 +10,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { api } from "../api.js";
 import { useNestDrop } from "../dnd.js";
 import { buildFolderPath, useActiveFolderId } from "../hooks.js";
+import { FolderIconDialog } from "./FolderIconDialog.js";
 
 export function FolderTree({ folders }: { folders: Folder[] }) {
   const { t } = useTranslation();
@@ -26,6 +28,7 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
     () => new Set(buildFolderPath(folders, activeId).map((f) => f.id)),
     [folders, activeId],
   );
+  const [iconTarget, setIconTarget] = useState<Folder | null>(null);
 
   return (
     <nav className="space-y-0.5">
@@ -49,8 +52,15 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
           depth={0}
           activeId={activeId}
           pathIds={pathIds}
+          onEditIcon={setIconTarget}
         />
       ))}
+      {iconTarget && (
+        <FolderIconDialog
+          folder={iconTarget}
+          onClose={() => setIconTarget(null)}
+        />
+      )}
     </nav>
   );
 }
@@ -61,12 +71,14 @@ function Node({
   depth,
   activeId,
   pathIds,
+  onEditIcon,
 }: {
   folder: Folder;
   folders: Folder[];
   depth: number;
   activeId: string | null;
   pathIds: Set<string>;
+  onEditIcon: (f: Folder) => void;
 }) {
   const { t } = useTranslation();
   const onPath = pathIds.has(folder.id);
@@ -105,11 +117,31 @@ function Node({
         ) : (
           <span className="w-3" />
         )}
-        {open && children.length > 0 ? (
-          <FolderOpen className="h-4 w-4 text-slate-500" />
-        ) : (
-          <FolderClosed className="h-4 w-4 text-slate-500" />
-        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onEditIcon(folder);
+          }}
+          title={t("sidebar.changeIcon")}
+          aria-label={t("sidebar.changeIcon")}
+          className="shrink-0 rounded hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600"
+        >
+          {folder.iconBlobPath ? (
+            // Mirror the folder's real icon, using the target's blob when this
+            // row is a symlink.
+            <img
+              src={api.folderIconUrl(folder.aliasOf ?? folder.id, folder.updatedAt)}
+              alt=""
+              className="h-4 w-4 rounded object-cover"
+            />
+          ) : open && children.length > 0 ? (
+            <FolderOpen className="h-4 w-4 text-slate-500" />
+          ) : (
+            <FolderClosed className="h-4 w-4 text-slate-500" />
+          )}
+        </button>
         <Link
           to={
             folder.linkedShareId
@@ -133,6 +165,7 @@ function Node({
             depth={depth + 1}
             activeId={activeId}
             pathIds={pathIds}
+            onEditIcon={onEditIcon}
           />
         ))}
     </div>

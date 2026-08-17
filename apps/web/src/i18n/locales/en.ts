@@ -98,6 +98,8 @@ const en = {
     title: "Favorites",
   },
   sidebar: {
+    changeIcon: "Change icon",
+    changeIconTitle: "Icon for {{name}}",
     home: "Home",
     groups: "Groups",
     tags: "Tags",
@@ -887,6 +889,7 @@ const en = {
   iconLib: {
     library: "Library",
     search: "Search icons…",
+    emoji: "Emojis",
     common: "Common",
     cat: {
       general: "General",
