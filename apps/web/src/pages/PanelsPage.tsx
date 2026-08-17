@@ -239,7 +239,14 @@ function PanelEditModal({
             ? emails.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean)
             : undefined,
       }),
-    onSuccess: onSaved,
+    onSuccess: (saved) => {
+      // The detail query backs this dialog, so it has to be refreshed too:
+      // invalidating only the list left the cached panel behind and reopening
+      // the dialog showed the values from before the save.
+      qc.setQueryData(["panel", panelId], saved);
+      qc.invalidateQueries({ queryKey: ["panel", panelId] });
+      onSaved();
+    },
     onError: (e) => setErr(e instanceof ApiError ? e.message : t("common.error")),
   });
 
