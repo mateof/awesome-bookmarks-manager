@@ -15,7 +15,7 @@ import { SettingsPage } from "./pages/SettingsPage.js";
 import { SharedPage } from "./pages/SharedPage.js";
 import { SharePage } from "./pages/SharePage.js";
 import { SignupPage } from "./pages/SignupPage.js";
-import { TagFilterPage } from "./pages/TagFilterPage.js";
+import { TagFilterPage, TagRedirectPage } from "./pages/TagFilterPage.js";
 import { TagsPage } from "./pages/TagsPage.js";
 
 export default function App() {
@@ -45,7 +45,8 @@ export default function App() {
                   <Route path="/shared/:shareId" element={<SharedPage />} />
                   <Route path="/panels" element={<PanelsPage />} />
                   <Route path="/tags" element={<TagsPage />} />
-                  <Route path="/tag/:id" element={<TagFilterPage />} />
+                  <Route path="/filter" element={<TagFilterPage />} />
+                  <Route path="/tag/:id" element={<TagRedirectPage />} />
                   <Route path="/settings/*" element={<SettingsPage />} />
                 </Routes>
               </Layout>

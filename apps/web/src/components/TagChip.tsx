@@ -71,7 +71,7 @@ export function TagChip(props: Props) {
   if (props.as === "link") {
     return (
       <Link
-        to={`/tag/${tag.id}`}
+        to={`/filter?tags=${tag.id}`}
         style={style}
         className={`${baseCls} hover:brightness-110`}
         onClick={(e) => e.stopPropagation()}

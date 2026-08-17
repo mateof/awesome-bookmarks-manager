@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Tag } from "@awesome-bookmarks/shared";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Filter, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -62,9 +62,15 @@ export function TagsPage() {
     <div className="space-y-4">
       <div className="flex items-center">
         <h1 className="text-xl font-semibold">{t("tags.pageTitle")}</h1>
+        <Link
+          to="/filter"
+          className="ml-auto flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <Filter className="h-4 w-4" /> {t("tags.filterHeading")}
+        </Link>
         <button
           onClick={() => setShowCreate(true)}
-          className="ml-auto flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
+          className="ml-2 flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
         >
           <Plus className="h-4 w-4" /> {t("tags.newTag")}
         </button>
