@@ -122,6 +122,18 @@ export function PanelRenderer({
 
   const showFilterBar = template.tagFilter !== false && allTags.size > 0;
 
+  // Cmd/Ctrl+K opens the panel search, matching the app's shortcut.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const rootTitle = displayTitle?.trim() || root.name;
 
   // Built up front so the template can swap their order.
@@ -205,6 +217,17 @@ export function PanelRenderer({
           }}
         >
           <Search size={16} /> Buscar en el panel…
+          <kbd
+            style={{
+              marginLeft: "auto",
+              border: `1px solid ${t.border}`,
+              borderRadius: 4,
+              padding: "0 5px",
+              fontSize: 11,
+            }}
+          >
+            ⌘K
+          </kbd>
         </button>
         )}
 
@@ -273,7 +296,12 @@ export function PanelRenderer({
         <DescriptionModal b={descBookmark} template={template} onClose={() => setDescBookmark(null)} />
       )}
       {searchOpen && (
-        <PanelSearch root={root} template={template} onClose={() => setSearchOpen(false)} />
+        <PanelSearch
+          root={root}
+          template={template}
+          onClose={() => setSearchOpen(false)}
+          onOpenFolder={(next) => setPath(next)}
+        />
       )}
     </div>
   );
@@ -283,22 +311,41 @@ function PanelSearch({
   root,
   template,
   onClose,
+  onOpenFolder,
 }: {
   root: PanelFolder;
   template: TemplateConfig;
   onClose: () => void;
+  /** Navigate to a folder by its path of ids (as used by `?p=`). */
+  onOpenFolder: (path: string[]) => void;
 }) {
   const t = template.theme;
   const all = useMemo(() => flatten(root), [root]);
+  const allFolders = useMemo(() => flattenFolders(root), [root]);
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const backdrop = useBackdropDismiss(onClose);
 
-  const results = useMemo(() => {
+  const activate = (hit: SearchHit) => {
+    if (hit.kind === "folder") onOpenFolder(hit.path);
+    else window.open(hit.b.url, "_blank", "noopener,noreferrer");
+    onClose();
+  };
+
+  const results = useMemo<SearchHit[]>(() => {
     const query = q.trim();
-    if (!query) return all.slice(0, 30);
-    const scored: Array<{ b: PanelBookmark; s: number }> = [];
+    if (!query) {
+      return [
+        ...allFolders.slice(0, 8).map((f) => ({ kind: "folder" as const, ...f })),
+        ...all.slice(0, 30).map((b) => ({ kind: "bookmark" as const, b })),
+      ];
+    }
+    const scored: Array<{ hit: SearchHit; s: number }> = [];
+    for (const f of allFolders) {
+      const s = fuzzyScoreAny(query, f.folder.name);
+      if (s !== null) scored.push({ hit: { kind: "folder", ...f }, s });
+    }
     for (const b of all) {
       const s = fuzzyScoreAny(
         query,
@@ -306,10 +353,11 @@ function PanelSearch({
         b.url,
         b.description ? stripHtml(b.description) : "",
       );
-      if (s !== null) scored.push({ b, s });
+      if (s !== null) scored.push({ hit: { kind: "bookmark", b }, s });
     }
-    scored.sort((a, b) => a.s - b.s);
-    return scored.slice(0, 40).map((x) => x.b);
+    // Folders win ties so that "open the folder" beats "open one link in it".
+    scored.sort((a, b) => a.s - b.s || (a.hit.kind === "folder" ? -1 : 1));
+    return scored.slice(0, 40).map((x) => x.hit);
   }, [q, all]);
 
   useEffect(() => setSel(0), [q]);
@@ -331,10 +379,7 @@ function PanelSearch({
         setSel((s) => Math.max(s - 1, 0));
       } else if (e.key === "Enter") {
         const r = results[sel];
-        if (r) {
-          window.open(r.url, "_blank", "noopener,noreferrer");
-          onClose();
-        }
+        if (r) activate(r);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -374,15 +419,12 @@ function PanelSearch({
           {results.length === 0 ? (
             <div style={{ padding: "2rem", textAlign: "center", color: t.muted, fontSize: 14 }}>Sin resultados.</div>
           ) : (
-            results.map((b, i) => (
+            results.map((hit, i) => (
               <button
-                key={b.id}
+                key={hit.kind === "folder" ? `f:${hit.folder.id}` : `b:${hit.b.id}`}
                 data-idx={i}
                 onMouseMove={() => setSel(i)}
-                onClick={() => {
-                  window.open(b.url, "_blank", "noopener,noreferrer");
-                  onClose();
-                }}
+                onClick={() => activate(hit)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -398,10 +440,18 @@ function PanelSearch({
                   background: i === sel ? `${t.accent}22` : "transparent",
                 }}
               >
-                <Favicon url={b.url} title={b.title} accent={t.accent} size={20} />
+                {hit.kind === "folder" ? (
+                  <FolderIcon size={20} style={{ color: t.accent, flexShrink: 0 }} />
+                ) : (
+                  <Favicon url={hit.b.url} title={hit.b.title} accent={t.accent} size={20} />
+                )}
                 <span style={{ minWidth: 0, flex: 1 }}>
-                  <span style={{ display: "block", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</span>
-                  <span style={{ display: "block", fontSize: 12, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
+                  <span style={{ display: "block", fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {hit.kind === "folder" ? hit.folder.name : hit.b.title}
+                  </span>
+                  <span style={{ display: "block", fontSize: 12, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {hit.kind === "folder" ? hit.where : hit.b.url}
+                  </span>
                 </span>
                 {i === sel && <CornerDownLeft size={14} style={{ color: t.muted, flexShrink: 0 }} />}
               </button>
@@ -425,6 +475,27 @@ function folderAt(root: PanelFolder, path: string[]): PanelFolder {
     cur = next;
   }
   return cur;
+}
+
+/** A search hit: either a bookmark or a folder with the path that opens it. */
+type SearchHit =
+  | { kind: "bookmark"; b: PanelBookmark }
+  | { kind: "folder"; folder: PanelFolder; path: string[]; where: string };
+
+/** Every descendant folder with the `?p=` path that navigates to it. */
+function flattenFolders(
+  root: PanelFolder,
+): { folder: PanelFolder; path: string[]; where: string }[] {
+  const out: { folder: PanelFolder; path: string[]; where: string }[] = [];
+  const walk = (f: PanelFolder, path: string[], trail: string[]) => {
+    for (const sub of f.subfolders) {
+      const p = [...path, sub.id];
+      out.push({ folder: sub, path: p, where: trail.join(" / ") || root.name });
+      walk(sub, p, [...trail, sub.name]);
+    }
+  };
+  walk(root, [], []);
+  return out;
 }
 
 function flatten(folder: PanelFolder): PanelBookmark[] {
