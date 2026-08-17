@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useBackdropDismiss } from "../lib/overlay.js";
 
 interface Props {
@@ -17,6 +18,7 @@ const SIZE = {
 };
 
 export function Modal({ title, children, onClose, size = "md" }: Props) {
+  const { t } = useTranslation();
   const backdrop = useBackdropDismiss(onClose);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -39,6 +41,8 @@ export function Modal({ title, children, onClose, size = "md" }: Props) {
           <h3 className="text-base font-semibold">{title}</h3>
           <button
             onClick={onClose}
+            title={t("common.close")}
+            aria-label={t("common.close")}
             className="ml-auto text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
