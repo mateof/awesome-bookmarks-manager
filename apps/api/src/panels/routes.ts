@@ -8,19 +8,27 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { readBlob } from "../storage/blobs.js";
-import { openPanelBgAsset, storePanelBgAsset } from "../storage/panel-assets.js";
+import {
+  openPanelBgAsset,
+  openPanelFaviconAsset,
+  storePanelBgAsset,
+  storePanelFaviconAsset,
+} from "../storage/panel-assets.js";
 import { BadRequest, NotFound } from "../util/errors.js";
 import { imageEtag } from "../util/image.js";
 import {
   clearPanelBgAsset,
+  clearPanelFaviconAsset,
   createPanel,
   deletePanel,
   getPanel,
   listPanels,
   panelBgForPublic,
+  panelFaviconForPublic,
   regeneratePanel,
   resolvePublicPanel,
   setPanelBgAsset,
+  setPanelFaviconAsset,
   updatePanel,
 } from "./service.js";
 import {
@@ -90,6 +98,24 @@ export const panelRoutes: FastifyPluginAsync = async (app) => {
     return clearPanelBgAsset(ctx, id);
   });
 
+  // Tab icon as an image (alternative to the emoji).
+  app.post("/panels/:id/favicon", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
+    const file = await req.file();
+    if (!file) throw BadRequest("file part missing");
+    getPanel(ctx, id); // ownership check
+    const { path, mime } = await storePanelFaviconAsset(ctx.userId, id, file);
+    return setPanelFaviconAsset(ctx, id, path, mime);
+  });
+
+  app.delete("/panels/:id/favicon", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return clearPanelFaviconAsset(ctx, id);
+  });
+
   // Templates (built-ins + the user's own).
   app.get("/panel-templates", async (req) => listTemplates(requireAuth(req)));
 
@@ -149,6 +175,23 @@ export const publicPanelRoutes: FastifyPluginAsync = async (app) => {
     }
     const sealed = await readBlob(info.path);
     const bytes = openPanelBgAsset(info.ownerId, sealed);
+    reply.header("content-type", info.mime);
+    return reply.send(bytes);
+  });
+
+  app.get("/public/panel/:slug/favicon", async (req, reply) => {
+    const { slug } = SlugParam.parse(req.params);
+    const info = panelFaviconForPublic(slug, req.session.get("userId"));
+    if (!info) throw NotFound("Favicon not set");
+    const etag = imageEtag(info.updatedAt);
+    reply.header("etag", etag);
+    reply.header("cache-control", "public, max-age=300");
+    if (req.headers["if-none-match"] === etag) {
+      reply.code(304).send();
+      return;
+    }
+    const sealed = await readBlob(info.path);
+    const bytes = openPanelFaviconAsset(info.ownerId, sealed);
     reply.header("content-type", info.mime);
     return reply.send(bytes);
   });

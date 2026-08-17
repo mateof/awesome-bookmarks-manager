@@ -14,17 +14,25 @@ function emojiFaviconDataUrl(emoji: string): string {
 }
 
 /** Set the browser tab title/favicon while a panel is open; restore on leave. */
-function usePanelTabMeta(resp: PublicPanelResponse | undefined) {
+function usePanelTabMeta(resp: PublicPanelResponse | undefined, slug?: string) {
   const title = resp ? resp.tabTitle?.trim() || resp.displayTitle?.trim() || resp.title : "";
   const favicon = resp?.faviconEmoji?.trim() || "";
+  // An uploaded image wins over the emoji when present.
+  const faviconImage =
+    resp?.faviconKind === "image" && slug
+      ? api.panelFaviconUrl(slug, resp.faviconVersion ?? undefined)
+      : "";
   useEffect(() => {
-    if (!title && !favicon) return;
+    if (!title && !favicon && !faviconImage) return;
     const prevTitle = document.title;
     if (title) document.title = title;
     const link = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
     const prevHref = link?.getAttribute("href") ?? null;
     const prevType = link?.getAttribute("type") ?? null;
-    if (favicon && link) {
+    if (faviconImage && link) {
+      link.removeAttribute("type");
+      link.setAttribute("href", faviconImage);
+    } else if (favicon && link) {
       link.setAttribute("type", "image/svg+xml");
       link.setAttribute("href", emojiFaviconDataUrl(favicon));
     }
@@ -35,7 +43,7 @@ function usePanelTabMeta(resp: PublicPanelResponse | undefined) {
         if (prevHref !== null) link.setAttribute("href", prevHref);
       }
     };
-  }, [title, favicon]);
+  }, [title, favicon, faviconImage]);
 }
 
 export function PublicPanelPage() {
@@ -49,7 +57,7 @@ export function PublicPanelPage() {
   });
 
   const resp = unlocked ?? q.data;
-  usePanelTabMeta(resp);
+  usePanelTabMeta(resp, slug);
 
   if (q.isLoading) {
     return <Centered>Cargando…</Centered>;

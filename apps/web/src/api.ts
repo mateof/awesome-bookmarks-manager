@@ -637,6 +637,23 @@ export const api = {
   },
   clearPanelBgAsset: (id: string) =>
     request<PanelDetail>(`/panels/${id}/background`, { method: "DELETE" }),
+  // Tab icon as an image (alternative to the emoji).
+  panelFaviconUrl: (slug: string, v?: string) =>
+    `${BASE}/public/panel/${encodeURIComponent(slug)}/favicon${v ? `?v=${encodeURIComponent(v)}` : ""}`,
+  uploadPanelFavicon: async (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/panels/${id}/favicon`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) throw await iconError(res);
+    return res.json() as Promise<PanelDetail>;
+  },
+  clearPanelFavicon: (id: string) =>
+    request<PanelDetail>(`/panels/${id}/favicon`, { method: "DELETE" }),
 
   // panel templates
   listTemplates: () => request<TemplateItem[]>("/panel-templates"),

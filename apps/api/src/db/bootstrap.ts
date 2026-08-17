@@ -97,6 +97,8 @@ export function ensureSchema() {
       favicon_emoji TEXT,
       bg_blob_path TEXT,
       bg_mime TEXT,
+      favicon_blob_path TEXT,
+      favicon_mime TEXT,
       folder_id TEXT NOT NULL,
       template_id TEXT,
       access_mode TEXT NOT NULL DEFAULT 'public',
@@ -316,6 +318,9 @@ export function ensureSchema() {
   // Custom uploaded panel background (image/gif/video), MASTER_KEY-sealed.
   tryAddColumn("panels", "bg_blob_path", "TEXT");
   tryAddColumn("panels", "bg_mime", "TEXT");
+  // Tab icon as an uploaded image, as an alternative to the emoji.
+  tryAddColumn("panels", "favicon_blob_path", "TEXT");
+  tryAddColumn("panels", "favicon_mime", "TEXT");
   // Token-wrapped DEK envelope for headless API / MCP access.
   tryAddColumn("extension_tokens", "dek_wrap", "BLOB");
   // Passkeys registered before the PRF-less fallback existed default to PRF.

@@ -136,6 +136,9 @@ export type PanelAccessMode = z.infer<typeof PanelAccessModeSchema>;
 /** Kind of custom panel background asset. `image` covers static images + GIFs. */
 export type PanelBgKind = "image" | "video";
 
+/** How a panel's browser-tab icon is defined. */
+export type PanelFaviconKind = "emoji" | "image";
+
 export const PanelSlugSchema = z
   .string()
   .trim()
@@ -198,6 +201,8 @@ export interface PanelListItem {
   faviconEmoji: string | null;
   /** Set when the panel has an uploaded custom background (image/gif/video). */
   bgAssetKind: PanelBgKind | null;
+  /** "emoji" when faviconEmoji is set, "image" when one was uploaded. */
+  faviconKind: PanelFaviconKind | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -241,6 +246,9 @@ export interface PublicPanelResponse {
    */
   bgAssetKind?: PanelBgKind | null;
   bgAssetVersion?: string | null;
+  /** Tab icon: an emoji (see faviconEmoji) or an uploaded image. */
+  faviconKind?: PanelFaviconKind | null;
+  faviconVersion?: string | null;
   /** Present only when unlocked/authorized. */
   root?: PanelFolder;
   needsPassword?: boolean;

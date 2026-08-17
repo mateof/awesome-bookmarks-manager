@@ -1,6 +1,7 @@
 import { hashPassword, verifyPassword } from "@awesome-bookmarks/crypto";
 import type {
   CreatePanelBody,
+  PanelFaviconKind,
   PanelBookmark,
   PanelDetail,
   PanelFolder,
@@ -30,6 +31,16 @@ import { resolveTemplateConfig } from "./templates.js";
 
 function panelUrl(slug: string): string {
   return `${getEnv().PUBLIC_BASE_URL.replace(/\/$/, "")}/panel/${slug}`;
+}
+
+/** Which kind of tab icon a panel row carries, if any. */
+function faviconKindOf(row: {
+  faviconBlobPath: string | null;
+  faviconEmoji: string | null;
+}): PanelFaviconKind | null {
+  if (row.faviconBlobPath) return "image";
+  if (row.faviconEmoji) return "emoji";
+  return null;
 }
 
 /** Trim an optional override; an empty string clears it (stored as null). */
@@ -241,6 +252,7 @@ function toListItem(row: typeof panels.$inferSelect): PanelListItem {
     tabTitle: row.tabTitle ?? null,
     faviconEmoji: row.faviconEmoji ?? null,
     bgAssetKind: panelBgKind(row.bgMime),
+    faviconKind: faviconKindOf(row),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -333,6 +345,11 @@ export async function updatePanel(
       tabTitle: input.tabTitle === undefined ? row.tabTitle : normOverride(input.tabTitle),
       faviconEmoji:
         input.faviconEmoji === undefined ? row.faviconEmoji : normOverride(input.faviconEmoji),
+      // Emoji and uploaded image are alternatives: choosing an emoji drops the
+      // image, the same way the background colour and image exclude each other.
+      ...(input.faviconEmoji !== undefined && normOverride(input.faviconEmoji)
+        ? { faviconBlobPath: null, faviconMime: null }
+        : {}),
       templateId: input.templateId === undefined ? row.templateId : input.templateId,
       accessMode,
       passwordHash,
@@ -390,6 +407,8 @@ export async function resolvePublicPanel(
     faviconEmoji: row.faviconEmoji ?? null,
     bgAssetKind: panelBgKind(row.bgMime),
     bgAssetVersion: row.bgBlobPath ? row.updatedAt : null,
+    faviconKind: faviconKindOf(row),
+    faviconVersion: row.faviconBlobPath ? row.updatedAt : null,
   };
 
   if (row.accessMode === "password") {
@@ -452,6 +471,72 @@ export function clearPanelBgAsset(ctx: AuthedContext, id: string): PanelDetail {
     .run();
   if (row.bgBlobPath) void deleteBlob(row.bgBlobPath);
   return getPanel(ctx, id);
+}
+
+/** Persist a freshly stored tab icon (and drop the emoji, they are exclusive). */
+export function setPanelFaviconAsset(
+  ctx: AuthedContext,
+  id: string,
+  path: string,
+  mime: string,
+): PanelDetail {
+  const row = getDb()
+    .select({ id: panels.id, faviconBlobPath: panels.faviconBlobPath })
+    .from(panels)
+    .where(and(eq(panels.id, id), eq(panels.userId, ctx.userId)))
+    .get();
+  if (!row) throw NotFound("Panel not found");
+  const previous = row.faviconBlobPath;
+  getDb()
+    .update(panels)
+    .set({
+      faviconBlobPath: path,
+      faviconMime: mime,
+      faviconEmoji: null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(panels.id, id))
+    .run();
+  if (previous && previous !== path) void deleteBlob(previous);
+  return getPanel(ctx, id);
+}
+
+/** Remove a panel's uploaded tab icon. */
+export function clearPanelFaviconAsset(ctx: AuthedContext, id: string): PanelDetail {
+  const row = getDb()
+    .select({ id: panels.id, faviconBlobPath: panels.faviconBlobPath })
+    .from(panels)
+    .where(and(eq(panels.id, id), eq(panels.userId, ctx.userId)))
+    .get();
+  if (!row) throw NotFound("Panel not found");
+  getDb()
+    .update(panels)
+    .set({ faviconBlobPath: null, faviconMime: null, updatedAt: new Date().toISOString() })
+    .where(eq(panels.id, id))
+    .run();
+  if (row.faviconBlobPath) void deleteBlob(row.faviconBlobPath);
+  return getPanel(ctx, id);
+}
+
+/** Tab icon for public streaming. Decorative, so gated like the background. */
+export function panelFaviconForPublic(
+  slug: string,
+  viewerUserId?: string,
+): { path: string; mime: string; updatedAt: string; ownerId: string } | null {
+  const row = getDb().select().from(panels).where(eq(panels.slug, slug)).get();
+  if (!row || !row.faviconBlobPath || !row.faviconMime) return null;
+  if (row.accessMode === "users") {
+    const allowed =
+      !!viewerUserId &&
+      (viewerUserId === row.userId || allowedUserIds(row.id).includes(viewerUserId));
+    if (!allowed) return null;
+  }
+  return {
+    path: row.faviconBlobPath,
+    mime: row.faviconMime,
+    updatedAt: row.updatedAt,
+    ownerId: row.userId,
+  };
 }
 
 /**

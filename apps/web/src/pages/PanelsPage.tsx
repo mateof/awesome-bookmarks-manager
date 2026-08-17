@@ -19,6 +19,7 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api, panelPublicUrl } from "../api.js";
 import { Modal } from "../components/Modal.js";
+import { FaviconPicker } from "../components/FaviconPicker.js";
 import { TemplateEditor } from "../components/TemplateEditor.js";
 import { TemplateSwatch } from "../components/TemplateSwatch.js";
 
@@ -303,16 +304,27 @@ function PanelEditModal({
                     placeholder={d.title}
                   />
                 </label>
-                <label className="space-y-1 text-sm">
+                <div className="space-y-1 text-sm">
                   <span className="text-slate-500">{t("panels.faviconEmoji")}</span>
-                  <input
-                    className={`${input} w-20 text-center`}
-                    value={form.faviconEmoji ?? d.faviconEmoji ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, faviconEmoji: e.target.value }))}
-                    placeholder="🔖"
-                    maxLength={8}
+                  <FaviconPicker
+                    emoji={form.faviconEmoji ?? d.faviconEmoji ?? ""}
+                    onEmojiChange={(v) => setForm((f) => ({ ...f, faviconEmoji: v }))}
+                    imageUrl={
+                      d.faviconKind === "image"
+                        ? api.panelFaviconUrl(d.slug, d.updatedAt)
+                        : null
+                    }
+                    onUpload={async (file) => {
+                      await api.uploadPanelFavicon(panelId, file);
+                      setForm((f) => ({ ...f, faviconEmoji: "" }));
+                      await afterBgChange();
+                    }}
+                    onClearImage={async () => {
+                      await api.clearPanelFavicon(panelId);
+                      await afterBgChange();
+                    }}
                   />
-                </label>
+                </div>
               </div>
               <label className="space-y-1 text-sm">
                 <span className="text-slate-500">{t("panels.tabTitle")}</span>

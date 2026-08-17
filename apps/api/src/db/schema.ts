@@ -108,6 +108,9 @@ export const panels = sqliteTable(
     /** Custom background asset: MASTER_KEY-sealed blob path + its MIME type. */
     bgBlobPath: text("bg_blob_path"),
     bgMime: text("bg_mime"),
+    /** Custom tab icon as an image (alternative to faviconEmoji). */
+    faviconBlobPath: text("favicon_blob_path"),
+    faviconMime: text("favicon_mime"),
     folderId: text("folder_id").notNull(),
     templateId: text("template_id"),
     accessMode: text("access_mode").notNull().default("public"),

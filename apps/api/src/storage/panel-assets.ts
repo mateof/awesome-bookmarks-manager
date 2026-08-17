@@ -31,6 +31,22 @@ function panelBgAad(userId: string): string {
   return `master|${userId}|panel.bg`;
 }
 
+function panelFaviconAad(userId: string): string {
+  return `master|${userId}|panel.favicon`;
+}
+
+const MAX_FAVICON_BYTES = 1024 * 1024; // 1 MB is plenty for a tab icon.
+const FAVICON_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/svg+xml",
+  "image/x-icon",
+  "image/vnd.microsoft.icon",
+]);
+
 /** image/* → "image"; video/* → "video". */
 export function panelBgKind(mime: string | null | undefined): PanelBgKind | null {
   if (!mime) return null;
@@ -70,4 +86,37 @@ export async function storePanelBgAsset(
 /** Decrypt a stored panel background (needs only the MASTER_KEY, no DEK). */
 export function openPanelBgAsset(userId: string, sealed: Buffer): Buffer {
   return aeadDecrypt(masterKey(), sealed, panelBgAad(userId));
+}
+
+/**
+ * Store a panel's tab icon image. Sealed with the MASTER_KEY like the
+ * background, so the public page can serve it without the owner logged in.
+ */
+export async function storePanelFaviconAsset(
+  userId: string,
+  panelId: string,
+  file: MultipartFile,
+): Promise<{ path: string; mime: string }> {
+  const mime = file.mimetype;
+  if (!FAVICON_TYPES.has(mime)) {
+    throw BadRequest(`Tipo de icono no soportado: ${mime}`);
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of file.file) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+    chunks.push(buf);
+    size += buf.length;
+    if (size > MAX_FAVICON_BYTES) {
+      throw BadRequest(`El icono supera ${Math.round(MAX_FAVICON_BYTES / 1024)}KB`);
+    }
+  }
+  const sealed = aeadEncrypt(masterKey(), Buffer.concat(chunks), panelFaviconAad(userId));
+  const path = await writeBlob(join(panelBlobDir(userId, panelId), "favicon.bin"), sealed);
+  return { path, mime };
+}
+
+/** Decrypt a stored panel tab icon (MASTER_KEY only, no DEK). */
+export function openPanelFaviconAsset(userId: string, sealed: Buffer): Buffer {
+  return aeadDecrypt(masterKey(), sealed, panelFaviconAad(userId));
 }
