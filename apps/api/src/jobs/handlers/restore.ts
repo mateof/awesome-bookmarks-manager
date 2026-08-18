@@ -5,6 +5,7 @@ import yauzl from "yauzl";
 import { loadConnection } from "../../cloud/registry.js";
 import { keyCache } from "../../auth/key-cache.js";
 import { getSqlite } from "../../db/client.js";
+import { invalidateAll } from "../../db/decoded-cache.js";
 import { invalidateUsage } from "../../storage/usage.js";
 import { userBlobDir } from "../../storage/blobs.js";
 
@@ -156,8 +157,11 @@ export async function runRestoreJob(
     summary.blobs++;
   });
 
-  // The restored blobs changed what this account occupies.
+  // The restored blobs changed what this account occupies, and the rows were
+  // rewritten with raw SQL, behind the services that normally keep the
+  // decrypted cache honest.
   invalidateUsage(userId);
+  invalidateAll();
   return summary;
 }
 

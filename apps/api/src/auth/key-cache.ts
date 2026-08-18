@@ -15,6 +15,16 @@ interface Entry {
 class KeyCache {
   private map = new Map<string, Entry>();
   private timer: NodeJS.Timeout | null = null;
+  /**
+   * Run when a user's key goes. Anything derived from a DEK — decrypted
+   * lists, above all — must not outlive the key that produced it, so the
+   * eviction has to be observable rather than silent.
+   */
+  private evictListeners: Array<(userId: string) => void> = [];
+
+  onEvict(listener: (userId: string) => void) {
+    this.evictListeners.push(listener);
+  }
 
   start() {
     if (this.timer) return;
@@ -54,6 +64,16 @@ class KeyCache {
     if (entry) {
       entry.dek.fill(0);
       this.map.delete(userId);
+    }
+    for (const listener of this.evictListeners) {
+      try {
+        listener(userId);
+      } catch (err) {
+        console.warn(
+          "[key-cache] evict listener failed",
+          err instanceof Error ? err.message : err,
+        );
+      }
     }
   }
 

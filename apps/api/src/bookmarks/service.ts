@@ -5,6 +5,7 @@ import { openField, sealField } from "../auth/encryption.js";
 import { getAutoSnapshots } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb, getSqlite } from "../db/client.js";
+import { cachedBookmarks, invalidate } from "../db/decoded-cache.js";
 import { bookmarkTags, bookmarks, folders, tags } from "../db/schema.js";
 import {
   resealSharesForBookmark,
@@ -149,40 +150,63 @@ export interface ListFilters {
   favorite?: boolean;
 }
 
+/**
+ * Every bookmark of a user, decrypted, in `position ASC, createdAt DESC` order.
+ *
+ * Cached in process because the decryption, not the query, is what costs: on
+ * 20.000 bookmarks the rows come out of SQLite in ~48 ms and opening their
+ * three sealed fields takes ~193 ms. See db/decoded-cache.ts for how the entry
+ * proves it is still current.
+ */
+function allBookmarks(ctx: AuthedContext): Bookmark[] {
+  return cachedBookmarks(ctx.userId, () => decodeAllBookmarks(ctx));
+}
+
 export function listBookmarks(
   ctx: AuthedContext,
   filters: ListFilters,
 ): Bookmark[] {
-  const conds = [
-    eq(bookmarks.userId, ctx.userId),
-    isNull(bookmarks.deletedAt),
-  ];
-  if (filters.folderId) conds.push(eq(bookmarks.folderId, filters.folderId));
-  if (filters.favorite) conds.push(eq(bookmarks.favorite, true));
+  // Filters run over the cached list in the same order the SQL used to apply
+  // them (folder/favourite, then limit, then tag, then text), so the results
+  // are identical to before — `limit` still bites before the tag filter.
+  const all = allBookmarks(ctx);
+  let result = all;
 
-  // No default limit — return everything by default, which is what makes
-  // sense for a self-hosted personal app. Callers can opt into a limit when
-  // they want a slice (e.g. search top-N).
-  const baseQuery = getDb()
+  if (filters.folderId) {
+    result = result.filter((b) => b.folderId === filters.folderId);
+  }
+  if (filters.favorite) result = result.filter((b) => b.favorite);
+  if (filters.limit) result = result.slice(0, filters.limit);
+  if (filters.tagId) {
+    result = result.filter((b) => b.tagIds.includes(filters.tagId!));
+  }
+
+  if (filters.q) {
+    const q = filters.q.toLowerCase();
+    result = result.filter(
+      (b) =>
+        b.title.toLowerCase().includes(q) ||
+        b.url.toLowerCase().includes(q) ||
+        (b.description?.toLowerCase().includes(q) ?? false),
+    );
+  }
+
+  // Never hand out the cached array itself: every filter above already builds
+  // a new one, but the unfiltered call would otherwise share it, and a single
+  // in-place sort or splice anywhere would corrupt it for every later reader.
+  return result === all ? all.slice() : result;
+}
+
+/** The uncached path: read every row and open every sealed field. */
+function decodeAllBookmarks(ctx: AuthedContext): Bookmark[] {
+  const rows = getDb()
     .select()
     .from(bookmarks)
-    .where(and(...conds))
-    .orderBy(asc(bookmarks.position), desc(bookmarks.createdAt));
-  let rows = filters.limit
-    ? baseQuery.limit(filters.limit).all()
-    : baseQuery.all();
-
-  if (filters.tagId) {
-    const taggedIds = new Set(
-      getDb()
-        .select({ id: bookmarkTags.bookmarkId })
-        .from(bookmarkTags)
-        .where(eq(bookmarkTags.tagId, filters.tagId))
-        .all()
-        .map((r) => r.id),
-    );
-    rows = rows.filter((r) => taggedIds.has(r.id));
-  }
+    .where(
+      and(eq(bookmarks.userId, ctx.userId), isNull(bookmarks.deletedAt)),
+    )
+    .orderBy(asc(bookmarks.position), desc(bookmarks.createdAt))
+    .all();
 
   const tagMap = loadTagIds(rows.map((r) => r.id));
   // Decode per-row; skip (with a warning) any row whose blob fails to
@@ -224,19 +248,10 @@ export function listBookmarks(
     }
   }
 
-  result = applyBookmarkAliases(ctx, result);
-
-  if (filters.q) {
-    const q = filters.q.toLowerCase();
-    result = result.filter(
-      (b) =>
-        b.title.toLowerCase().includes(q) ||
-        b.url.toLowerCase().includes(q) ||
-        (b.description?.toLowerCase().includes(q) ?? false),
-    );
-  }
-
-  return result;
+  // Resolved against the whole list rather than a page of it, so a symlink
+  // whose target sits outside the current slice still renders from memory
+  // instead of triggering a lookup per alias.
+  return applyBookmarkAliases(ctx, result);
 }
 
 /**
@@ -546,6 +561,10 @@ export function moveBookmark(
     })
     .where(eq(bookmarks.id, id))
     .run();
+  // A move rewrites the row without bumping `rev`, which is the one mutation
+  // the decoded-cache signature could miss if two landed in the same
+  // millisecond. Cheap to be explicit here.
+  invalidate(ctx.userId);
   // Moving in or out of a shared folder changes what members should see.
   resealSharesForBookmark(ctx, id, newFolderId);
   rebuildPanelsForFolderTree(ctx, newFolderId);

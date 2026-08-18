@@ -65,6 +65,15 @@ one port.
   plus its text, served back as a sandboxed reader iframe in the detail view.
   No headless browser, so the runtime image ships no Chromium; the trade-off
   is no pixel screenshot and limited fidelity on JS-only / SPA pages.
+- **Decrypted-list cache** — the cost of a read here is the decryption, not
+  the query: on 20.000 bookmarks SQLite returns the rows in ~48 ms while
+  opening their three sealed fields takes ~193 ms. The decrypted lists are
+  therefore cached in process, next to the keys that produced them, and each
+  entry proves it is current against a cheap signature derived from the data
+  (row count, sum of `rev`, latest `updated_at`) instead of relying on every
+  mutation path remembering to invalidate. Measured on 5.000 bookmarks:
+  `GET /bookmarks` 103 ms → 12 ms, `GET /search` 126 ms → 32 ms. The cache is
+  dropped whenever the user's key is evicted, so plaintext never outlives it.
 - **Full-text search** over snapshot contents (SQLite FTS5), with
   **Levenshtein fuzzy matching** on titles/URLs (typo-tolerant) and a
   GitHub-style chip to scope the search to the current folder.

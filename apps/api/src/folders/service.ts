@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
 import { openField, sealField } from "../auth/encryption.js";
 import { getDb, getSqlite } from "../db/client.js";
+import { cachedFolders, invalidate } from "../db/decoded-cache.js";
 import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
 import { resealSharesForFolderTree } from "../groups/resync.js";
 import { rebuildPanelsForFolderTree } from "../panels/resync.js";
@@ -77,7 +78,14 @@ function loadTagIdsForFolders(folderIds: string[]): Map<string, string[]> {
   return out;
 }
 
+/** Cached like the bookmark list; see db/decoded-cache.ts for why. */
 export function listFolders(ctx: AuthedContext): Folder[] {
+  // Copied on the way out: the cached array is shared, and callers sort and
+  // splice their lists freely.
+  return cachedFolders(ctx.userId, () => decodeAllFolders(ctx)).slice();
+}
+
+function decodeAllFolders(ctx: AuthedContext): Folder[] {
   const rows = getDb()
     .select()
     .from(folders)
@@ -412,6 +420,8 @@ export function moveFolder(
     .run();
   // Moving in or out of a shared subtree changes what members should see.
   resealSharesForFolderTree(ctx, oldParentId);
+  // See moveBookmark: a move does not bump `rev`.
+  invalidate(ctx.userId);
   rebuildPanelsForFolderTree(ctx, oldParentId);
   resealSharesForFolderTree(ctx, newParentId);
   rebuildPanelsForFolderTree(ctx, newParentId);
