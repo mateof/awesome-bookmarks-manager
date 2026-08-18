@@ -23,6 +23,7 @@ import { dlg } from "../components/dialogs.js";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { fmtDateTime } from "../lib/date.js";
 import { registerPasskey, passkeysSupported } from "../webauthn.js";
 import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
@@ -685,17 +686,24 @@ function Cloud() {
         {(conns.data ?? []).map((c) => (
           <div
             key={c.id}
-            className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
+            className="rounded-lg border border-slate-200 p-3 dark:border-slate-800"
           >
-            <div className="min-w-0 flex-1">
-              <div className="font-medium">{c.label}</div>
+            {/* Header wraps instead of forcing one row: on a phone the label,
+                the timestamp and three controls do not fit side by side, and
+                the vault panel below is a block, not a flex sibling. */}
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+            <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+              <div className="truncate font-medium">{c.label}</div>
               <div className="text-xs text-slate-500">
                 {c.provider} ·{" "}
                 {t("settings.cloud.lastBackup", {
-                  when: c.lastBackupAt ?? t("settings.cloud.never"),
+                  when: c.lastBackupAt
+                    ? fmtDateTime(c.lastBackupAt)
+                    : t("settings.cloud.never"),
                 })}
               </div>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={async () => {
                 await api.startBackup(c.id);
@@ -718,6 +726,8 @@ function Cloud() {
             >
               {t("settings.cloud.delete")}
             </button>
+            </div>
+            </div>
             <CloudVault connection={c} all={conns.data ?? []} />
           </div>
         ))}

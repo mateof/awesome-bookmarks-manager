@@ -106,7 +106,17 @@ export function inspectCertificate(
  */
 class PinnedAgent extends HttpsAgent {
   constructor(private readonly pin: string) {
-    super({ rejectUnauthorized: false, keepAlive: false });
+    super({
+      rejectUnauthorized: false,
+      keepAlive: false,
+      // No TLS session resumption. On a resumed session the server does not
+      // re-send its certificate, so `getPeerCertificate()` comes back empty
+      // and there is nothing to compare the pin against. Without this the
+      // first request works and every one after it fails, which is both a
+      // broken feature and a check that silently stops checking. A full
+      // handshake per request is irrelevant next to uploading an archive.
+      maxCachedSessions: 0,
+    });
   }
 
   override createConnection(
@@ -119,6 +129,8 @@ class PinnedAgent extends HttpsAgent {
     ) as unknown as TLSSocket;
     socket.on("secureConnect", () => {
       const presented = normalize(socket.getPeerCertificate()?.fingerprint256);
+      // An empty fingerprint fails closed: no certificate to compare means no
+      // grounds to trust the connection.
       if (presented !== this.pin) {
         socket.destroy(
           new Error(

@@ -95,13 +95,47 @@ export async function listSynologyDirectories(
   }
 }
 
+/**
+ * Create a directory and any missing parent, tolerating the ones that are
+ * already there.
+ *
+ * The library's own `recursive: true` issues MKCOL for every ancestor and
+ * throws on the first that already exists, because Synology answers 405 for
+ * that. Since the common case is "the share exists, the subfolder does not",
+ * that made creating a folder fail almost always. Doing it a segment at a time
+ * and checking the outcome is both more predictable and gives a usable error.
+ */
+export async function ensureDirectory(
+  client: WebDAVClient,
+  path: string,
+): Promise<void> {
+  const clean = path.replace(/\/+$/, "");
+  if (!clean || clean === "/") return;
+
+  const segments = clean.split("/").filter(Boolean);
+  let current = "";
+  for (const segment of segments) {
+    current += `/${segment}`;
+    if (await client.exists(current).catch(() => false)) continue;
+    try {
+      await client.createDirectory(current);
+    } catch (err) {
+      // 405/409/301 all mean "it is already a collection" on one server or
+      // another. Only a genuinely absent directory is an error.
+      if (!(await client.exists(current).catch(() => false))) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`No se pudo crear "${current}": ${prettyDavError(msg)}`);
+      }
+    }
+  }
+}
+
 /** Create a directory (recursive). Used by the folder picker's "new folder" UX. */
 export async function createSynologyDirectory(
   auth: SynologyAuth,
   path: string,
 ): Promise<void> {
-  const client = buildClient(auth);
-  await client.createDirectory(path, { recursive: true });
+  await ensureDirectory(buildClient(auth), path);
 }
 
 function prettyDavError(raw: string): string {
@@ -164,9 +198,17 @@ export class SynologyWebDAVProvider implements CloudProvider {
     return stream as unknown as Readable;
   }
 
+  /**
+   * Files in the vault whose name starts with `prefix`.
+   *
+   * `prefix` filters the *file name*; it is not a subdirectory. The previous
+   * version resolved it as a path and asked the server for the contents of
+   * "<base>/awesome-bookmarks-", which of course does not exist, so listing
+   * always failed. Nothing called this until the vault screen existed, so the
+   * bug sat here unnoticed.
+   */
   async list(prefix: string): Promise<FileMeta[]> {
-    const dir = this.full(prefix);
-    const entries = (await this.client.getDirectoryContents(dir, {
+    const entries = (await this.client.getDirectoryContents(this.basePath, {
       deep: false,
     })) as Array<{
       filename: string;
@@ -177,6 +219,7 @@ export class SynologyWebDAVProvider implements CloudProvider {
     }>;
     return entries
       .filter((e) => e.type === "file")
+      .filter((e) => !prefix || e.basename.startsWith(prefix))
       .map((e) => ({
         path: e.filename.replace(`${this.basePath}/`, ""),
         name: e.basename,
@@ -191,11 +234,9 @@ export class SynologyWebDAVProvider implements CloudProvider {
   }
 
   private async ensureDir(path: string): Promise<void> {
-    if (!path || path === "/") return;
-    const exists = await this.client.exists(path).catch(() => false);
-    if (exists) return;
-    const parent = path.split("/").slice(0, -1).join("/");
-    if (parent && parent !== this.basePath) await this.ensureDir(parent);
-    await this.client.createDirectory(path, { recursive: true }).catch(() => {});
+    // Shared with the folder picker so both behave the same. It used to
+    // swallow every failure, which is why a broken destination surfaced much
+    // later as a confusing upload error instead of a clear one here.
+    await ensureDirectory(this.client, path);
   }
 }

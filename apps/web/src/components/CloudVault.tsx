@@ -70,7 +70,7 @@ export function CloudVault({
 
   return (
     <div className="mt-2 space-y-2 border-t border-slate-200 pt-2 dark:border-slate-800">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -111,7 +111,15 @@ export function CloudVault({
             <p className="text-xs text-slate-400">{t("common.loading")}</p>
           )}
           {backups.isError && (
-            <p className="text-xs text-red-600">{t("cloudVault.listFailed")}</p>
+            // The real reason, not a generic line. A vault that says only
+            // "could not list" leaves the user with nothing to act on, which
+            // is how the broken listing stayed a mystery.
+            <p className="text-xs text-red-600">
+              {t("cloudVault.listFailed")}
+              {backups.error instanceof ApiError
+                ? `: ${backups.error.message}`
+                : ""}
+            </p>
           )}
           {backups.data?.length === 0 && (
             <p className="text-xs text-slate-400">{t("cloudVault.empty")}</p>
@@ -122,7 +130,7 @@ export function CloudVault({
                 key={b.path}
                 className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 text-xs dark:border-slate-800"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                   <div className="truncate font-medium">{b.name}</div>
                   <div className="text-slate-500">
                     {fmtDateTime(b.modifiedAt)} ·{" "}
