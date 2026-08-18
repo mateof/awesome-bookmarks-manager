@@ -337,6 +337,23 @@ const es = {
     confirmTitle: "¿Seguro?",
     noticeTitle: "Aviso",
   },
+  sessions: {
+    heading: "Sesiones activas",
+    subtitle: "Dónde está abierta tu cuenta. Cierra lo que no reconozcas.",
+    thisDevice: "Este dispositivo",
+    ip: "IP",
+    lastSeen: "Última actividad: {{when}}",
+    startedAt: "Iniciada: {{when}}",
+    rawAgent: "Ver identificador del navegador",
+    revoke: "Cerrar",
+    logOut: "Cerrar sesión",
+    revokeOthers: "Cerrar las demás sesiones",
+    confirmRevoke: "¿Cerrar la sesión de {{browser}} ({{ip}})? Ese dispositivo tendrá que volver a iniciar sesión.",
+    confirmRevokeCurrent: "Es la sesión que estás usando ahora. Se cerrará y volverás al inicio de sesión.",
+    confirmRevokeOthers: "¿Cerrar {{count}} sesión(es)? Solo seguirá abierta la de este dispositivo.",
+    explainer:
+      "Al cerrar una sesión, su cookie deja de valer en la siguiente petición, aunque no haya caducado. Si ves algo que no reconoces, ciérralo y cambia la contraseña.",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "Nuevo tag",

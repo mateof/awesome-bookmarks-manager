@@ -16,6 +16,7 @@ import type {
   SmartFolder,
   StorageUsage,
   TrashItem,
+  UserSession,
   UpdateSmartFolderBody,
   Group,
   GroupInvitation,
@@ -346,6 +347,13 @@ export const api = {
       `/trash${olderThanDays === undefined ? "" : `?olderThanDays=${olderThanDays}`}`,
       { method: "DELETE" },
     ),
+
+  // active logins
+  listSessions: () => request<UserSession[]>("/sessions"),
+  revokeSession: (id: string) =>
+    request<void>(`/sessions/${id}`, { method: "DELETE" }),
+  revokeOtherSessions: () =>
+    request<{ revoked: number }>("/sessions", { method: "DELETE" }),
 
   // storage usage + quotas
   myStorage: (fresh = false) =>

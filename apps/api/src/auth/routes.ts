@@ -7,6 +7,7 @@ import {
   UpdateProfileBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
+import { z } from "zod";
 import { getRegistrationEnabled } from "../settings/service.js";
 import {
   changePassword,
@@ -20,10 +21,16 @@ import {
 } from "./service.js";
 import {
   clearSession,
+  currentSessionId,
   requireAuth,
   requireUserId,
   setSession,
 } from "./session.js";
+import {
+  listSessions,
+  revokeOtherSessions,
+  revokeSession,
+} from "./sessions-service.js";
 import { isTrustedNetwork } from "./trusted.js";
 import {
   beginTwoFactorSetup,
@@ -79,6 +86,29 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
   app.post("/auth/logout", async (_req, reply) => {
     clearSession(reply);
     return { ok: true };
+  });
+
+  // --- active logins -------------------------------------------------
+  app.get("/sessions", async (req) => {
+    const userId = requireUserId(req);
+    return listSessions(userId, currentSessionId(req));
+  });
+
+  app.delete("/sessions/:id", async (req, reply) => {
+    const userId = requireUserId(req);
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    revokeSession(userId, id);
+    // Revoking your own session is a logout; drop the cookie so the client
+    // does not keep sending one that will be refused from here on.
+    if (id === currentSessionId(req)) reply.request.session.delete();
+    reply.code(204);
+  });
+
+  app.delete("/sessions", async (req) => {
+    const userId = requireUserId(req);
+    const current = currentSessionId(req);
+    if (!current) return { revoked: 0 };
+    return { revoked: revokeOtherSessions(userId, current) };
   });
 
   app.post("/auth/change-password", async (req) => {

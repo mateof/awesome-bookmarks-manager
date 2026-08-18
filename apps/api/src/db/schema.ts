@@ -53,6 +53,30 @@ export const users = sqliteTable(
   }),
 );
 
+/**
+ * One row per active login. The session cookie is still the authority for
+ * *who* you are; this table is what makes a login revocable, and what lets a
+ * user see where their account is open. A revoked row makes its cookie stop
+ * working on the next request.
+ */
+export const userSessions = sqliteTable(
+  "user_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ip: text("ip").notNull().default(""),
+    userAgent: text("user_agent").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    lastSeenAt: text("last_seen_at").notNull().default(sql`(current_timestamp)`),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => ({
+    userIdx: index("user_sessions_user_idx").on(t.userId, t.revokedAt),
+  }),
+);
+
 /** Instance-wide key/value settings managed by admins (e.g. signup toggle). */
 export const appSettings = sqliteTable("app_settings", {
   key: text("key").primaryKey(),

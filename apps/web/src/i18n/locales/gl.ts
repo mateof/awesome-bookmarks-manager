@@ -337,6 +337,23 @@ const gl = {
     confirmTitle: "Seguro?",
     noticeTitle: "Aviso",
   },
+  sessions: {
+    heading: "Sesións activas",
+    subtitle: "Onde está aberta a túa conta. Pecha o que non recoñezas.",
+    thisDevice: "Este dispositivo",
+    ip: "IP",
+    lastSeen: "Última actividade: {{when}}",
+    startedAt: "Iniciada: {{when}}",
+    rawAgent: "Ver identificador do navegador",
+    revoke: "Pechar",
+    logOut: "Pechar sesión",
+    revokeOthers: "Pechar as demais sesións",
+    confirmRevoke: "Pechar a sesión de {{browser}} ({{ip}})? Ese dispositivo terá que iniciar sesión de novo.",
+    confirmRevokeCurrent: "É a sesión que estás a usar agora. Pecharase e volverás ao inicio de sesión.",
+    confirmRevokeOthers: "Pechar {{count}} sesión(s)? Só seguirá aberta a deste dispositivo.",
+    explainer:
+      "Ao pechar unha sesión, a súa cookie deixa de valer na seguinte petición, aínda que non caducase. Se ves algo que non recoñeces, péchao e cambia o contrasinal.",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",

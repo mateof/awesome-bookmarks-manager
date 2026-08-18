@@ -65,6 +65,18 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS bookmarks_user_url_hash_idx
       ON bookmarks(user_id, url_hash);
 
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      ip TEXT NOT NULL DEFAULT '',
+      user_agent TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      last_seen_at TEXT NOT NULL DEFAULT (current_timestamp),
+      revoked_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS user_sessions_user_idx
+      ON user_sessions(user_id, revoked_at);
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL

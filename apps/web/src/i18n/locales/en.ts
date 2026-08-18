@@ -337,6 +337,23 @@ const en = {
     confirmTitle: "Are you sure?",
     noticeTitle: "Notice",
   },
+  sessions: {
+    heading: "Active sessions",
+    subtitle: "Where your account is open. Close anything you do not recognise.",
+    thisDevice: "This device",
+    ip: "IP",
+    lastSeen: "Last active: {{when}}",
+    startedAt: "Started: {{when}}",
+    rawAgent: "Show browser identifier",
+    revoke: "Close",
+    logOut: "Log out",
+    revokeOthers: "Close all other sessions",
+    confirmRevoke: "Close the {{browser}} session ({{ip}})? That device will have to sign in again.",
+    confirmRevokeCurrent: "This is the session you are using now. It will be closed and you will return to the login screen.",
+    confirmRevokeOthers: "Close {{count}} session(s)? Only this device will stay signed in.",
+    explainer:
+      "Closing a session makes its cookie invalid on the very next request, even though it has not expired. If you see something you do not recognise, close it and change your password.",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",

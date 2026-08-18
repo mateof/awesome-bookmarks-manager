@@ -7,6 +7,7 @@ import {
   Fingerprint,
   HardDrive,
   HelpCircle,
+  MonitorSmartphone,
   KeyRound,
   Plus,
   ScrollText,
@@ -27,6 +28,7 @@ import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
 import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
 import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
+import { SessionList } from "../components/SessionList.js";
 
 /* ------------------------------------------------------------------ */
 /* Shared presentation primitives                                     */
@@ -387,6 +389,14 @@ function Security() {
   });
   return (
     <div className="space-y-4">
+      <Card>
+        <SectionHeader
+          icon={<MonitorSmartphone className="h-5 w-5" />}
+          title={t("sessions.heading")}
+          subtitle={t("sessions.subtitle")}
+        />
+        <SessionList />
+      </Card>
       <Card>
         <SectionHeader
           icon={<ShieldCheck className="h-5 w-5" />}

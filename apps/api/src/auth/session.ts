@@ -5,6 +5,13 @@ import { getEnv } from "../env.js";
 import { masterUnwrap, masterWrap } from "./encryption.js";
 import { keyCache } from "./key-cache.js";
 import { KeyUnavailable, Unauthorized } from "../util/errors.js";
+import {
+  createSession,
+  isSessionAlive,
+  revokeSession,
+  touchSession,
+} from "./sessions-service.js";
+import { clientIp } from "./trusted.js";
 
 declare module "@fastify/secure-session" {
   interface SessionData {
@@ -16,6 +23,9 @@ declare module "@fastify/secure-session" {
     dekWrap: string;
     // In-flight WebAuthn challenge (base64url) for a register/login ceremony.
     waChallenge: string;
+    // Row id in user_sessions. What makes this login revocable: the cookie is
+    // only accepted while its row is alive.
+    sid: string;
   }
 }
 
@@ -40,8 +50,17 @@ export async function registerSession(app: FastifyInstance) {
 }
 
 export function setSession(reply: FastifyReply, userId: string) {
-  reply.request.session.set("userId", userId);
-  reply.request.session.set("loginAt", Date.now());
+  const req = reply.request;
+  req.session.set("userId", userId);
+  req.session.set("loginAt", Date.now());
+  req.session.set(
+    "sid",
+    createSession(
+      userId,
+      clientIp(req),
+      String(req.headers["user-agent"] ?? ""),
+    ),
+  );
   // Login/signup have just populated the key cache; stash the wrapped DEK in
   // the (already server-encrypted) cookie so restarts don't force a re-login.
   if (getEnv().PERSIST_SESSION_KEY) {
@@ -56,7 +75,24 @@ export function setSession(reply: FastifyReply, userId: string) {
 }
 
 export function clearSession(reply: FastifyReply) {
-  reply.request.session.delete();
+  const req = reply.request;
+  const sid = req.session.get("sid");
+  const userId = req.session.get("userId");
+  // Revoke before dropping the cookie: logging out has to end the session for
+  // good, not merely forget it on this device.
+  if (sid && userId) {
+    try {
+      revokeSession(userId, sid);
+    } catch {
+      /* already gone */
+    }
+  }
+  req.session.delete();
+}
+
+/** The caller's own session row id, when it has one. */
+export function currentSessionId(req: FastifyRequest): string | undefined {
+  return req.session.get("sid");
 }
 
 export interface AuthedContext {
@@ -68,6 +104,24 @@ export interface AuthedContext {
 export function requireUserId(req: FastifyRequest): string {
   const userId = req.session.get("userId");
   if (!userId) throw Unauthorized();
+
+  const sid = req.session.get("sid");
+  if (sid) {
+    // Revoked from another device: the cookie is still cryptographically
+    // valid, which is exactly why the check has to be here.
+    if (!isSessionAlive(sid, userId)) throw Unauthorized("Session revoked");
+    touchSession(sid);
+  } else {
+    // A cookie minted before sessions were recorded. Adopting it rather than
+    // rejecting it avoids logging everyone out on upgrade; from now on it is
+    // revocable like any other.
+    const fresh = createSession(
+      userId,
+      clientIp(req),
+      String(req.headers["user-agent"] ?? ""),
+    );
+    req.session.set("sid", fresh);
+  }
   return userId;
 }
 
