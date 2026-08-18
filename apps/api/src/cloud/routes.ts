@@ -1,4 +1,6 @@
 import {
+  CopyBackupBodySchema,
+  RestoreBackupBodySchema,
   ConnectSynologyBodySchema,
   CreateSynologyDirBodySchema,
   ListSynologyDirsBodySchema,
@@ -18,7 +20,8 @@ import { enqueue } from "../jobs/queue.js";
 import { AppError, BadRequest, NotFound } from "../util/errors.js";
 import { GDRIVE_SCOPES, gdriveOAuthClient } from "./gdrive.js";
 import { ONEDRIVE_SCOPES } from "./onedrive.js";
-import { packCredentials } from "./registry.js";
+import { loadConnection, packCredentials } from "./registry.js";
+import { copyBackupBetween } from "../jobs/handlers/restore.js";
 import {
   createSynologyDirectory,
   listSynologyDirectories,
@@ -42,6 +45,7 @@ function summary(row: typeof cloudConnections.$inferSelect) {
     backupScheduleCron: row.backupScheduleCron,
     lastBackupAt: row.lastBackupAt,
     lastStatus: row.lastStatus,
+    isDefault: row.isDefault,
     createdAt: row.createdAt,
   };
 }
@@ -55,6 +59,62 @@ export const cloudRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(cloudConnections.userId, ctx.userId))
       .all()
       .map(summary);
+  });
+
+  // What is actually sitting in this vault. The providers could already list
+  // and download; nothing ever called them, so a backup could be uploaded and
+  // never retrieved from the app.
+  app.get("/cloud/connections/:id/backups", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const { provider } = loadConnection(ctx.userId, id, ctx.dek);
+    return provider.list("awesome-bookmarks-");
+  });
+
+  // Pull an archive back into this server. Runs as a job: unzipping and
+  // replaying thousands of rows has no business happening inside a request.
+  app.post("/cloud/connections/:id/restore", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const { filename } = RestoreBackupBodySchema.parse(req.body);
+    loadConnection(ctx.userId, id, ctx.dek); // ownership + credentials check
+    const jobId = enqueue({
+      userId: ctx.userId,
+      type: "restore",
+      payload: { connectionId: id, filename },
+    });
+    return { jobId };
+  });
+
+  // Vault to vault, without the bytes touching the browser.
+  app.post("/cloud/connections/:id/copy-to", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const { filename, targetConnectionId } = CopyBackupBodySchema.parse(req.body);
+    if (targetConnectionId === id) {
+      throw BadRequest("Source and destination are the same vault");
+    }
+    await copyBackupBetween(ctx.userId, id, targetConnectionId, filename);
+    return { ok: true };
+  });
+
+  // The primary vault. Exactly one can hold the flag, so setting it clears
+  // the others in the same statement pair.
+  app.patch("/cloud/connections/:id/default", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    loadConnection(ctx.userId, id, ctx.dek);
+    getDb()
+      .update(cloudConnections)
+      .set({ isDefault: false })
+      .where(eq(cloudConnections.userId, ctx.userId))
+      .run();
+    getDb()
+      .update(cloudConnections)
+      .set({ isDefault: true })
+      .where(eq(cloudConnections.id, id))
+      .run();
+    return { ok: true };
   });
 
   // Probe credentials before saving — body carries url/username/password

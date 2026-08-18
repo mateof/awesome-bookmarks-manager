@@ -31,6 +31,7 @@ import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
 import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
 import { SessionList } from "../components/SessionList.js";
 import { SecurityLog } from "../components/SecurityLog.js";
+import { CloudVault } from "../components/CloudVault.js";
 
 /* ------------------------------------------------------------------ */
 /* Shared presentation primitives                                     */
@@ -712,6 +713,7 @@ function Cloud() {
             >
               {t("settings.cloud.delete")}
             </button>
+            <CloudVault connection={c} all={conns.data ?? []} />
           </div>
         ))}
       </div>

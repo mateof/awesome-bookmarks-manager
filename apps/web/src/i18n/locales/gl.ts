@@ -409,6 +409,22 @@ const gl = {
       server_error: "Erro do servidor",
     },
   },
+  cloudVault: {
+    show: "Ver copias",
+    hide: "Agochar copias",
+    empty: "Non hai copias neste destino.",
+    listFailed: "Non se puideron listar as copias.",
+    isDefault: "Predeterminado",
+    makeDefault: "Marcar como predeterminado",
+    restore: "Restaurar",
+    confirmRestore: 'Restaurar "{{name}}" neste servidor?',
+    restoreDetails:
+      "Engádense e actualízanse os elementos da copia. O que creases despois NON se borra: é unha restauración por fusión, non un reemprazo. Execútase en segundo plano.",
+    restoreQueued: "Restauración en marcha. Podes seguir a tarefa nos logs.",
+    copyTo: "Copiar a…",
+    copied: "Copia enviada ao outro destino.",
+    needTwo: "Precisas polo menos dous destinos configurados.",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",

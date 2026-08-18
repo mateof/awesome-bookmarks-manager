@@ -33,7 +33,8 @@ one port.
 ## Features
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
-  (Tiptap editor), custom icons, and tags. Bookmarks with no icon fall back to
+  (Tiptap editor with **click-to-copy** and **hidden-until-clicked** marks for
+  the credentials people actually keep in these notes), custom icons, and tags. Bookmarks with no icon fall back to
   a coloured letter tile derived from the name. Long descriptions are clamped
   with a "show more" toggle so a wall of notes never pushes a folder's contents
   off screen; the toggle only appears when the text really overflows.
@@ -126,7 +127,24 @@ one port.
   HTTPS); PRF-based DEK unlock, with an opt-in PRF-less mode for authenticators
   like Bitwarden.
 - **Cloud backups** to Google Drive, OneDrive, or Synology (WebDAV) — manual
-  or scheduled.
+  or scheduled, and **per user**: each account has its own vaults, and the
+  credentials are sealed with that user's own key, so nobody else (the server
+  included, without that key) can read them. Backups are a *copy*: the data
+  stays on the server, which is why storage quotas still apply. You can list
+  what is in a vault, **restore it back into the server** (a merge, never a
+  wipe), copy an archive straight from one vault to another without it passing
+  through the browser, and mark one vault as primary.
+- **Active sessions** — see every device where the account is open (browser,
+  system, IP, first and last seen) and close any of them. Revoking makes that
+  cookie be refused on its next request, even though it has not expired.
+- **Security log** (admin) — logins and failed attempts, refusals (401/403/429),
+  server errors and views of published panels and shares, with counters, an
+  activity sparkline, the IPs with most refusals, and filters by type, user,
+  IP, path and status. Successful 2xx traffic is deliberately not recorded: it
+  would bury the lines that matter.
+- **In-app dialogs** — confirmations are the app's own components, styled,
+  translated and keyboard-accessible, never `window.confirm`. Destructive ones
+  are red and start with Cancel focused.
 - **MCP server** at `/api/mcp` so an AI client (Claude and friends) can manage
   bookmarks, folders, tags, favourites, panels, panel templates, smart folders,
   duplicates and the trash with an API token. The two irreversible tools

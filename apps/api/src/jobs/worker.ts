@@ -3,6 +3,7 @@ import { keyCache } from "../auth/key-cache.js";
 import { getEnv } from "../env.js";
 import { isQuotaError } from "../storage/usage.js";
 import { runBackupJob } from "./handlers/backup.js";
+import { runRestoreJob } from "./handlers/restore.js";
 import { runFaviconJob } from "./handlers/favicon.js";
 import { runGroupShareSealJob } from "./handlers/group_share_seal.js";
 import { runPanelRebuildJob } from "./handlers/panel_rebuild.js";
@@ -210,6 +211,13 @@ async function dispatch(job: ClaimedJob): Promise<void> {
     }
     case "backup": {
       await runBackupJob(job.userId, job.payload as { connectionId: string });
+      return;
+    }
+    case "restore": {
+      await runRestoreJob(
+        job.userId,
+        job.payload as { connectionId: string; filename: string },
+      );
       return;
     }
   }

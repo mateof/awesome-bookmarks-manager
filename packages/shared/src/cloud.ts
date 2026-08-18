@@ -14,6 +14,8 @@ export const CloudConnectionSchema = z.object({
   backupScheduleCron: z.string().nullable(),
   lastBackupAt: z.string().datetime().nullable(),
   lastStatus: z.enum(["ok", "error", "running", "never"]),
+  /** The user's primary vault; what the UI preselects for copy and restore. */
+  isDefault: z.boolean().default(false),
   createdAt: z.string().datetime(),
 });
 export type CloudConnection = z.infer<typeof CloudConnectionSchema>;
@@ -67,3 +69,23 @@ export const RestoreBodySchema = z.object({
   backupPath: z.string(),
 });
 export type RestoreBody = z.infer<typeof RestoreBodySchema>;
+
+/** One archive sitting in a cloud vault. */
+export const CloudBackupSchema = z.object({
+  path: z.string(),
+  name: z.string(),
+  size: z.number().int(),
+  modifiedAt: z.string(),
+});
+export type CloudBackup = z.infer<typeof CloudBackupSchema>;
+
+export const RestoreBackupBodySchema = z.object({
+  filename: z.string().min(1).max(512),
+});
+export type RestoreBackupBody = z.infer<typeof RestoreBackupBodySchema>;
+
+export const CopyBackupBodySchema = z.object({
+  filename: z.string().min(1).max(512),
+  targetConnectionId: z.string().uuid(),
+});
+export type CopyBackupBody = z.infer<typeof CopyBackupBodySchema>;

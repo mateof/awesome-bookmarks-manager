@@ -1,5 +1,6 @@
 import type {
   AdminStorageRow,
+  CloudBackup,
   AdminUser,
   AppSettings,
   Bookmark,
@@ -891,6 +892,22 @@ export const api = {
   startBackup: (id: string) =>
     request<{ jobId: string }>(`/cloud/connections/${id}/backup`, {
       method: "POST",
+    }),
+  listBackups: (id: string) =>
+    request<CloudBackup[]>(`/cloud/connections/${id}/backups`),
+  restoreBackup: (id: string, filename: string) =>
+    request<{ jobId: string }>(`/cloud/connections/${id}/restore`, {
+      method: "POST",
+      body: JSON.stringify({ filename }),
+    }),
+  copyBackup: (id: string, filename: string, targetConnectionId: string) =>
+    request<{ ok: true }>(`/cloud/connections/${id}/copy-to`, {
+      method: "POST",
+      body: JSON.stringify({ filename, targetConnectionId }),
+    }),
+  setDefaultConnection: (id: string) =>
+    request<{ ok: true }>(`/cloud/connections/${id}/default`, {
+      method: "PATCH",
     }),
   deleteConnection: (id: string) =>
     request<void>(`/cloud/connections/${id}`, { method: "DELETE" }),

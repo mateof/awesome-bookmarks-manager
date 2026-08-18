@@ -4,6 +4,7 @@ export const JobTypeSchema = z.enum([
   "snapshot",
   "favicon",
   "backup",
+  "restore",
   "import",
   "share_seal",
   "group_share_seal",

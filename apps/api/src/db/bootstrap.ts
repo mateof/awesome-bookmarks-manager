@@ -329,6 +329,8 @@ export function ensureSchema() {
   tryAddColumn("users", "two_factor_pending_ct", "BLOB");
   // Per-user storage ceiling; NULL falls back to the instance default.
   tryAddColumn("users", "storage_quota_bytes", "INTEGER");
+  // The user's primary cloud vault (UI default for copy/restore).
+  tryAddColumn("cloud_connections", "is_default", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
   // Starred bookmarks ("Favoritos" bar).
   tryAddColumn("bookmarks", "favorite", "INTEGER NOT NULL DEFAULT 0");

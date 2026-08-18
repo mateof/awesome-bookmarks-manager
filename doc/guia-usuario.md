@@ -30,6 +30,10 @@ paneles y guardar pestañas desde la extensión de Chrome.
 17. [Guardar desde el móvil](#17-guardar-desde-el-móvil)
 18. [Descripciones largas](#18-descripciones-largas)
 19. [Almacenamiento y cuotas](#19-almacenamiento-y-cuotas)
+20. [Sesiones activas](#20-sesiones-activas)
+21. [Registro de seguridad](#21-registro-de-seguridad)
+22. [Texto copiable y texto oculto](#22-texto-copiable-y-texto-oculto)
+23. [Copias en la nube](#23-copias-en-la-nube)
 
 ---
 
@@ -441,6 +445,85 @@ Al llegar al límite:
 Para bajar el consumo: borra bookmarks que ya no uses y **vacía la papelera**
 (mientras están en la papelera siguen ocupando, porque siguen ahí). El número
 se recalcula solo cada pocos minutos; el botón de refrescar lo fuerza.
+
+---
+
+## 20. Sesiones activas
+
+En **Ajustes → Seguridad** ves dónde está abierta tu cuenta: navegador,
+sistema, tipo de dispositivo, IP, cuándo empezó la sesión y cuándo se vio por
+última vez. La que estás usando aparece marcada.
+
+Puedes cerrar una concreta o todas las demás de golpe. Cerrar una sesión hace
+que su cookie deje de valer en la **siguiente petición**, aunque no haya
+caducado: no es solo olvidarla en aquel dispositivo. Si ves algo que no
+reconoces, ciérralo y cambia la contraseña.
+
+---
+
+## 21. Registro de seguridad
+
+Si eres administrador, **Ajustes → Seguridad** (pestaña propia) muestra qué ha
+pasado en la instancia: inicios de sesión correctos y fallidos, 2FA, sesiones
+revocadas, rechazos 401/403/429, errores del servidor y visitas a los paneles y
+shares que hayas publicado.
+
+Arriba hay contadores de la ventana elegida (1 h, 24 h, 7 o 30 días), la
+actividad por hora y las IPs con más rechazos, que puedes pulsar para filtrar
+por ellas. Debajo, la tabla con filtros por tipo, usuario o email, IP, ruta,
+estado y un interruptor de "solo sospechosos".
+
+**No se registra el tráfico correcto (2xx).** Es deliberado: un gestor de
+marcadores genera miles de peticiones normales al día y meterlas ahí enterraría
+las pocas líneas que de verdad quieres ver. La retención es configurable, 90
+días por defecto.
+
+---
+
+## 22. Texto copiable y texto oculto
+
+En el editor de descripciones hay dos marcas nuevas, pensadas para lo que
+realmente se escribe en esas notas:
+
+- **Texto copiable**: se ve subrayado a trazos. Al pulsarlo, su contenido va al
+  portapapeles y parpadea en verde.
+- **Texto oculto**: sale borroso. El primer clic lo revela y el segundo lo
+  copia. En ese orden a propósito: copiar algo que aún no has visto sería una
+  sorpresa desagradable.
+
+Selecciona el texto y usa los botones del portapapeles y del ojo tachado en la
+barra del editor. Funcionan igual en las descripciones de carpetas y bookmarks,
+y en lo que compartes.
+
+Dentro del editor el texto oculto solo se atenúa, nunca se difumina: no puedes
+dar formato a algo que no ves.
+
+---
+
+## 23. Copias en la nube
+
+Conviene tener claro qué es y qué no es esta función, porque el nombre engaña.
+
+Una conexión cloud es una **copia de seguridad**, no un sitio donde vivan tus
+datos. Tus carpetas y bookmarks siguen en el servidor; lo que se sube es un ZIP
+con todo cifrado. Por eso el espacio sigue contando para tu cuota: la copia es
+*adicional*, no *en lugar de*.
+
+Cada usuario tiene sus propias conexiones, y las credenciales se cifran con tu
+clave, así que nadie más puede leerlas.
+
+En **Ajustes → Cloud**, cada destino tiene ahora **Ver copias**, que lista los
+archivos que hay en él con su fecha y tamaño. Desde ahí puedes:
+
+- **Restaurar** una copia en el servidor. Es una restauración **por fusión**:
+  añade y actualiza lo que había en la copia, y **no borra** lo que hayas
+  creado después. Si quieres un reemplazo limpio, borra antes y restaura luego.
+  Va en segundo plano, así que puedes seguirla en los logs.
+- **Copiar a…** otro destino, sin que los bytes pasen por el navegador.
+- Marcar un destino como **predeterminado**, que es el que la interfaz propone.
+
+Una copia solo se puede restaurar en la cuenta que la hizo: las filas van
+selladas con tu clave.
 
 ---
 

@@ -485,6 +485,14 @@ export const cloudConnections = sqliteTable(
     backupScheduleCron: text("backup_schedule_cron"),
     lastBackupAt: text("last_backup_at"),
     lastStatus: text("last_status").notNull().default("never"),
+    /**
+     * The user's primary vault. Schedules stay per connection (each has its
+     * own cron), so this is what the UI preselects: the destination offered
+     * for a copy, and the vault a restore starts from.
+     */
+    isDefault: integer("is_default", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (t) => ({

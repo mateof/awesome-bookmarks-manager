@@ -409,6 +409,22 @@ const en = {
       server_error: "Server error",
     },
   },
+  cloudVault: {
+    show: "Show backups",
+    hide: "Hide backups",
+    empty: "No backups in this vault.",
+    listFailed: "Could not list the backups.",
+    isDefault: "Default",
+    makeDefault: "Make default",
+    restore: "Restore",
+    confirmRestore: 'Restore "{{name}}" onto this server?',
+    restoreDetails:
+      "Items from the backup are added and updated. Anything you created afterwards is NOT deleted: this is a merge restore, not a replacement. It runs in the background.",
+    restoreQueued: "Restore started. You can follow the job in the logs.",
+    copyTo: "Copy to…",
+    copied: "Backup sent to the other vault.",
+    needTwo: "You need at least two vaults configured.",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",
