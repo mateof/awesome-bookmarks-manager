@@ -3,6 +3,7 @@ import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
   Bold,
+  ClipboardCopy,
   Code,
   Eye,
   EyeOff,
@@ -14,6 +15,7 @@ import {
   Quote,
   Strikethrough,
 } from "lucide-react";
+import { RICH_MARKS } from "../lib/richMarks.js";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -41,6 +43,7 @@ export function RichTextEditor({ value, onChange, placeholder }: Props) {
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
       }),
+      ...RICH_MARKS,
     ],
     content: value || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -151,6 +154,21 @@ function Toolbar({
         title={t("richText.quote")}
       >
         <Quote className="h-3 w-3" />
+      </Btn>
+      <Sep />
+      <Btn
+        active={editor.isActive("copyable")}
+        onClick={() => editor.chain().focus().toggleCopyable().run()}
+        title={t("richText.copyable")}
+      >
+        <ClipboardCopy className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("spoiler")}
+        onClick={() => editor.chain().focus().toggleSpoiler().run()}
+        title={t("richText.spoiler")}
+      >
+        <EyeOff className="h-3 w-3" />
       </Btn>
       <Sep />
       <Btn

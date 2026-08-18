@@ -926,6 +926,11 @@ const en = {
     tooLarge: "The image exceeds 4MB",
   },
   richText: {
+    copyable: "Copyable text (click to copy)",
+    spoiler: "Hidden text (click to reveal)",
+    clickToCopy: "Click to copy",
+    clickToReveal: "Click to reveal",
+    copied: "Copied!",
     bold: "Bold",
     italic: "Italic",
     strike: "Strikethrough",

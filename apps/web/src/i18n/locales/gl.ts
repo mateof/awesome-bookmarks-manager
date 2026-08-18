@@ -929,6 +929,11 @@ const gl = {
     tooLarge: "A imaxe supera 4MB",
   },
   richText: {
+    copyable: "Texto copiable (clic para copiar)",
+    spoiler: "Texto agochado (clic para amosar)",
+    clickToCopy: "Clic para copiar",
+    clickToReveal: "Clic para amosar",
+    copied: "Copiado!",
     bold: "Negra",
     italic: "Cursiva",
     strike: "Tachado",

@@ -462,3 +462,74 @@ body,
     }
   }
 }
+
+/* ---- Copyable / spoiler marks in rich text ------------------------------
+   Styled here rather than with utility classes because the HTML is produced
+   by TipTap and re-inserted from a sanitised string, so the classes have to
+   survive a round-trip through the server without Tailwind seeing them. */
+
+.ab-copyable {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  padding: 0 0.2em;
+  background: rgb(226 232 240);
+  border-bottom: 1px dashed rgb(100 116 139);
+  transition: background-color 0.15s ease;
+}
+.dark .ab-copyable {
+  background: rgb(51 65 85);
+  border-bottom-color: rgb(148 163 184);
+}
+.ab-copyable:hover,
+.ab-copyable:focus-visible {
+  background: rgb(203 213 225);
+}
+.dark .ab-copyable:hover,
+.dark .ab-copyable:focus-visible {
+  background: rgb(71 85 105);
+}
+
+.ab-spoiler {
+  cursor: pointer;
+  border-radius: 0.25rem;
+  padding: 0 0.2em;
+  background: rgb(100 116 139);
+  color: transparent;
+  /* The blur is what actually hides it; transparent text alone would still be
+     readable by selecting it. */
+  filter: blur(0.28em);
+  user-select: none;
+  transition: filter 0.15s ease;
+}
+.ab-spoiler[data-revealed="true"] {
+  color: inherit;
+  background: rgb(226 232 240);
+  filter: none;
+  user-select: text;
+}
+.dark .ab-spoiler[data-revealed="true"] {
+  background: rgb(51 65 85);
+}
+
+/* Both marks flash green on a successful copy. */
+.ab-copied {
+  background: rgb(187 247 208) !important;
+  border-bottom-color: rgb(22 163 74) !important;
+}
+.dark .ab-copied {
+  background: rgb(20 83 45) !important;
+}
+
+/* Inside the editor the marks must stay legible: you cannot format text you
+   cannot see, so the spoiler is only dimmed there, never blurred. */
+.tiptap .ab-spoiler {
+  color: inherit;
+  filter: none;
+  opacity: 0.75;
+  user-select: text;
+  cursor: text;
+  outline: 1px dashed rgb(100 116 139);
+}
+.tiptap .ab-copyable {
+  cursor: text;
+}

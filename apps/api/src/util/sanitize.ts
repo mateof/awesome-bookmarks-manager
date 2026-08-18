@@ -33,6 +33,10 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedAttributes: {
     a: ["href", "title", "target", "rel"],
     img: ["src", "alt", "title", "width", "height"],
+    // The copyable/spoiler markers ride on spans as data attributes; without
+    // these they would be stripped on the way in and the marks would silently
+    // stop working after a round-trip through the server.
+    span: ["class", "style", "data-copyable", "data-spoiler"],
     "*": ["class", "style"],
   },
   allowedSchemes: ["http", "https", "mailto", "data"],
