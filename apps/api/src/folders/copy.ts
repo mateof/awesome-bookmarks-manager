@@ -27,6 +27,7 @@ async function copyFolderBlobs(
 ): Promise<void> {
   if (src.iconBlobPath) {
     const p = await copyBlob(
+      ctx.userId,
       src.iconBlobPath,
       join(folderBlobDir(ctx.userId, newId), basename(src.iconBlobPath)),
     );
@@ -34,6 +35,7 @@ async function copyFolderBlobs(
   }
   if (src.imageBlobPath) {
     const p = await copyBlob(
+      ctx.userId,
       src.imageBlobPath,
       join(folderBlobDir(ctx.userId, newId), basename(src.imageBlobPath)),
     );
@@ -48,6 +50,7 @@ async function copyBookmarkBlobs(
 ): Promise<void> {
   if (src.iconBlobPath) {
     const p = await copyBlob(
+      ctx.userId,
       src.iconBlobPath,
       join(bookmarkBlobDir(ctx.userId, newId), basename(src.iconBlobPath)),
     );
@@ -55,6 +58,7 @@ async function copyBookmarkBlobs(
   }
   if (src.imageBlobPath) {
     const p = await copyBlob(
+      ctx.userId,
       src.imageBlobPath,
       join(bookmarkBlobDir(ctx.userId, newId), basename(src.imageBlobPath)),
     );

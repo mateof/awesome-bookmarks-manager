@@ -301,6 +301,38 @@ const gl = {
     kwShared: "compartidos comigo shares",
     kwImportExport: "importar exportar copia html navegador respaldo",
   },
+  storage: {
+    myTitle: "O meu almacenamento",
+    mySubtitle: "O que ocupan os teus datos no servidor.",
+    adminTitle: "Almacenamento por usuario",
+    adminSubtitle: "Consumo de cada conta e o seu límite. Podes limitarte a ti mesmo.",
+    noLimit: "sen límite",
+    noLimitShort: "Sen límite",
+    ofQuota: "de {{quota}} ({{percent}}%)",
+    overQuota:
+      "Acadaches o teu límite. Podes seguir lendo, editando e borrando, pero non se gardarán instantáneas nin imaxes novas ata que liberes espazo.",
+    recalculate: "Recalcular",
+    nothingStored: "Aínda non ocupas espazo.",
+    explainer:
+      "As instantáneas de páxinas adoitan ser a maior parte. Para liberar espazo, borra bookmarks que non precises e baleira a papeleira. O apartado de base de datos é unha estimación: suma o tamaño dos campos cifrados, sen contar o que SQLite engade pola súa conta.",
+    bucket: {
+      snapshots: "Instantáneas de páxinas",
+      images: "Imaxes de fondo",
+      icons: "Iconas e favicons",
+      panelAssets: "Fondos e iconas de paneis",
+      database: "Base de datos (estimado)",
+    },
+    defaultQuota: "Límite por defecto",
+    defaultQuotaHint:
+      "Aplícase a quen non teña un límite propio. Déixao baleiro para non limitar. Acepta 500MB, 2GB ou un número solto (enténdese en MB).",
+    quotaPlaceholder: "2GB",
+    badSize: "Tamaño non válido. Usa por exemplo 500MB ou 2GB.",
+    inherited: "Herdado: {{size}}",
+    quotaFor: "Límite de {{user}}",
+    colUser: "Usuario",
+    colUsed: "En uso",
+    colQuota: "Límite",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",
@@ -613,6 +645,7 @@ const gl = {
   },
   settings: {
     tabs: {
+    storage: "Almacenamento",
       profile: "Perfil",
       security: "Seguridade",
       cloud: "Cloud",

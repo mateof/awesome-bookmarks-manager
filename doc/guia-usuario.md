@@ -29,6 +29,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 16. [Buscador y paleta de comandos](#16-buscador-y-paleta-de-comandos)
 17. [Guardar desde el móvil](#17-guardar-desde-el-móvil)
 18. [Descripciones largas](#18-descripciones-largas)
+19. [Almacenamiento y cuotas](#19-almacenamiento-y-cuotas)
 
 ---
 
@@ -410,6 +411,36 @@ longitud sugiere.
 
 Aplica igual a la descripción de un bookmark y a las carpetas y bookmarks que
 ves en Compartidos.
+
+---
+
+## 19. Almacenamiento y cuotas
+
+En **Ajustes → Almacenamiento** ves cuánto ocupan tus datos en el servidor,
+desglosado por lo que de verdad lo causa: instantáneas de páginas, imágenes de
+fondo, iconos, fondos de paneles y las filas cifradas de la base de datos. El
+desglose importa porque la respuesta a "¿por qué ocupo 4 GB?" casi siempre es
+"las instantáneas", y un número suelto no te dice qué borrar.
+
+Si eres administrador, la misma pantalla añade una tabla con el consumo de cada
+cuenta, ordenada de mayor a menor, un **límite por defecto** para toda la
+instancia y un límite propio para cada usuario. Puedes ponerte límite a ti
+mismo: el administrador no está exento.
+
+Los tamaños se escriben como `500MB`, `2GB` o `1,5 GB`. Un número suelto se
+entiende en MB. Dejar el campo vacío significa "sin límite": en la tabla de
+usuarios, vacío quiere decir que se hereda el límite por defecto.
+
+Al llegar al límite:
+
+- **No** se guardan instantáneas ni imágenes nuevas. La subida se rechaza y la
+  captura de una página se marca como error, sin reintentarlo en bucle.
+- **Sí** puedes seguir leyendo, editando, moviendo y borrando. Sería absurdo
+  bloquear justo lo que necesitas para liberar espacio.
+
+Para bajar el consumo: borra bookmarks que ya no uses y **vacía la papelera**
+(mientras están en la papelera siguen ocupando, porque siguen ahí). El número
+se recalcula solo cada pocos minutos; el botón de refrescar lo fuerza.
 
 ---
 

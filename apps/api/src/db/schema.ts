@@ -41,6 +41,9 @@ export const users = sqliteTable(
       .default(false),
     twoFactorSecretCt: blob("two_factor_secret_ct", { mode: "buffer" }),
     twoFactorPendingCt: blob("two_factor_pending_ct", { mode: "buffer" }),
+    // Per-user storage ceiling in bytes. NULL means "use the instance
+    // default" (app_settings), which itself may be unset = unlimited.
+    storageQuotaBytes: integer("storage_quota_bytes"),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },

@@ -1,6 +1,7 @@
 import type { JobType } from "@awesome-bookmarks/shared";
 import { keyCache } from "../auth/key-cache.js";
 import { getEnv } from "../env.js";
+import { isQuotaError } from "../storage/usage.js";
 import { runBackupJob } from "./handlers/backup.js";
 import { runFaviconJob } from "./handlers/favicon.js";
 import { runGroupShareSealJob } from "./handlers/group_share_seal.js";
@@ -136,8 +137,13 @@ async function runOne(job: ClaimedJob) {
       deferForUserKey(job.id);
       return;
     }
-    const terminal = isTerminalError(msg);
-    const human = friendlyMessage(msg);
+    // A full quota will not clear itself by retrying, and a job that keeps
+    // coming back would bury the real errors in the log. The user has to free
+    // space (or be given more) and re-trigger it.
+    const terminal = isQuotaError(err) || isTerminalError(msg);
+    const human = isQuotaError(err)
+      ? "Cuota de almacenamiento llena — libera espacio o pide más al administrador"
+      : friendlyMessage(msg);
 
     // Keep the full stack in stderr for operators; the user-facing message
     // and the jobs table get the friendly summary.

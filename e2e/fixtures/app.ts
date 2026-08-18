@@ -1,7 +1,7 @@
-import { type BrowserContext, type Page, expect } from "@playwright/test";
+import { type Browser, type BrowserContext, type Page, expect } from "@playwright/test";
 import path from "node:path";
 import { IMAGES_DIR } from "./config.js";
-import type { BookmarkSeed, TestUser } from "./data.js";
+import { admin, type BookmarkSeed, type TestUser } from "./data.js";
 
 /**
  * i18next detects language from localStorage key "language" first. Seed it so
@@ -102,4 +102,22 @@ export async function createBookmark(page: Page, b: BookmarkSeed) {
   }
   await page.getByRole("button", { name: "Crear", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nuevo bookmark" })).toBeHidden();
+}
+
+/**
+ * A session holding the admin role.
+ *
+ * The account is registered by the setup project (see setup/admin.setup.ts)
+ * before any spec runs, which is what makes it the instance's first user and
+ * therefore its admin. Specs must not rely on being first themselves: file
+ * ordering is not a contract.
+ */
+export async function adminSession(
+  browser: Browser,
+): Promise<{ ctx: BrowserContext; page: Page }> {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await login(page, admin);
+  return { ctx, page };
 }

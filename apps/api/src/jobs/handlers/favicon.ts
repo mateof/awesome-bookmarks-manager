@@ -44,6 +44,7 @@ export async function runFaviconJob(
 
   const sealed = aeadEncrypt(dek, result.bytes, `${userId}|bookmark.icon`);
   const path = await writeBlob(
+    userId,
     join(bookmarkBlobDir(userId, bookmarkId), "favicon.bin"),
     sealed,
   );

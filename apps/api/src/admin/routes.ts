@@ -1,5 +1,6 @@
 import {
   CreateUserBodySchema,
+  SetUserQuotaBodySchema,
   UpdateAppSettingsBodySchema,
   UpdateUserRoleBodySchema,
 } from "@awesome-bookmarks/shared";
@@ -15,7 +16,9 @@ import {
   getSettings,
   listAllJobs,
   listAllUsers,
+  listStorage,
   resetUserTwoFactor,
+  setStorageQuota,
   setUserRole,
   updateSettings,
 } from "./service.js";
@@ -47,6 +50,22 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.get("/admin/users", async (req) => {
     const ctx = requireAuth(req);
     return listAllUsers(ctx);
+  });
+
+  // What every account is taking on disk, heaviest first.
+  app.get("/admin/storage", async (req) => {
+    const ctx = requireAuth(req);
+    return listStorage(ctx);
+  });
+
+  // An admin can cap anyone, themselves included; null clears the override so
+  // the instance default applies again.
+  app.patch("/admin/users/:id/quota", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const { quotaBytes } = SetUserQuotaBodySchema.parse(req.body);
+    setStorageQuota(ctx, id, quotaBytes);
+    return { ok: true };
   });
 
   app.post("/admin/users", async (req, reply) => {

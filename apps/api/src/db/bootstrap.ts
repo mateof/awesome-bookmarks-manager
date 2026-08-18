@@ -298,6 +298,8 @@ export function ensureSchema() {
   tryAddColumn("users", "two_factor_enabled", "INTEGER NOT NULL DEFAULT 0");
   tryAddColumn("users", "two_factor_secret_ct", "BLOB");
   tryAddColumn("users", "two_factor_pending_ct", "BLOB");
+  // Per-user storage ceiling; NULL falls back to the instance default.
+  tryAddColumn("users", "storage_quota_bytes", "INTEGER");
   tryAddColumn("bookmarks", "snapshot_error", "TEXT");
   // Starred bookmarks ("Favoritos" bar).
   tryAddColumn("bookmarks", "favorite", "INTEGER NOT NULL DEFAULT 0");

@@ -10,6 +10,16 @@ export type TestUser = {
   password: string;
 };
 
+/**
+ * The instance administrator. Registered by the setup project before any spec
+ * runs, so it is always the first account and therefore always the admin.
+ */
+export const admin: TestUser = {
+  email: "admin.e2e@example.com",
+  nickname: "instanceadmin",
+  password: "FirstUserIsAdmin26",
+};
+
 export const ada: TestUser = {
   email: "ada.lovelace@example.com",
   nickname: "ada",

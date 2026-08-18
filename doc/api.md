@@ -399,6 +399,47 @@ that destroy data instead of moving it.
 
 ---
 
+## Storage
+
+Bytes are counted from two places: blobs on disk (page snapshots, images,
+icons, panel assets) and the encrypted columns. Blobs are what actually fill a
+server — a snapshot is 100 kB to 5 MB — so the database figure is an estimate
+of stored field sizes and deliberately ignores SQLite's own overhead.
+
+### `GET /storage/me`
+Your own consumption and the limit that applies to you.
+
+```json
+{ "userId": "…", "usedBytes": 734003200, "quotaBytes": 2147483648,
+  "quotaSource": "default",
+  "breakdown": { "snapshots": 700000000, "images": 20000000, "icons": 3000000,
+                 "panelAssets": 0, "database": 11003200 } }
+```
+
+`quotaSource` is `user` (a per-user override), `default` (the instance-wide
+setting) or `none` (unlimited, in which case `quotaBytes` is null). Pass
+`?fresh=1` to bypass the five-minute cache and re-walk the blob tree.
+
+**Enforcement.** A write that would cross the limit is rejected with `413`
+(`code: "quota_exceeded"`); the snapshot worker checks before fetching and
+marks the bookmark as errored rather than retrying forever. Being over quota
+never blocks reads, edits or deletes — a user has to be able to free their own
+space.
+
+### `GET /admin/storage` *(admin)*
+Every account, heaviest first, each row being a `GET /storage/me` payload plus
+`email`, `nickname` and `role`.
+
+### `PATCH /admin/users/:id/quota` *(admin)*
+Body: `{ "quotaBytes": number | null }`. `null` clears the per-user override so
+the instance default applies again; `0` is a real value meaning "no new bytes".
+An admin can cap any account, their own included.
+
+The instance-wide default lives in the settings endpoint as
+`defaultStorageQuotaBytes` (null = unlimited).
+
+---
+
 ## Search
 
 ### `GET /search`

@@ -1,4 +1,5 @@
 import type {
+  AdminStorageRow,
   AdminUser,
   AppSettings,
   CreateUserResponse,
@@ -21,6 +22,14 @@ import {
   setTrustedNetworks,
 } from "../settings/service.js";
 import { deleteUserBlobs } from "../storage/blobs.js";
+import {
+  getDefaultQuota,
+  quotaFor,
+  setDefaultQuota,
+  setUserQuota,
+  totalOf,
+  usageFor,
+} from "../storage/usage.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
 
 export function ensureAdmin(ctx: AuthedContext) {
@@ -87,6 +96,7 @@ export function getSettings(ctx: AuthedContext): AppSettings {
     require2fa: getRequire2fa(),
     trustedNetworks: getTrustedNetworks(),
     skip2faOnTrusted: getSkip2faOnTrusted(),
+    defaultStorageQuotaBytes: getDefaultQuota(),
   };
 }
 
@@ -102,6 +112,8 @@ export function updateSettings(
     setTrustedNetworks(input.trustedNetworks);
   if (input.skip2faOnTrusted !== undefined)
     setSkip2faOnTrusted(input.skip2faOnTrusted);
+  if (input.defaultStorageQuotaBytes !== undefined)
+    setDefaultQuota(input.defaultStorageQuotaBytes);
   return getSettings(ctx);
 }
 
@@ -190,6 +202,63 @@ export function deleteJobsByStatus(
   ensureAdmin(ctx);
   const result = getDb().delete(jobs).where(eq(jobs.status, status)).run();
   return { deleted: result.changes ?? 0 };
+}
+
+/**
+ * Per-user storage report. Walking one blob tree per user is the expensive
+ * part, so this is an admin-only screen rather than something rendered on
+ * every page: with a handful of accounts it is milliseconds, and the results
+ * are cached for five minutes anyway.
+ */
+export async function listStorage(
+  ctx: AuthedContext,
+): Promise<AdminStorageRow[]> {
+  ensureAdmin(ctx);
+  const rows = getDb()
+    .select({
+      id: users.id,
+      email: users.email,
+      nickname: users.nickname,
+      role: users.role,
+    })
+    .from(users)
+    .all();
+
+  const out: AdminStorageRow[] = [];
+  for (const r of rows) {
+    const breakdown = await usageFor(r.id);
+    const quota = quotaFor(r.id);
+    out.push({
+      userId: r.id,
+      email: r.email,
+      nickname: r.nickname,
+      role: r.role as AdminStorageRow["role"],
+      usedBytes: totalOf(breakdown),
+      quotaBytes: quota.bytes,
+      quotaSource: quota.source,
+      breakdown,
+    });
+  }
+  // Heaviest first: the point of the screen is spotting who is filling the
+  // disk, not reading an alphabetical list.
+  out.sort((a, b) => b.usedBytes - a.usedBytes);
+  return out;
+}
+
+/** Set or clear (null) a user's own storage ceiling. Admins included. */
+export function setStorageQuota(
+  ctx: AuthedContext,
+  targetId: string,
+  bytes: number | null,
+) {
+  ensureAdmin(ctx);
+  const row = getDb()
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.id, targetId))
+    .get();
+  if (!row) throw NotFound("User not found");
+  setUserQuota(targetId, bytes);
 }
 
 export function setUserRole(

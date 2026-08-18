@@ -1,4 +1,5 @@
 import type {
+  AdminStorageRow,
   AdminUser,
   AppSettings,
   Bookmark,
@@ -13,6 +14,7 @@ import type {
   Folder,
   MergeBookmarksResult,
   SmartFolder,
+  StorageUsage,
   TrashItem,
   UpdateSmartFolderBody,
   Group,
@@ -344,6 +346,16 @@ export const api = {
       `/trash${olderThanDays === undefined ? "" : `?olderThanDays=${olderThanDays}`}`,
       { method: "DELETE" },
     ),
+
+  // storage usage + quotas
+  myStorage: (fresh = false) =>
+    request<StorageUsage>(`/storage/me${fresh ? "?fresh=1" : ""}`),
+  adminListStorage: () => request<AdminStorageRow[]>("/admin/storage"),
+  adminSetUserQuota: (id: string, quotaBytes: number | null) =>
+    request<{ ok: true }>(`/admin/users/${id}/quota`, {
+      method: "PATCH",
+      body: JSON.stringify({ quotaBytes }),
+    }),
 
   // duplicates
   listDuplicates: () => request<DuplicateGroup[]>("/bookmarks/duplicates"),

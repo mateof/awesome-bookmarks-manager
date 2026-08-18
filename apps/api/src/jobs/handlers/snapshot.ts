@@ -7,6 +7,7 @@ import { getDb } from "../../db/client.js";
 import { bookmarks } from "../../db/schema.js";
 import { upsertSnapshotIndex } from "../../search/service.js";
 import { bookmarkBlobDir, writeBlob } from "../../storage/blobs.js";
+import { QuotaExceeded, isOverQuota } from "../../storage/usage.js";
 import { join } from "node:path";
 import { NotFound } from "../../util/errors.js";
 
@@ -144,6 +145,17 @@ export async function runSnapshotJob(
     )
     .get();
   if (!row) throw NotFound("Bookmark not found");
+
+  // Checked before fetching, not just before writing: a snapshot costs a
+  // network round-trip and a Readability parse, and there is no point paying
+  // for either when the bytes have nowhere to go. writeBlob enforces it again
+  // as a backstop.
+  if (await isOverQuota(userId)) {
+    throw QuotaExceeded(
+      "Storage quota reached, so this page was not archived. Free space or ask an admin to raise the limit, then re-snapshot.",
+    );
+  }
+
   const url = openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt));
 
   // Mark as running so the UI shows progress instead of staying on "pending"
@@ -160,8 +172,8 @@ export async function runSnapshotJob(
   const sealedHtml = sealField(dek, userId, "snapshot.html", result.html);
   const sealedText = sealField(dek, userId, "snapshot.text", result.text);
 
-  const htmlPath = await writeBlob(join(dir, "page.html.bin"), sealedHtml);
-  const textPath = await writeBlob(join(dir, "text.bin"), sealedText);
+  const htmlPath = await writeBlob(userId, join(dir, "page.html.bin"), sealedHtml);
+  const textPath = await writeBlob(userId, join(dir, "text.bin"), sealedText);
 
   // If we captured a usable title and the bookmark still has the URL as title
   // (the case for quick-add or when the user didn't set one), update it.

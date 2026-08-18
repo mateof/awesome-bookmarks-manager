@@ -89,6 +89,13 @@ one port.
   in env + per-user key derived from password via Argon2id).
 - **Multi-user** with email/password accounts. The first registered user
   becomes the **admin** and can manage other users (including deletion).
+- **Storage quotas & usage** — Settings → Almacenamiento shows what your data
+  takes up, split by what actually causes it (page snapshots, background
+  images, icons, panel assets, encrypted rows). Admins additionally see every
+  account's consumption, set an instance-wide default limit, and override it
+  per user (themselves included). Over quota, uploads and new snapshots are
+  refused with a `413` while reading, editing and deleting keep working, so a
+  user can always free their own space.
 - **Groups** — invite people by email, share folders or bookmarks with the
   group; group members see them in a "Shared with me" section.
 - **Public share links** with optional password and expiration.

@@ -38,6 +38,7 @@ import { refreshBackupSchedules, stopScheduler } from "./scheduler.js";
 import { searchRoutes } from "./search/routes.js";
 import { shareRoutes } from "./shares/routes.js";
 import { smartFolderRoutes } from "./smart-folders/routes.js";
+import { storageRoutes } from "./storage/routes.js";
 import { tagRoutes } from "./tags/routes.js";
 import { trashRoutes } from "./trash/routes.js";
 import { versionRoutes } from "./versions/routes.js";
@@ -134,6 +135,7 @@ export async function buildServer() {
       await api.register(iconRoutes);
       await api.register(tagRoutes);
       await api.register(smartFolderRoutes);
+      await api.register(storageRoutes);
       await api.register(trashRoutes);
       await api.register(versionRoutes);
       await api.register(searchRoutes);

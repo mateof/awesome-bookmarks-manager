@@ -5,6 +5,7 @@ import {
   Copy,
   Download,
   Fingerprint,
+  HardDrive,
   HelpCircle,
   KeyRound,
   Plus,
@@ -24,6 +25,7 @@ import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
 import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
+import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
 
 /* ------------------------------------------------------------------ */
 /* Shared presentation primitives                                     */
@@ -149,6 +151,9 @@ export function SettingsPage() {
           >
             {t("settings.tabs.importExport")}
           </Tab>
+          <Tab to="/settings/storage" icon={<HardDrive className="h-4 w-4" />}>
+            {t("settings.tabs.storage")}
+          </Tab>
           <Tab to="/settings/api" icon={<KeyRound className="h-4 w-4" />}>
             {t("settings.tabs.api")}
           </Tab>
@@ -169,6 +174,7 @@ export function SettingsPage() {
             <Route path="security" element={<Security />} />
             <Route path="cloud" element={<Cloud />} />
             <Route path="import-export" element={<ImportExport />} />
+            <Route path="storage" element={<Storage />} />
             <Route path="api" element={<ApiTokens />} />
             {isAdmin && <Route path="admin" element={<Admin />} />}
             {isAdmin && <Route path="logs" element={<Logs />} />}
@@ -203,6 +209,37 @@ function Tab({
       {icon}
       <span>{children}</span>
     </NavLink>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Storage                                                            */
+/* ------------------------------------------------------------------ */
+
+function Storage() {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  return (
+    <div className="space-y-4">
+      <Card>
+        <SectionHeader
+          icon={<HardDrive className="h-5 w-5" />}
+          title={t("storage.myTitle")}
+          subtitle={t("storage.mySubtitle")}
+        />
+        <MyStorage />
+      </Card>
+      {user?.role === "admin" && (
+        <Card>
+          <SectionHeader
+            icon={<Users className="h-5 w-5" />}
+            title={t("storage.adminTitle")}
+            subtitle={t("storage.adminSubtitle")}
+          />
+          <AdminStorage />
+        </Card>
+      )}
+    </div>
   );
 }
 

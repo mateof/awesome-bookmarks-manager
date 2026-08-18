@@ -32,8 +32,17 @@ export default defineConfig({
   },
   projects: [
     {
+      // Claims the admin role before anything else registers, so admin-only
+      // specs have a known account instead of depending on file order.
+      name: "setup",
+      testDir: "./setup",
+      testMatch: /.*\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
       name: "app",
       testMatch: /.*\.app\.spec\.ts/,
+      dependencies: ["setup"],
       use: { ...devices["Desktop Chrome"] },
     },
     {
@@ -41,6 +50,7 @@ export default defineConfig({
       // can only load an unpacked extension via a persistent context).
       name: "extension",
       testMatch: /.*\.ext\.spec\.ts/,
+      dependencies: ["setup"],
     },
   ],
   webServer: {

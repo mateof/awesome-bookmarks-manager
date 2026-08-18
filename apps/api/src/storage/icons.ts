@@ -56,6 +56,7 @@ export async function storeBookmarkIcon(
   const bytes = await readMultipart(file);
   const sealed = aeadEncrypt(dek, bytes, `${userId}|bookmark.icon`);
   return writeBlob(
+    userId,
     join(bookmarkBlobDir(userId, bookmarkId), "user-icon.bin"),
     sealed,
   );
@@ -70,6 +71,7 @@ export async function storeFolderIcon(
   const bytes = await readMultipart(file);
   const sealed = aeadEncrypt(dek, bytes, `${userId}|folder.icon`);
   return writeBlob(
+    userId,
     join(folderBlobDir(userId, folderId), "user-icon.bin"),
     sealed,
   );
@@ -84,6 +86,7 @@ export async function storeBookmarkBgImage(
   const bytes = await readMultipart(file, MAX_BG_BYTES);
   const sealed = aeadEncrypt(dek, bytes, `${userId}|bookmark.bg`);
   return writeBlob(
+    userId,
     join(bookmarkBlobDir(userId, bookmarkId), "user-bg.bin"),
     sealed,
   );
@@ -98,6 +101,7 @@ export async function storeFolderBgImage(
   const bytes = await readMultipart(file, MAX_BG_BYTES);
   const sealed = aeadEncrypt(dek, bytes, `${userId}|folder.bg`);
   return writeBlob(
+    userId,
     join(folderBlobDir(userId, folderId), "user-bg.bin"),
     sealed,
   );

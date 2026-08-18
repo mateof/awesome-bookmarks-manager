@@ -301,6 +301,38 @@ const en = {
     kwShared: "shared with me shares",
     kwImportExport: "import export html browser backup",
   },
+  storage: {
+    myTitle: "My storage",
+    mySubtitle: "What your data takes up on the server.",
+    adminTitle: "Storage per user",
+    adminSubtitle: "What each account uses and its limit. You can cap yourself too.",
+    noLimit: "no limit",
+    noLimitShort: "No limit",
+    ofQuota: "of {{quota}} ({{percent}}%)",
+    overQuota:
+      "You have reached your limit. You can still read, edit and delete, but no new snapshots or images will be saved until you free some space.",
+    recalculate: "Recalculate",
+    nothingStored: "You are not using any space yet.",
+    explainer:
+      "Saved page snapshots are usually most of it. To free space, delete bookmarks you no longer need and empty the trash. The database figure is an estimate: it sums the encrypted field sizes and ignores SQLite's own overhead.",
+    bucket: {
+      snapshots: "Page snapshots",
+      images: "Background images",
+      icons: "Icons and favicons",
+      panelAssets: "Panel backgrounds and icons",
+      database: "Database (estimated)",
+    },
+    defaultQuota: "Default limit",
+    defaultQuotaHint:
+      "Applies to anyone without their own limit. Leave it empty for no limit. Accepts 500MB, 2GB or a bare number (read as MB).",
+    quotaPlaceholder: "2GB",
+    badSize: "Invalid size. Use something like 500MB or 2GB.",
+    inherited: "Inherited: {{size}}",
+    quotaFor: "Limit for {{user}}",
+    colUser: "User",
+    colUsed: "Used",
+    colQuota: "Limit",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",
@@ -611,6 +643,7 @@ const en = {
   },
   settings: {
     tabs: {
+    storage: "Storage",
       profile: "Profile",
       security: "Security",
       cloud: "Cloud",

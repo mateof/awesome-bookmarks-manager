@@ -79,7 +79,11 @@ export async function storePanelBgAsset(
     }
   }
   const sealed = aeadEncrypt(masterKey(), Buffer.concat(chunks), panelBgAad(userId));
-  const path = await writeBlob(join(panelBlobDir(userId, panelId), "bg.bin"), sealed);
+  const path = await writeBlob(
+    userId,
+    join(panelBlobDir(userId, panelId), "bg.bin"),
+    sealed,
+  );
   return { path, mime };
 }
 
@@ -112,7 +116,11 @@ export async function storePanelFaviconAsset(
     }
   }
   const sealed = aeadEncrypt(masterKey(), Buffer.concat(chunks), panelFaviconAad(userId));
-  const path = await writeBlob(join(panelBlobDir(userId, panelId), "favicon.bin"), sealed);
+  const path = await writeBlob(
+    userId,
+    join(panelBlobDir(userId, panelId), "favicon.bin"),
+    sealed,
+  );
   return { path, mime };
 }
 
