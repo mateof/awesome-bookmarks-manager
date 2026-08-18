@@ -77,6 +77,36 @@ export const userSessions = sqliteTable(
   }),
 );
 
+/**
+ * Security-relevant events: logins, refusals, panel views, admin actions.
+ *
+ * Not a general access log. Recording every 2xx on a personal bookmark manager
+ * would bury the handful of lines an operator actually needs, and would grow
+ * without bound. Rows are pruned by age (see security-log/service.ts).
+ */
+export const securityEvents = sqliteTable(
+  "security_events",
+  {
+    id: text("id").primaryKey(),
+    at: text("at").notNull().default(sql`(current_timestamp)`),
+    type: text("type").notNull(),
+    userId: text("user_id"),
+    /** Account email when known, or whatever was attempted on a failed login. */
+    subject: text("subject"),
+    ip: text("ip").notNull().default(""),
+    userAgent: text("user_agent").notNull().default(""),
+    method: text("method").notNull().default(""),
+    path: text("path").notNull().default(""),
+    status: integer("status"),
+    detail: text("detail"),
+  },
+  (t) => ({
+    atIdx: index("security_events_at_idx").on(t.at),
+    typeIdx: index("security_events_type_idx").on(t.type, t.at),
+    ipIdx: index("security_events_ip_idx").on(t.ip, t.at),
+  }),
+);
+
 /** Instance-wide key/value settings managed by admins (e.g. signup toggle). */
 export const appSettings = sqliteTable("app_settings", {
   key: text("key").primaryKey(),

@@ -36,6 +36,8 @@ import { reawakenForUser } from "./jobs/queue.js";
 import { startWorker, stopWorker } from "./jobs/worker.js";
 import { refreshBackupSchedules, stopScheduler } from "./scheduler.js";
 import { searchRoutes } from "./search/routes.js";
+import { recordEvent } from "./security-log/service.js";
+import { securityLogRoutes } from "./security-log/routes.js";
 import { shareRoutes } from "./shares/routes.js";
 import { smartFolderRoutes } from "./smart-folders/routes.js";
 import { storageRoutes } from "./storage/routes.js";
@@ -112,6 +114,48 @@ export async function buildServer() {
   // /health stays at root so HEALTHCHECK can hit it without auth or prefix.
   app.get("/health", async () => ({ ok: true }));
 
+  /**
+   * The passive half of the security log: refusals, server errors and views of
+   * anything public.
+   *
+   * Successful 2xx traffic is skipped on purpose. On a personal bookmark
+   * manager that is thousands of uninteresting rows a day, and it would bury
+   * the handful of lines that matter — which is how audit logs stop being read.
+   */
+  app.addHook("onResponse", async (req, reply) => {
+    const status = reply.statusCode;
+    const path = req.url.split("?")[0] ?? "";
+    const userId = req.session?.get?.("userId") ?? null;
+
+    if (status === 401) {
+      recordEvent({ type: "unauthorized", req, userId, status });
+    } else if (status === 403) {
+      recordEvent({ type: "forbidden", req, userId, status });
+    } else if (status === 429) {
+      recordEvent({ type: "rate_limited", req, userId, status });
+    } else if (status === 413) {
+      recordEvent({ type: "quota_exceeded", req, userId, status });
+    } else if (status >= 500) {
+      recordEvent({ type: "server_error", req, userId, status });
+    } else if (status < 400) {
+      // Views of published content: who is looking at what you shared.
+      const panel = /^\/api\/public\/panel\/([^/]+)$/.exec(path);
+      if (panel) {
+        recordEvent({
+          type: "panel_view",
+          req,
+          userId,
+          status,
+          detail: decodeURIComponent(panel[1] ?? ""),
+        });
+      }
+      const share = /^\/api\/public\/share\/([^/]+)$/.exec(path);
+      if (share) {
+        recordEvent({ type: "share_view", req, userId, status, detail: share[1] ?? null });
+      }
+    }
+  });
+
   // Re-arm any deferred jobs whenever the user authenticates successfully.
   app.addHook("onResponse", async (req) => {
     if (
@@ -147,6 +191,7 @@ export async function buildServer() {
       await api.register(notificationRoutes);
       await api.register(extensionRoutes);
       await api.register(adminRoutes);
+      await api.register(securityLogRoutes);
       await api.register(jobRoutes);
       await api.register(panelRoutes);
       await api.register(aliasRoutes);

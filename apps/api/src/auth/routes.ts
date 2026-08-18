@@ -8,6 +8,7 @@ import {
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
+import { recordEvent } from "../security-log/service.js";
 import { getRegistrationEnabled } from "../settings/service.js";
 import {
   changePassword,
@@ -48,17 +49,40 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const body = SignupBodySchema.parse(req.body);
     const user = await signupService(body.email, body.password, body.nickname);
     setSession(reply, user.id);
+    recordEvent({ type: "signup", req, userId: user.id, subject: user.email });
     return user;
   });
 
   app.post("/auth/login", async (req, reply) => {
     const body = LoginBodySchema.parse(req.body);
-    const result = await loginService(body.identifier, body.password, {
-      totp: body.totp,
-      trusted: isTrustedNetwork(req),
-    });
-    if (!result.ok) return { twoFactorRequired: true };
+    let result;
+    try {
+      result = await loginService(body.identifier, body.password, {
+        totp: body.totp,
+        trusted: isTrustedNetwork(req),
+      });
+    } catch (err) {
+      // Records what was *attempted*, which is the whole point: a run of these
+      // against one account from one IP is what an attack looks like.
+      recordEvent({
+        type: "login_failed",
+        req,
+        subject: body.identifier,
+        status: 401,
+      });
+      throw err;
+    }
+    if (!result.ok) {
+      recordEvent({ type: "login_2fa_required", req, subject: body.identifier });
+      return { twoFactorRequired: true };
+    }
     setSession(reply, result.user.id);
+    recordEvent({
+      type: "login_ok",
+      req,
+      userId: result.user.id,
+      subject: result.user.email,
+    });
     return result.user;
   });
 
@@ -73,6 +97,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { code } = TotpCodeSchema.parse(req.body);
     enableTwoFactor(ctx, code);
+    recordEvent({ type: "twofa_enabled", req, userId: ctx.userId });
     return { ok: true };
   });
 
@@ -80,11 +105,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { code } = TotpCodeSchema.parse(req.body);
     disableTwoFactor(ctx, code);
+    recordEvent({ type: "twofa_disabled", req, userId: ctx.userId });
     return { ok: true };
   });
 
-  app.post("/auth/logout", async (_req, reply) => {
+  app.post("/auth/logout", async (req, reply) => {
+    const userId = req.session.get("userId");
     clearSession(reply);
+    recordEvent({ type: "logout", req, userId: userId ?? null });
     return { ok: true };
   });
 
@@ -98,6 +126,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const userId = requireUserId(req);
     const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
     revokeSession(userId, id);
+    recordEvent({ type: "session_revoked", req, userId, detail: id });
     // Revoking your own session is a logout; drop the cookie so the client
     // does not keep sending one that will be refused from here on.
     if (id === currentSessionId(req)) reply.request.session.delete();
@@ -115,6 +144,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req); // ensures DEK is unlockable from current pw
     const body = ChangePasswordBodySchema.parse(req.body);
     await changePassword(ctx.userId, body.currentPassword, body.newPassword);
+    recordEvent({ type: "password_changed", req, userId: ctx.userId });
     return { ok: true };
   });
 

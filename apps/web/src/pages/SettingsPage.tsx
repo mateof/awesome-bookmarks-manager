@@ -11,6 +11,7 @@ import {
   KeyRound,
   Plus,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   Trash2,
   User,
@@ -29,6 +30,7 @@ import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
 import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
 import { SessionList } from "../components/SessionList.js";
+import { SecurityLog } from "../components/SecurityLog.js";
 
 /* ------------------------------------------------------------------ */
 /* Shared presentation primitives                                     */
@@ -166,6 +168,11 @@ export function SettingsPage() {
             </Tab>
           )}
           {isAdmin && (
+            <Tab to="/settings/security-log" icon={<ShieldAlert className="h-4 w-4" />}>
+              {t("settings.tabs.securityLog")}
+            </Tab>
+          )}
+          {isAdmin && (
             <Tab to="/settings/logs" icon={<ScrollText className="h-4 w-4" />}>
               {t("settings.tabs.logs")}
             </Tab>
@@ -180,6 +187,9 @@ export function SettingsPage() {
             <Route path="storage" element={<Storage />} />
             <Route path="api" element={<ApiTokens />} />
             {isAdmin && <Route path="admin" element={<Admin />} />}
+            {isAdmin && (
+              <Route path="security-log" element={<SecurityLogTab />} />
+            )}
             {isAdmin && <Route path="logs" element={<Logs />} />}
           </Routes>
         </div>
@@ -212,6 +222,24 @@ function Tab({
       {icon}
       <span>{children}</span>
     </NavLink>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Security log                                                       */
+/* ------------------------------------------------------------------ */
+
+function SecurityLogTab() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <SectionHeader
+        icon={<ShieldAlert className="h-5 w-5" />}
+        title={t("securityLog.heading")}
+        subtitle={t("securityLog.subtitle")}
+      />
+      <SecurityLog />
+    </Card>
   );
 }
 

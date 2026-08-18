@@ -14,6 +14,9 @@ import type {
   Folder,
   MergeBookmarksResult,
   SmartFolder,
+  SecurityLogPage,
+  SecurityLogQuery,
+  SecuritySummary,
   StorageUsage,
   TrashItem,
   UserSession,
@@ -347,6 +350,24 @@ export const api = {
       `/trash${olderThanDays === undefined ? "" : `?olderThanDays=${olderThanDays}`}`,
       { method: "DELETE" },
     ),
+
+  // security log (admin)
+  securityLog: (q: Partial<SecurityLogQuery>) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(q)) {
+      if (v !== undefined && v !== "" && v !== false) params.set(k, String(v));
+    }
+    const qs = params.toString();
+    return request<SecurityLogPage>(`/security-log${qs ? `?${qs}` : ""}`);
+  },
+  securitySummary: (hours: number) =>
+    request<SecuritySummary>(`/security-log/summary?hours=${hours}`),
+  securityRetention: () => request<{ days: number }>("/security-log/retention"),
+  setSecurityRetention: (days: number) =>
+    request<{ days: number; pruned: number }>("/security-log/retention", {
+      method: "PATCH",
+      body: JSON.stringify({ days }),
+    }),
 
   // active logins
   listSessions: () => request<UserSession[]>("/sessions"),

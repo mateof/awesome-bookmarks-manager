@@ -77,6 +77,23 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS user_sessions_user_idx
       ON user_sessions(user_id, revoked_at);
 
+    CREATE TABLE IF NOT EXISTS security_events (
+      id TEXT PRIMARY KEY,
+      at TEXT NOT NULL DEFAULT (current_timestamp),
+      type TEXT NOT NULL,
+      user_id TEXT,
+      subject TEXT,
+      ip TEXT NOT NULL DEFAULT '',
+      user_agent TEXT NOT NULL DEFAULT '',
+      method TEXT NOT NULL DEFAULT '',
+      path TEXT NOT NULL DEFAULT '',
+      status INTEGER,
+      detail TEXT
+    );
+    CREATE INDEX IF NOT EXISTS security_events_at_idx ON security_events(at);
+    CREATE INDEX IF NOT EXISTS security_events_type_idx ON security_events(type, at);
+    CREATE INDEX IF NOT EXISTS security_events_ip_idx ON security_events(ip, at);
+
     CREATE TABLE IF NOT EXISTS app_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
