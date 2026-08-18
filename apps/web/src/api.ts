@@ -1,6 +1,7 @@
 import type {
   AdminStorageRow,
   CloudBackup,
+  PeerCertificate,
   AdminUser,
   AppSettings,
   Bookmark,
@@ -415,7 +416,7 @@ export const api = {
   ) => {
     const fd = new FormData();
     fd.append("file", file);
-    fd.append("fetchSnapshots", String(options.fetchSnapshots ?? true));
+    fd.append("fetchSnapshots", String(options.fetchSnapshots ?? false));
     if (options.parentId) fd.append("parentId", options.parentId);
     if (options.wrapperFolderName)
       fd.append("wrapperFolderName", options.wrapperFolderName);
@@ -859,12 +860,23 @@ export const api = {
     username: string;
     password: string;
     basePath?: string;
+    certFingerprint?: string;
   }) =>
     request<{ id: string; provider: "synology_webdav"; label: string }>(
       "/cloud/connect/synology",
       { method: "POST", body: JSON.stringify(body) },
     ),
-  testSynology: (body: { url: string; username: string; password: string }) =>
+  inspectCertificate: (url: string) =>
+    request<PeerCertificate>("/cloud/inspect-cert", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+  testSynology: (body: {
+    url: string;
+    username: string;
+    password: string;
+    certFingerprint?: string;
+  }) =>
     request<{ ok: boolean; message: string }>("/cloud/synology/test", {
       method: "POST",
       body: JSON.stringify(body),
@@ -874,6 +886,7 @@ export const api = {
     username: string;
     password: string;
     path: string;
+    certFingerprint?: string;
   }) =>
     request<{ entries: Array<{ name: string; path: string }> }>(
       "/cloud/synology/list-dirs",
@@ -884,6 +897,7 @@ export const api = {
     username: string;
     password: string;
     path: string;
+    certFingerprint?: string;
   }) =>
     request<{ ok: true }>("/cloud/synology/create-dir", {
       method: "POST",

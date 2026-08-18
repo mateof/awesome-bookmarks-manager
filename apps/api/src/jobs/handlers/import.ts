@@ -195,7 +195,7 @@ export async function runImportJob(
   const db = getDb();
 
   const wantSnapshots =
-    (payload.fetchSnapshots ?? true) && getAutoSnapshots(userId);
+    (payload.fetchSnapshots ?? false) && getAutoSnapshots(userId);
 
   let resolvedParent: string | null = null;
   if (payload.parentId) {

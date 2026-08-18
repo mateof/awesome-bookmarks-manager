@@ -142,7 +142,10 @@ one port.
   stays on the server, which is why storage quotas still apply. You can list
   what is in a vault, **restore it back into the server** (a merge, never a
   wipe), copy an archive straight from one vault to another without it passing
-  through the browser, and mark one vault as primary.
+  through the browser, and mark one vault as primary. A NAS presenting a
+  self-signed certificate (the usual case on a LAN) is handled by **pinning**:
+  you are shown the fingerprint, and once accepted only that exact certificate
+  is trusted, so it never degrades into "accept anything".
 - **Active sessions** — see every device where the account is open (browser,
   system, IP, first and last seen) and close any of them. Revoking makes that
   cookie be refused on its next request, even though it has not expired.
@@ -162,6 +165,8 @@ one port.
   assistant that never looked cannot call it. See [doc/mcp.md](doc/mcp.md).
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
 - **Importer** for the standard HTML bookmarks export of Chrome / Firefox / Edge.
+  Page snapshots are **off by default** on import: bringing in a few thousand
+  URLs would otherwise mean a few thousand page fetches and a lot of storage.
 - **Installable PWA and share target** — install it from the browser on Android
   and the app joins the system share sheet, so a link can be sent from any app
   straight into a folder you pick (the last one is remembered). Responsive UI

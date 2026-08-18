@@ -26,6 +26,13 @@ export const ConnectSynologyBodySchema = z.object({
   username: z.string().min(1).max(256),
   password: z.string().min(1).max(1024),
   basePath: z.string().default("/AwesomeBookmarks"),
+  /**
+   * SHA-256 fingerprint of a certificate the user has explicitly accepted.
+   * Present only for servers whose certificate no public CA signed, which on
+   * a LAN NAS is the normal case. Pinning one certificate is what keeps this
+   * from becoming "trust anything".
+   */
+  certFingerprint: z.string().max(200).optional(),
 });
 export type ConnectSynologyBody = z.infer<typeof ConnectSynologyBodySchema>;
 
@@ -33,6 +40,8 @@ export const SynologyCredentialsSchema = z.object({
   url: z.string().url(),
   username: z.string().min(1).max(256),
   password: z.string().min(1).max(1024),
+  /** See ConnectSynologyBodySchema.certFingerprint. */
+  certFingerprint: z.string().max(200).optional(),
 });
 export type SynologyCredentials = z.infer<typeof SynologyCredentialsSchema>;
 
@@ -89,3 +98,17 @@ export const CopyBackupBodySchema = z.object({
   targetConnectionId: z.string().uuid(),
 });
 export type CopyBackupBody = z.infer<typeof CopyBackupBodySchema>;
+
+/** What a server presents, so the user can decide whether to trust it. */
+export const PeerCertificateSchema = z.object({
+  fingerprint: z.string(),
+  subject: z.string(),
+  issuer: z.string(),
+  validFrom: z.string(),
+  validTo: z.string(),
+  selfSigned: z.boolean(),
+});
+export type PeerCertificate = z.infer<typeof PeerCertificateSchema>;
+
+export const InspectCertBodySchema = z.object({ url: z.string().url() });
+export type InspectCertBody = z.infer<typeof InspectCertBodySchema>;

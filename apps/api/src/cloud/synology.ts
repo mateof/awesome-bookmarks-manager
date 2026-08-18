@@ -1,17 +1,25 @@
 import type { Readable } from "node:stream";
 import { createClient, type WebDAVClient } from "webdav";
+import { agentFor } from "./tls.js";
 import type { CloudProvider, FileMeta, StoredCredentials } from "./types.js";
 
 export interface SynologyAuth {
   url: string;
   username: string;
   password: string;
+  /**
+   * Fingerprint of a certificate the user accepted explicitly. Without one the
+   * connection keeps standard verification, so a properly-signed server is
+   * unaffected by any of this.
+   */
+  certFingerprint?: string;
 }
 
 function buildClient(auth: SynologyAuth): WebDAVClient {
   return createClient(auth.url, {
     username: auth.username,
     password: auth.password,
+    httpsAgent: agentFor(auth.certFingerprint),
   });
 }
 
@@ -27,10 +35,15 @@ export async function testSynologyConnection(
     try {
       await client.getDirectoryContents("/", { deep: false });
       return { ok: true, message: "Conexión correcta" };
-    } catch {
+    } catch (listErr) {
       const exists = await client.exists("/").catch(() => false);
       if (exists) return { ok: true, message: "Conexión correcta (exists)" };
-      throw new Error("No se pudo listar el raíz");
+      // Re-throw the original failure rather than a generic one. Swallowing it
+      // turned every TLS problem into "no se pudo listar el raíz", which tells
+      // the user nothing and hides the one thing they can act on.
+      throw listErr instanceof Error
+        ? listErr
+        : new Error("No se pudo listar el raíz");
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -97,8 +110,22 @@ function prettyDavError(raw: string): string {
   if (raw.includes("404")) return "Servidor inaccesible (404)";
   if (raw.includes("ECONNREFUSED")) return "Conexión rechazada — ¿servicio WebDAV activo?";
   if (raw.includes("ENOTFOUND")) return "Host no encontrado — revisa la URL";
-  if (raw.includes("self signed") || raw.includes("UNABLE_TO_VERIFY")) {
-    return "Certificado TLS no válido (autofirmado)";
+  if (raw.includes("PINNED_CERT_MISMATCH")) {
+    return (
+      "El certificado del servidor ha cambiado y no coincide con el aceptado. " +
+      "Vuelve a aceptarlo si lo has renovado tú."
+    );
+  }
+  if (
+    raw.includes("self signed") ||
+    raw.includes("self-signed") ||
+    raw.includes("UNABLE_TO_VERIFY") ||
+    raw.includes("ALTNAME")
+  ) {
+    return (
+      "Certificado no verificable (autofirmado o emitido para otro nombre). " +
+      "Puedes revisarlo y aceptarlo desde el formulario."
+    );
   }
   if (raw.includes("ETIMEDOUT")) return "Timeout — el servidor no responde";
   return raw.slice(0, 200);
@@ -113,6 +140,7 @@ export class SynologyWebDAVProvider implements CloudProvider {
     this.client = createClient(creds.url, {
       username: creds.username,
       password: creds.password,
+      httpsAgent: agentFor(creds.certFingerprint),
     });
     this.basePath = creds.basePath.replace(/\/$/, "");
   }

@@ -48,4 +48,6 @@ export type StoredCredentials =
       username: string;
       password: string;
       basePath: string;
+      /** Pinned certificate fingerprint; see cloud/tls.ts. */
+      certFingerprint?: string;
     };

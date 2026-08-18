@@ -1,5 +1,6 @@
 import {
   CopyBackupBodySchema,
+  InspectCertBodySchema,
   RestoreBackupBodySchema,
   ConnectSynologyBodySchema,
   CreateSynologyDirBodySchema,
@@ -21,6 +22,7 @@ import { AppError, BadRequest, NotFound } from "../util/errors.js";
 import { GDRIVE_SCOPES, gdriveOAuthClient } from "./gdrive.js";
 import { ONEDRIVE_SCOPES } from "./onedrive.js";
 import { loadConnection, packCredentials } from "./registry.js";
+import { inspectCertificate } from "./tls.js";
 import { copyBackupBetween } from "../jobs/handlers/restore.js";
 import {
   createSynologyDirectory,
@@ -220,6 +222,26 @@ export const cloudRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  /**
+   * Show what certificate a server presents, so the user can decide whether to
+   * trust it. Nothing is sent to that server beyond the handshake: no
+   * credentials, no request body. Auth is still required, because otherwise
+   * this is an outbound TLS prober for arbitrary internal hosts.
+   */
+  app.post("/cloud/inspect-cert", async (req) => {
+    requireAuth(req);
+    const { url } = InspectCertBodySchema.parse(req.body);
+    try {
+      return await inspectCertificate(url);
+    } catch (err) {
+      throw BadRequest(
+        `No se pudo leer el certificado: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  });
+
   app.post("/cloud/connect/synology", async (req, reply) => {
     const ctx = requireAuth(req);
     const body = ConnectSynologyBodySchema.parse(req.body);
@@ -230,6 +252,7 @@ export const cloudRoutes: FastifyPluginAsync = async (app) => {
       username: body.username,
       password: body.password,
       basePath: body.basePath,
+      certFingerprint: body.certFingerprint,
     });
     getDb()
       .insert(cloudConnections)

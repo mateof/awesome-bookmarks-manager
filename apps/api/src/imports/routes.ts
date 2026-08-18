@@ -13,7 +13,8 @@ export const importRoutes: FastifyPluginAsync = async (app) => {
     if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
 
     let html: string | null = null;
-    let fetchSnapshots = true;
+    // Defaults off: see the note on the import form. A caller has to ask.
+    let fetchSnapshots = false;
     let parentId: string | null = null;
     let wrapperFolderName: string | undefined;
 

@@ -425,6 +425,19 @@ const gl = {
     copied: "Copia enviada ao outro destino.",
     needTwo: "Precisas polo menos dous destinos configurados.",
   },
+  cert: {
+    explain:
+      "O servidor presenta un certificado que ningunha autoridade pública avala. É o normal nun NAS: Synology usa un autofirmado, e adoita estar emitido para un nome distinto da IP pola que entras.",
+    inspect: "Ver o certificado",
+    subject: "Emitido para",
+    issuer: "Emitido por",
+    validTo: "Válido ata",
+    fingerprint: "Pegada SHA-256",
+    compareHint:
+      "Compáraa coa que amosa o teu NAS en Panel de control → Seguridade → Certificado. Se coincide, podes aceptala.",
+    trust: "Confiar neste certificado",
+    trusted: "Certificado aceptado ({{short}}…). Só se admitirá ese.",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",

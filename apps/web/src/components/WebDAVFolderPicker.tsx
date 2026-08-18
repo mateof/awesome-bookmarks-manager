@@ -12,12 +12,21 @@ import { useTranslation } from "react-i18next";
 import { dlg } from "./dialogs.js";
 import { ApiError, api } from "../api.js";
 import { Modal } from "./Modal.js";
+import { CertificateTrust, looksLikeCertError } from "./CertificateTrust.js";
 
 interface Props {
-  auth: { url: string; username: string; password: string };
+  auth: {
+    url: string;
+    username: string;
+    password: string;
+    /** Pinned certificate, when the user has accepted one. */
+    certFingerprint?: string;
+  };
   initialPath?: string;
   onSelect: (path: string) => void;
   onClose: () => void;
+  /** Called when the user accepts the server's certificate from in here. */
+  onTrustCert?: (fingerprint: string) => void;
 }
 
 export function WebDAVFolderPicker({
@@ -25,12 +34,13 @@ export function WebDAVFolderPicker({
   initialPath = "/",
   onSelect,
   onClose,
+  onTrustCert,
 }: Props) {
   const { t } = useTranslation();
   const [path, setPath] = useState(normalizePath(initialPath));
 
   const dirs = useQuery({
-    queryKey: ["webdav-dirs", auth.url, auth.username, path],
+    queryKey: ["webdav-dirs", auth.url, auth.username, auth.certFingerprint, path],
     queryFn: () => api.listSynologyDirs({ ...auth, path }),
     retry: false,
   });
@@ -88,6 +98,22 @@ export function WebDAVFolderPicker({
                     : t("webdav.cannotList")}
                 </span>
               </div>
+              {/* Reaching the NAS by IP with its own certificate lands here,
+                  which is the most common way this fails. Offer the fix
+                  in place instead of sending the user back to the form. */}
+              {!auth.certFingerprint &&
+                onTrustCert &&
+                looksLikeCertError(
+                  dirs.error instanceof ApiError ? dirs.error.message : "",
+                ) && (
+                  <CertificateTrust
+                    url={auth.url}
+                    onTrust={(fingerprint) => {
+                      onTrustCert(fingerprint);
+                      void dirs.refetch();
+                    }}
+                  />
+                )}
               <div className="flex flex-wrap gap-2">
                 {path !== "/" && (
                   <button

@@ -425,6 +425,19 @@ const en = {
     copied: "Backup sent to the other vault.",
     needTwo: "You need at least two vaults configured.",
   },
+  cert: {
+    explain:
+      "The server presents a certificate no public authority vouches for. That is normal for a NAS: Synology uses a self-signed one, and it is usually issued for a name other than the IP you connect to.",
+    inspect: "Show the certificate",
+    subject: "Issued to",
+    issuer: "Issued by",
+    validTo: "Valid until",
+    fingerprint: "SHA-256 fingerprint",
+    compareHint:
+      "Compare it with the one your NAS shows under Control Panel → Security → Certificate. If it matches, you can accept it.",
+    trust: "Trust this certificate",
+    trusted: "Certificate accepted ({{short}}…). Only that one will be allowed.",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",

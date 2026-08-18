@@ -32,6 +32,11 @@ import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
 import { SessionList } from "../components/SessionList.js";
 import { SecurityLog } from "../components/SecurityLog.js";
 import { CloudVault } from "../components/CloudVault.js";
+import {
+  CertificateTrust,
+  TrustedCertBadge,
+  looksLikeCertError,
+} from "../components/CertificateTrust.js";
 
 /* ------------------------------------------------------------------ */
 /* Shared presentation primitives                                     */
@@ -763,6 +768,8 @@ function SynologyDialog({
     username: "",
     password: "",
     basePath: "/AwesomeBookmarks",
+    // Set only once the user has looked at a certificate and accepted it.
+    certFingerprint: "" as string,
   });
   const [showBrowser, setShowBrowser] = useState(false);
   const [testStatus, setTestStatus] = useState<{
@@ -776,6 +783,7 @@ function SynologyDialog({
         url: form.url,
         username: form.username,
         password: form.password,
+        certFingerprint: form.certFingerprint || undefined,
       }),
     onSuccess: (r) =>
       setTestStatus({ state: r.ok ? "ok" : "err", message: r.message }),
@@ -787,7 +795,11 @@ function SynologyDialog({
   });
 
   const save = useMutation({
-    mutationFn: () => api.connectSynology(form),
+    mutationFn: () =>
+      api.connectSynology({
+        ...form,
+        certFingerprint: form.certFingerprint || undefined,
+      }),
     onSuccess: () => {
       onSaved();
       onClose();
@@ -871,6 +883,21 @@ function SynologyDialog({
           )}
         </div>
 
+        {form.certFingerprint && (
+          <TrustedCertBadge fingerprint={form.certFingerprint} />
+        )}
+        {testStatus.state === "err" &&
+          !form.certFingerprint &&
+          looksLikeCertError(testStatus.message) && (
+            <CertificateTrust
+              url={form.url}
+              onTrust={(fingerprint) => {
+                setForm((f) => ({ ...f, certFingerprint: fingerprint }));
+                setTestStatus({ state: "idle", message: "" });
+              }}
+            />
+          )}
+
         <div className="flex gap-2 pt-2">
           <button
             onClick={() => save.mutate()}
@@ -890,7 +917,11 @@ function SynologyDialog({
               url: form.url,
               username: form.username,
               password: form.password,
+              certFingerprint: form.certFingerprint || undefined,
             }}
+            onTrustCert={(fingerprint) =>
+              setForm((f) => ({ ...f, certFingerprint: fingerprint }))
+            }
             initialPath={form.basePath || "/"}
             onSelect={(p) => {
               setForm({ ...form, basePath: p });
@@ -972,9 +1003,10 @@ function ImportExport() {
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [fetchSnapshots, setFetchSnapshots] = useState<boolean>(
-    user?.autoSnapshots ?? true,
-  );
+  // Off by default. An import brings hundreds or thousands of URLs, and
+  // capturing every one of them is a long run of network fetches that also
+  // eats storage quota. Ticking the box is a deliberate choice.
+  const [fetchSnapshots, setFetchSnapshots] = useState<boolean>(false);
   const [parentId, setParentId] = useState<string>("");
   const [wrapperName, setWrapperName] = useState<string>(
     `Import ${new Date().toISOString().slice(0, 10)}`,

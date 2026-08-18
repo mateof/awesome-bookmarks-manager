@@ -512,6 +512,20 @@ con todo cifrado. Por eso el espacio sigue contando para tu cuota: la copia es
 Cada usuario tiene sus propias conexiones, y las credenciales se cifran con tu
 clave, así que nadie más puede leerlas.
 
+**Certificados de un NAS.** Un Synology (o cualquier servidor de tu red) suele
+presentar un certificado autofirmado, y además emitido para un nombre distinto
+de la IP por la que entras, así que la conexión falla. Cuando pasa, la
+aplicación te ofrece **ver el certificado**: te muestra para quién está
+emitido, por quién, hasta cuándo vale y su huella SHA-256. Puedes compararla
+con la que aparece en tu NAS (Panel de control → Seguridad → Certificado) y
+aceptarla.
+
+A partir de ese momento **solo se admite ese certificado exacto**. No es
+"aceptar cualquiera": si mañana otro equipo de la red intenta hacerse pasar por
+tu NAS, la conexión se rechaza igual, porque su huella no coincide. Es el mismo
+modelo que usa SSH. Si renuevas el certificado del NAS tendrás que aceptarlo de
+nuevo, y ese aviso es deliberado.
+
 En **Ajustes → Cloud**, cada destino tiene ahora **Ver copias**, que lista los
 archivos que hay en él con su fecha y tamaño. Desde ahí puedes:
 
