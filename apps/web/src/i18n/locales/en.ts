@@ -1,5 +1,7 @@
 const en = {
   common: {
+    showMore: "Show more",
+    showLess: "Show less",
     conflict:
       "Someone else changed this while you were editing. Reload and try again.",
     cancel: "Cancel",

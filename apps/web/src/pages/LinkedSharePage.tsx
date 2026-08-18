@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { contrastClass, useCardTone } from "../lib/contrast.js";
+import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { RichTextView } from "../components/RichTextView.js";
 import {
   SharedNodeEditor,
@@ -124,7 +125,7 @@ export function LinkedSharePage() {
         )}
       </div>
 
-      {node.description && <RichTextView html={node.description} />}
+      {node.description && <CollapsibleRichText html={node.description} />}
 
       {node.subfolders.length === 0 && node.bookmarks.length === 0 && (
         <div className="text-sm text-slate-400">{t("linked.empty")}</div>

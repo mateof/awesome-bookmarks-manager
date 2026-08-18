@@ -42,7 +42,7 @@ import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
 import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
-import { RichTextView } from "../components/RichTextView.js";
+import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 import { TagPicker } from "../components/TagPicker.js";
@@ -667,7 +667,7 @@ export function FolderPage() {
         </div>
       )}
 
-      {folder?.description && <RichTextView html={folder.description} />}
+      {folder?.description && <CollapsibleRichText html={folder.description} />}
 
       {selection.size > 0 && (
         <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">

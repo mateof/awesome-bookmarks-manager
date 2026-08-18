@@ -34,7 +34,9 @@ one port.
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
   (Tiptap editor), custom icons, and tags. Bookmarks with no icon fall back to
-  a coloured letter tile derived from the name.
+  a coloured letter tile derived from the name. Long descriptions are clamped
+  with a "show more" toggle so a wall of notes never pushes a folder's contents
+  off screen; the toggle only appears when the text really overflows.
 - **Favourites** — star any folder or bookmark; the "Favoritos" bar in the
   header is a flat, quick-access list of everything you starred.
 - **Symlinks** — place a link to a folder or bookmark that lives elsewhere.

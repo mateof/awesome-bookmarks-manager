@@ -1,5 +1,7 @@
 const gl = {
   common: {
+    showMore: "Ver máis",
+    showLess: "Ver menos",
     conflict:
       "Outro usuario cambiou isto mentres o editabas. Recarga e téntao de novo.",
     cancel: "Cancelar",

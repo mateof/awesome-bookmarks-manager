@@ -24,7 +24,7 @@ import { LetterIcon } from "../components/LetterIcon.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
-import { RichTextView } from "../components/RichTextView.js";
+import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 
@@ -210,7 +210,7 @@ export function BookmarkDetailPage() {
         />
       )}
 
-      {b.description && <RichTextView html={b.description} />}
+      {b.description && <CollapsibleRichText html={b.description} />}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">

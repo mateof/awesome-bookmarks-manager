@@ -28,6 +28,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 15. [Duplicados](#15-duplicados)
 16. [Buscador y paleta de comandos](#16-buscador-y-paleta-de-comandos)
 17. [Guardar desde el móvil](#17-guardar-desde-el-móvil)
+18. [Descripciones largas](#18-descripciones-largas)
 
 ---
 
@@ -389,6 +390,26 @@ se extrae y el resto queda como nota).
 
 Si la sesión está cerrada, el enlace compartido sobrevive al inicio de sesión:
 te devuelve a la misma pantalla con los datos puestos.
+
+---
+
+## 18. Descripciones largas
+
+La descripción de una carpeta va encima de su contenido, así que unas notas
+largas empujaban los bookmarks fuera de la pantalla: abrir la carpeta obligaba
+a hacer scroll para llegar a lo que ibas a buscar.
+
+Ahora el texto se recorta a unas pocas líneas, con un degradado al final para
+que se vea que hay más, y un botón **Ver más** lo despliega entero. **Ver
+menos** lo vuelve a plegar.
+
+El botón solo aparece si el texto de verdad no cabe: una nota de dos líneas no
+gana un control que no hace nada. La medida es de altura real, no de número de
+caracteres, porque una imagen o una tabla ocupan mucho más de lo que su
+longitud sugiere.
+
+Aplica igual a la descripción de un bookmark y a las carpetas y bookmarks que
+ves en Compartidos.
 
 ---
 

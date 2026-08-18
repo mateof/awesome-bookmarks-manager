@@ -14,7 +14,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { fmtDate } from "../lib/date.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
-import { RichTextView } from "../components/RichTextView.js";
+import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { SharedNodeEditor } from "../components/SharedNodeEditor.js";
 
 interface BookmarkPayload {
@@ -355,7 +355,9 @@ function Render({
         >
           {payload.url}
         </a>
-        {payload.description && <RichTextView html={payload.description} />}
+        {payload.description && (
+          <CollapsibleRichText html={payload.description} />
+        )}
       </div>
     );
   }
@@ -365,7 +367,7 @@ function Render({
         <h1 className="text-xl font-semibold">{payload.name}</h1>
         {canEdit && <EditButton onClick={() => onEdit(payload)} />}
       </div>
-      {payload.description && <RichTextView html={payload.description} />}
+      {payload.description && <CollapsibleRichText html={payload.description} />}
       {payload.bookmarks.map((b) => (
         <div
           key={b.id}
@@ -392,7 +394,11 @@ function Render({
           </a>
           {b.description && (
             <div className="mt-1 text-sm">
-              <RichTextView html={b.description} />
+              <CollapsibleRichText
+                html={b.description}
+                collapsedHeight={120}
+                fadeFrom="from-white dark:from-slate-900"
+              />
             </div>
           )}
         </div>
