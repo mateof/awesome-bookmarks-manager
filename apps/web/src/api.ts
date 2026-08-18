@@ -7,8 +7,14 @@ import type {
   CreateFolderBody,
   CreateGroupBody,
   CreateShareBody,
+  CreateSmartFolderBody,
   CreateTagBody,
+  DuplicateGroup,
   Folder,
+  MergeBookmarksResult,
+  SmartFolder,
+  TrashItem,
+  UpdateSmartFolderBody,
   Group,
   GroupInvitation,
   SentInvitation,
@@ -303,6 +309,49 @@ export const api = {
     request<Tag>(`/tags/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteTag: (id: string) =>
     request<void>(`/tags/${id}`, { method: "DELETE" }),
+
+  // smart folders (saved queries shown in the sidebar)
+  listSmartFolders: () => request<SmartFolder[]>("/smart-folders"),
+  getSmartFolder: (id: string) => request<SmartFolder>(`/smart-folders/${id}`),
+  createSmartFolder: (body: CreateSmartFolderBody) =>
+    request<SmartFolder>("/smart-folders", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateSmartFolder: (id: string, body: UpdateSmartFolderBody) =>
+    request<SmartFolder>(`/smart-folders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteSmartFolder: (id: string) =>
+    request<void>(`/smart-folders/${id}`, { method: "DELETE" }),
+
+  // trash (soft-deleted folders and bookmarks)
+  listTrash: (rootLabel?: string) =>
+    request<TrashItem[]>(
+      `/trash${rootLabel ? `?rootLabel=${encodeURIComponent(rootLabel)}` : ""}`,
+    ),
+  trashCount: () => request<{ count: number }>("/trash/count"),
+  restoreTrash: (type: "folder" | "bookmark", id: string) =>
+    request<{ folders: number; bookmarks: number; movedToRoot: boolean }>(
+      "/trash/restore",
+      { method: "POST", body: JSON.stringify({ type, id }) },
+    ),
+  purgeTrashItem: (type: "folder" | "bookmark", id: string) =>
+    request<void>(`/trash/${type}/${id}`, { method: "DELETE" }),
+  purgeTrash: (olderThanDays?: number) =>
+    request<{ folders: number; bookmarks: number }>(
+      `/trash${olderThanDays === undefined ? "" : `?olderThanDays=${olderThanDays}`}`,
+      { method: "DELETE" },
+    ),
+
+  // duplicates
+  listDuplicates: () => request<DuplicateGroup[]>("/bookmarks/duplicates"),
+  mergeBookmarks: (keepId: string, mergeIds: string[]) =>
+    request<MergeBookmarksResult>("/bookmarks/merge", {
+      method: "POST",
+      body: JSON.stringify({ keepId, mergeIds }),
+    }),
 
   // search
   search: (q: string, opts: { folderId?: string | null } = {}) => {

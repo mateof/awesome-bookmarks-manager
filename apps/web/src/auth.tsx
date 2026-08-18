@@ -98,7 +98,15 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const loc = useLocation();
   if (loading) return <div className="p-8 text-slate-400">Cargando…</div>;
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: loc.pathname }} />;
+    // Keep the query string: a shared link arrives as /share-target?url=…
+    // and would otherwise be lost on the way through the login form.
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${loc.pathname}${loc.search}` }}
+      />
+    );
   }
   // Admin-provisioned account still on its one-time password: force a change
   // before anything else is reachable.

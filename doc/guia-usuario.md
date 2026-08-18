@@ -23,6 +23,11 @@ paneles y guardar pestañas desde la extensión de Chrome.
 10. [Enlaces simbólicos](#10-enlaces-simbólicos)
 11. [Personalizar el aspecto de un panel](#11-personalizar-el-aspecto-de-un-panel)
 12. [Llevarte un panel a los marcadores del navegador](#12-llevarte-un-panel-a-los-marcadores-del-navegador)
+13. [Carpetas inteligentes](#13-carpetas-inteligentes)
+14. [Papelera y restaurar](#14-papelera-y-restaurar)
+15. [Duplicados](#15-duplicados)
+16. [Buscador y paleta de comandos](#16-buscador-y-paleta-de-comandos)
+17. [Guardar desde el móvil](#17-guardar-desde-el-móvil)
 
 ---
 
@@ -288,6 +293,102 @@ Dos avisos prácticos:
 - Importar dos veces **duplica**, porque el navegador siempre añade. Si vas a
   repetir el volcado, borra antes la carpeta anterior.
 - Los iconos no viajan: Chrome ignora los del fichero y busca los suyos.
+
+---
+
+## 13. Carpetas inteligentes
+
+En **Filtrar por tags** puedes combinar varios tags (con *Todas* o *Alguna*),
+escribir texto libre y limitar a favoritos. Cuando el filtro te sirva, pulsa
+**Guardar como carpeta**: aparecerá en la barra lateral con el nombre y el
+color que elijas.
+
+Lo importante es lo que *no* hace: no copia nada. Guarda la búsqueda, y la
+lista se recalcula cada vez que la abres. Si etiquetas algo nuevo, entra solo;
+si le quitas el tag, sale. Un mismo bookmark puede estar en varias carpetas
+inteligentes a la vez sin ocupar espacio ni salirse de su carpeta real.
+
+Como el filtro vive en la URL, también puedes compartirlo o guardarlo en el
+navegador sin crear nada. Si cambias la búsqueda con una carpeta abierta,
+aparece un botón **Actualizar carpeta** para fijar la nueva definición.
+
+---
+
+## 14. Papelera y restaurar
+
+Eliminar nunca borró de verdad: marcaba el elemento como borrado. La
+**Papelera** de la barra lateral es la otra mitad de esa decisión.
+
+Al borrar una carpeta se borra también todo lo que contiene, así que la
+papelera lo muestra como una sola tarjeta: la carpeta que eliminaste, con el
+resto plegado debajo (*Ver contenido*). **Restaurar** devuelve todo el bloque
+de una vez y a su sitio original. Si la carpeta que lo contenía ya no existe,
+el elemento vuelve a Inicio en lugar de perderse.
+
+Restaurar una carpeta solo recupera lo que se borró **en esa misma acción**:
+algo que eliminaste aparte, antes, sigue en la papelera. Es deliberado, para
+que restaurar no resucite cosas que quitaste a propósito.
+
+Nada caduca solo. Vaciar la papelera (entera o solo lo anterior a 30 días) es
+siempre una acción tuya, y es el único punto de la aplicación donde los datos
+se destruyen de verdad.
+
+---
+
+## 15. Duplicados
+
+Tras importar los marcadores de un navegador es normal acabar con el mismo
+enlace varias veces. **Duplicados** agrupa los bookmarks que apuntan a la misma
+URL, ignorando diferencias cosméticas: la barra final, el puerto por defecto y
+el fragmento `#...` no crean grupos distintos.
+
+Eliges cuál se queda (por defecto el más antiguo) y **Fusionar** lo deja con
+los tags y la descripción de todas las copias, marca favorito si alguna lo era,
+y reapunta a él cualquier enlace simbólico que apuntara a las copias. Las
+copias van a la papelera, no se destruyen: si la fusión no era lo que querías,
+las restauras.
+
+Los enlaces simbólicos no se cuentan como duplicados: apuntar al mismo sitio
+desde dos lugares es exactamente para lo que existen.
+
+---
+
+## 16. Buscador y paleta de comandos
+
+`Ctrl/Cmd + K` abre una única caja para todo.
+
+Mientras escribes, los títulos y las URL se buscan al instante en lo que ya
+está cargado. En paralelo el servidor busca en las **descripciones** y en el
+**texto de las instantáneas guardadas** (índice FTS5), así que puedes encontrar
+una página por algo que estaba *dentro* de ella aunque el título no lo diga; el
+fragmento que coincide aparece resaltado bajo el resultado.
+
+Los elementos de la carpeta en la que estás se agrupan y se resaltan arriba,
+bajo *En esta carpeta*, y el resto va después. Cada resultado muestra su icono
+real.
+
+La misma caja ejecuta acciones: *Nuevo bookmark*, *Nueva carpeta*, *Filtrar por
+tags*, *Paneles*, *Papelera*, *Duplicados*, *Grupos*, *Importar y exportar*.
+Con la caja vacía se ofrecen las más usadas, y al escribir se filtran por
+nombre o por palabras relacionadas.
+
+---
+
+## 17. Guardar desde el móvil
+
+En Android, instala la aplicación desde el navegador (*Añadir a pantalla de
+inicio* / *Instalar aplicación*). A partir de ahí AwesomeBookmarks aparece en
+el menú **Compartir** del sistema: desde cualquier app puedes mandarle un
+enlace y se abre una pantalla corta con la URL, el título, la carpeta y los
+tags. La carpeta que elegiste la última vez queda recordada, que es lo normal
+si guardas todo en una bandeja de entrada.
+
+Funciona con las dos formas en que las apps comparten: las que envían la URL en
+su propio campo y las que lo meten todo dentro del texto (en ese caso el enlace
+se extrae y el resto queda como nota).
+
+Si la sesión está cerrada, el enlace compartido sobrevive al inicio de sesión:
+te devuelve a la misma pantalla con los datos puestos.
 
 ---
 

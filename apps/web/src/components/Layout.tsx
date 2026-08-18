@@ -10,6 +10,8 @@ import {
 } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Copy,
+  Filter,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -17,6 +19,7 @@ import {
   Settings,
   Share2,
   Tag,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -170,12 +173,53 @@ export function Layout({ children }: { children: React.ReactNode }) {
     queryFn: api.listMyInvitations,
   });
   const pendingInvites = invitations.data?.length ?? 0;
+  const smartFolders = useQuery({
+    queryKey: ["smart-folders"],
+    queryFn: api.listSmartFolders,
+  });
+  // Same key prefix as the trash page, so one invalidation refreshes both.
+  const trash = useQuery({ queryKey: ["trash", "count"], queryFn: api.trashCount });
+  const trashed = trash.data?.count ?? 0;
+
+  const navClass = ({ isActive }: { isActive: boolean }) =>
+    `flex items-center gap-2 rounded px-2 py-1 text-sm ${
+      isActive
+        ? "bg-slate-200 dark:bg-slate-800"
+        : "hover:bg-slate-100 dark:hover:bg-slate-800"
+    }`;
 
   const sidebarContent = (
     <nav className="space-y-3">
       <div>
         <FolderTree folders={folders.data ?? []} />
       </div>
+
+      {/* Smart folders: saved queries, not containers. They sit right under
+          the real tree because that is how they are used. */}
+      {(smartFolders.data?.length ?? 0) > 0 && (
+        <div className="space-y-0.5 border-t border-slate-200 pt-3 dark:border-slate-800">
+          <div className="px-2 pb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+            {t("smart.sectionTitle")}
+          </div>
+          {smartFolders.data?.map((sf) => (
+            <NavLink
+              key={sf.id}
+              to={`/smart/${sf.id}`}
+              className={({ isActive }) =>
+                `flex items-center gap-2 rounded px-2 py-1 text-sm ${
+                  isActive || loc.search.includes(`sf=${sf.id}`)
+                    ? "bg-slate-200 dark:bg-slate-800"
+                    : "hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`
+              }
+            >
+              <Filter className="h-4 w-4 shrink-0" style={{ color: sf.color }} />
+              <span className="truncate">{sf.name}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-1 border-t border-slate-200 pt-3 dark:border-slate-800">
         <NavLink
           to="/groups"
@@ -229,6 +273,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }
         >
           <Share2 className="h-4 w-4" /> {t("sidebar.shared")}
+        </NavLink>
+        <NavLink to="/duplicates" className={navClass}>
+          <Copy className="h-4 w-4" /> {t("sidebar.duplicates")}
+        </NavLink>
+        <NavLink to="/trash" className={navClass}>
+          <Trash2 className="h-4 w-4" /> {t("sidebar.trash")}
+          {trashed > 0 && (
+            <span className="ml-auto rounded-full bg-slate-300 px-1.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+              {trashed}
+            </span>
+          )}
         </NavLink>
       </div>
     </nav>

@@ -47,7 +47,7 @@ test("filtro: buscador de tags con muchas etiquetas", async ({ browser }) => {
   }
 
   await page.goto("/filter");
-  const chips = page.locator("button[aria-pressed]");
+  const chips = page.getByTestId("tag-chip");
 
   // The most used tag leads the list without typing anything.
   await expect(chips.first()).toContainText("popular");

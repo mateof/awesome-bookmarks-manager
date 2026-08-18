@@ -41,8 +41,22 @@ one port.
   The link always shows the original's current content, so one folder can
   gather items scattered across the tree (handy for building custom panels)
   and editing the original updates every link.
-- **Tags** with color picker, autocomplete, in-line creation, and a
-  dedicated `/tag/:id` view.
+- **Tags** with color picker, autocomplete, in-line creation, and a filter
+  view (`/filter`) that combines several tags with AND / OR, free text and a
+  favourites-only switch.
+- **Smart folders** — save any filter under a name and it appears in the
+  sidebar. They store the query, not the items, so membership is recomputed on
+  every visit: tag something and it shows up, untag it and it leaves. Nothing
+  is duplicated.
+- **Trash with restore** — deletes have always been soft; the trash makes that
+  reversible. Deleting a folder cascades, so its whole subtree is restored as
+  one piece and lands back where it was (or at the root if its parent is gone).
+  Nothing expires on its own: emptying the trash is always an explicit action.
+- **Duplicate detection & merge** — bookmarks pointing at the same URL are
+  grouped on the stored `url_hash`, so trailing slashes, default ports and
+  fragments do not split a group. Merging gives the survivor every tag and
+  description from its copies, repoints any symlink at it, and sends the copies
+  to the trash rather than destroying them.
 - **Page snapshots** (Wallabag-style) — a background worker fetches each
   bookmark over HTTP and extracts the readable article (Mozilla Readability)
   plus its text, served back as a sandboxed reader iframe in the detail view.
@@ -51,6 +65,13 @@ one port.
 - **Full-text search** over snapshot contents (SQLite FTS5), with
   **Levenshtein fuzzy matching** on titles/URLs (typo-tolerant) and a
   GitHub-style chip to scope the search to the current folder.
+- **Command palette** (Cmd/Ctrl+K) — one box for everything. Titles and URLs
+  match instantly from memory while the server searches descriptions and the
+  FTS index over saved snapshots in parallel, so a page can be found by
+  something written *inside* it, with the matching phrase highlighted under the
+  result. Items in the folder you are standing in are grouped and highlighted
+  first. The same box also runs actions (new bookmark, new folder, go to
+  panels, trash, duplicates…).
 - **Five view modes** for folders/bookmarks: grid, compact list, large cards,
   detail table, icon mosaic. Persisted per device.
 - **Multi-select** on hover with checkboxes + 3-dot kebab menus for each
@@ -102,7 +123,11 @@ one port.
   token. See [doc/mcp.md](doc/mcp.md).
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
 - **Importer** for the standard HTML bookmarks export of Chrome / Firefox / Edge.
-- **PWA-ready** responsive UI that also works on mobile.
+- **Installable PWA and share target** — install it from the browser on Android
+  and the app joins the system share sheet, so a link can be sent from any app
+  straight into a folder you pick (the last one is remembered). Responsive UI
+  throughout; a minimal service worker keeps the shell available offline and
+  never caches anything under `/api`.
 
 ## Quickstart — pull from GHCR
 

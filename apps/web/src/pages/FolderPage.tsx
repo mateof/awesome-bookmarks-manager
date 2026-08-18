@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
+import { onAppCommand } from "../lib/commands.js";
 import { contrastClass, useCardTone } from "../lib/contrast.js";
 import { CopyButton } from "../components/CopyButton.js";
 import { FavoriteToggle } from "../components/FavoriteToggle.js";
@@ -147,6 +148,9 @@ export function FolderPage() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["folders"] });
     qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    // Deletes are soft, so anything removed here lands in the trash and the
+    // sidebar badge would otherwise lag behind.
+    qc.invalidateQueries({ queryKey: ["trash"] });
   };
 
   const collectDescendantBookmarks = (rootId: string | null): string[] => {
@@ -202,6 +206,18 @@ export function FolderPage() {
   useEffect(() => {
     setSelection(new Set());
   }, [folderId]);
+
+  // The command palette lives in Layout, above this page, so "nueva carpeta"
+  // and "nuevo bookmark" arrive as window events and open the dialogs here —
+  // always in whatever folder the user is currently looking at.
+  useEffect(
+    () =>
+      onAppCommand((command) => {
+        if (command === "new-folder") setShowAddFolder(true);
+        else if (command === "new-bookmark") setShowAddBookmark(true);
+      }),
+    [],
+  );
 
   const selectedFolderIds = useMemo(
     () =>

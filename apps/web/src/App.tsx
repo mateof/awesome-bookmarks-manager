@@ -3,6 +3,7 @@ import { AuthProvider, RequireAuth } from "./auth.js";
 import { Layout } from "./components/Layout.js";
 import { useSelectAllOnFirstClick } from "./lib/selectAllOnFirstClick.js";
 import { BookmarkDetailPage } from "./pages/BookmarkDetailPage.js";
+import { DuplicatesPage } from "./pages/DuplicatesPage.js";
 import { FolderPage } from "./pages/FolderPage.js";
 import { GroupsPage } from "./pages/GroupsPage.js";
 import { InvitePage } from "./pages/InvitePage.js";
@@ -14,9 +15,15 @@ import { SearchPage } from "./pages/SearchPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { SharedPage } from "./pages/SharedPage.js";
 import { SharePage } from "./pages/SharePage.js";
+import { ShareTargetPage } from "./pages/ShareTargetPage.js";
 import { SignupPage } from "./pages/SignupPage.js";
-import { TagFilterPage, TagRedirectPage } from "./pages/TagFilterPage.js";
+import {
+  SmartFolderPage,
+  TagFilterPage,
+  TagRedirectPage,
+} from "./pages/TagFilterPage.js";
 import { TagsPage } from "./pages/TagsPage.js";
+import { TrashPage } from "./pages/TrashPage.js";
 
 export default function App() {
   useSelectAllOnFirstClick();
@@ -46,7 +53,12 @@ export default function App() {
                   <Route path="/panels" element={<PanelsPage />} />
                   <Route path="/tags" element={<TagsPage />} />
                   <Route path="/filter" element={<TagFilterPage />} />
+                  <Route path="/smart/:id" element={<SmartFolderPage />} />
                   <Route path="/tag/:id" element={<TagRedirectPage />} />
+                  <Route path="/duplicates" element={<DuplicatesPage />} />
+                  <Route path="/trash" element={<TrashPage />} />
+                  {/* Landing spot for the OS share sheet (see the manifest). */}
+                  <Route path="/share-target" element={<ShareTargetPage />} />
                   <Route path="/settings/*" element={<SettingsPage />} />
                 </Routes>
               </Layout>

@@ -327,6 +327,31 @@ export const bookmarks = sqliteTable(
   }),
 );
 
+/**
+ * Saved queries shown in the sidebar as "smart folders". They own no content:
+ * `queryCt` holds the sealed predicate and membership is evaluated at read
+ * time, so nothing is duplicated and nothing goes stale.
+ */
+export const smartFolders = sqliteTable(
+  "smart_folders",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    /** Sealed JSON: { tagIds, match, text, favorite }. */
+    queryCt: blob("query_ct", { mode: "buffer" }).notNull(),
+    color: text("color").notNull().default("#6366f1"),
+    position: integer("position").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    userIdx: index("smart_folders_user_idx").on(t.userId, t.position),
+  }),
+);
+
 export const tags = sqliteTable(
   "tags",
   {

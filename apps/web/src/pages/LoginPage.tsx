@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Fingerprint } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
 import { loginWithPasskey, passkeysSupported } from "../webauthn.js";
@@ -11,6 +11,12 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
+  // RequireAuth parks the route the user actually wanted here. It matters most
+  // for the share target: arriving from another app's "share" sheet with a
+  // logged-out session, the shared URL must survive the login round-trip.
+  const from = (loc.state as { from?: string } | null)?.from;
+  const target = from && from.startsWith("/") && !from.startsWith("//") ? from : "/";
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -30,7 +36,7 @@ export function LoginPage() {
     try {
       await loginWithPasskey();
       refresh();
-      nav("/", { replace: true });
+      nav(target, { replace: true });
     } catch (e) {
       setErr(
         e instanceof ApiError
@@ -44,7 +50,7 @@ export function LoginPage() {
     }
   };
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={target} replace />;
 
   return (
     <div className="flex h-full items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -67,7 +73,7 @@ export function LoginPage() {
               return;
             }
             refresh();
-            nav("/", { replace: true });
+            nav(target, { replace: true });
           } catch (e) {
             setErr(e instanceof ApiError ? e.message : t("common.error"));
           } finally {

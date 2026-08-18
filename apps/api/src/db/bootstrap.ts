@@ -127,6 +127,19 @@ export function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS panel_templates_user_idx ON panel_templates(user_id);
 
+    CREATE TABLE IF NOT EXISTS smart_folders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name_ct BLOB NOT NULL,
+      query_ct BLOB NOT NULL,
+      color TEXT NOT NULL DEFAULT '#6366f1',
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS smart_folders_user_idx
+      ON smart_folders(user_id, position);
+
     CREATE TABLE IF NOT EXISTS tags (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

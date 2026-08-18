@@ -37,7 +37,9 @@ import { startWorker, stopWorker } from "./jobs/worker.js";
 import { refreshBackupSchedules, stopScheduler } from "./scheduler.js";
 import { searchRoutes } from "./search/routes.js";
 import { shareRoutes } from "./shares/routes.js";
+import { smartFolderRoutes } from "./smart-folders/routes.js";
 import { tagRoutes } from "./tags/routes.js";
+import { trashRoutes } from "./trash/routes.js";
 import { versionRoutes } from "./versions/routes.js";
 import { AppError } from "./util/errors.js";
 
@@ -131,6 +133,8 @@ export async function buildServer() {
       await api.register(snapshotRoutes);
       await api.register(iconRoutes);
       await api.register(tagRoutes);
+      await api.register(smartFolderRoutes);
+      await api.register(trashRoutes);
       await api.register(versionRoutes);
       await api.register(searchRoutes);
       await api.register(importRoutes);

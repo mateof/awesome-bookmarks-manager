@@ -1,6 +1,7 @@
 import {
   CreateBookmarkBodySchema,
   ListBookmarksQuerySchema,
+  MergeBookmarksBodySchema,
   MoveBookmarkBodySchema,
   UpdateBookmarkBodySchema,
 } from "@awesome-bookmarks/shared";
@@ -8,6 +9,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { copyBookmarkTo } from "../folders/copy.js";
+import { findDuplicates, mergeBookmarks } from "./duplicates.js";
 import { storeBookmarkIcon } from "../storage/icons.js";
 import { BadRequest } from "../util/errors.js";
 import {
@@ -28,6 +30,17 @@ export const bookmarkRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const q = ListBookmarksQuerySchema.parse(req.query);
     return listBookmarks(ctx, q);
+  });
+
+  // Declared before `/bookmarks/:id` so "duplicates" is never read as an id.
+  app.get("/bookmarks/duplicates", async (req) =>
+    findDuplicates(requireAuth(req)),
+  );
+
+  app.post("/bookmarks/merge", async (req) => {
+    const ctx = requireAuth(req);
+    const { keepId, mergeIds } = MergeBookmarksBodySchema.parse(req.body);
+    return mergeBookmarks(ctx, keepId, mergeIds);
   });
 
   app.get("/bookmarks/:id", async (req) => {

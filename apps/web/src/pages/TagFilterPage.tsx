@@ -1,24 +1,44 @@
-import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Filter, FolderClosed, Search, X } from "lucide-react";
+import type { SmartQuery } from "@awesome-bookmarks/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Bookmark as BookmarkIcon,
+  ExternalLink,
+  Filter,
+  FolderClosed,
+  Save,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { Modal } from "../components/Modal.js";
 import { TagChipList } from "../components/TagChip.js";
+import {
+  filterUrl,
+  isEmptyQuery,
+  paramsFromQuery,
+  queryFromParams,
+  sameQuery,
+} from "../lib/smartQuery.js";
 
 /**
- * Filter folders and bookmarks by one or more tags.
+ * Filter folders and bookmarks by tags, free text and favourites.
  *
- * The selection lives in the query string (`?tags=a,b&m=all`) so a filter is
- * shareable, bookmarkable and survives the back button. The chip bar and the
- * "match all / match any" toggle mirror the public panel's tag filter on
- * purpose: same interaction in both places, nothing new to learn.
+ * The whole selection lives in the query string (`?tags=a,b&m=all&q=…&fav=1`),
+ * which is what makes a filter shareable, bookmarkable and survivable across
+ * the back button. It is also exactly what a smart folder stores, so "save
+ * this filter" is a rename away rather than a second implementation.
  *
- * Everything is filtered client-side over the already-loaded lists, which is
- * what the single-tag version did too.
+ * When `?sf=<id>` is present the page is showing a saved smart folder, and the
+ * header offers to update it once the query drifts from what was saved.
  */
 export function TagFilterPage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const [sp, setSp] = useSearchParams();
 
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
@@ -27,61 +47,68 @@ export function TagFilterPage() {
     queryKey: ["bookmarks", "all"],
     queryFn: () => api.listBookmarks({}),
   });
+  const smartQ = useQuery({
+    queryKey: ["smart-folders"],
+    queryFn: api.listSmartFolders,
+  });
 
-  const selected = useMemo(
-    () => (sp.get("tags") ?? "").split(",").filter(Boolean),
-    [sp],
-  );
-  const matchAll = sp.get("m") === "all";
+  const query = useMemo(() => queryFromParams(sp), [sp]);
+  const selected = query.tagIds;
+  const matchAll = query.match === "all";
+  const smartId = sp.get("sf");
+  const smart = smartQ.data?.find((s) => s.id === smartId) ?? null;
+  const drifted = smart ? !sameQuery(smart.query, query) : false;
 
-  const setSelected = (ids: string[]) =>
-    setSp(
-      (prev) => {
-        const n = new URLSearchParams(prev);
-        if (ids.length) n.set("tags", ids.join(","));
-        else n.delete("tags");
-        // A single tag makes the mode meaningless; drop it to keep URLs clean.
-        if (ids.length < 2) n.delete("m");
-        return n;
-      },
-      { replace: false },
-    );
+  /** Rewrite the URL from a whole query, preserving the open smart folder. */
+  const apply = (next: SmartQuery, opts: { replace?: boolean } = {}) => {
+    const params = paramsFromQuery(next);
+    if (smartId) params.set("sf", smartId);
+    setSp(params, { replace: opts.replace ?? false });
+  };
 
   const toggle = (id: string) =>
-    setSelected(
-      selected.includes(id)
+    apply({
+      ...query,
+      tagIds: selected.includes(id)
         ? selected.filter((x) => x !== id)
         : [...selected, id],
-    );
-
-  const setMatchAll = (on: boolean) =>
-    setSp(
-      (prev) => {
-        const n = new URLSearchParams(prev);
-        if (on) n.set("m", "all");
-        else n.delete("m");
-        return n;
-      },
-      { replace: true },
-    );
+    });
 
   const folders = foldersQ.data ?? [];
   const bookmarks = bookmarksQ.data ?? [];
   const allTags = tagsQ.data ?? [];
+  const empty = isEmptyQuery(query);
+
+  const needle = query.text.trim().toLowerCase();
 
   /** AND keeps items carrying every selected tag; OR keeps any match. */
-  const hits = (tagIds: string[] | undefined) => {
+  const tagHit = (tagIds: string[] | undefined) => {
+    if (selected.length === 0) return true;
     const own = new Set(tagIds ?? []);
-    if (selected.length === 0) return false;
     return matchAll
       ? selected.every((id) => own.has(id))
       : selected.some((id) => own.has(id));
   };
 
-  const matchingFolders = selected.length ? folders.filter((f) => hits(f.tagIds)) : [];
-  const matchingBookmarks = selected.length
-    ? bookmarks.filter((b) => hits(b.tagIds))
-    : [];
+  const matchingFolders = empty
+    ? []
+    : folders.filter(
+        (f) =>
+          tagHit(f.tagIds) &&
+          (!query.favorite || f.favorite) &&
+          (!needle || f.name.toLowerCase().includes(needle)),
+      );
+  const matchingBookmarks = empty
+    ? []
+    : bookmarks.filter(
+        (b) =>
+          tagHit(b.tagIds) &&
+          (!query.favorite || b.favorite) &&
+          (!needle ||
+            b.title.toLowerCase().includes(needle) ||
+            b.url.toLowerCase().includes(needle) ||
+            (b.description?.toLowerCase().includes(needle) ?? false)),
+      );
 
   // How many items each tag would bring on its own — useful to spot the tags
   // worth combining, and to hide tags nothing uses.
@@ -93,6 +120,7 @@ export function TagFilterPage() {
   }, [folders, bookmarks]);
 
   const [tagQuery, setTagQuery] = useState("");
+  const [saving, setSaving] = useState(false);
 
   /** Accent- and case-insensitive, so "diseno" finds "diseño". */
   const norm = (v: string) =>
@@ -120,12 +148,36 @@ export function TagFilterPage() {
     allTags.filter((tg) => (counts.get(tg.id) ?? 0) > 0).length -
     usableTags.filter((tg) => (counts.get(tg.id) ?? 0) > 0).length;
 
+  const updateSmart = useMutation({
+    mutationFn: () =>
+      api.updateSmartFolder(smartId!, { query }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["smart-folders"] }),
+  });
+
+  const removeSmart = useMutation({
+    mutationFn: () => api.deleteSmartFolder(smartId!),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["smart-folders"] });
+      const params = paramsFromQuery(query);
+      setSp(params, { replace: true });
+    },
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <Filter className="h-5 w-5 text-slate-400" />
-        <h1 className="text-xl font-semibold">{t("tags.filterHeading")}</h1>
-        {selected.length > 0 && (
+        <h1 className="text-xl font-semibold">
+          {smart ? smart.name : t("tags.filterHeading")}
+        </h1>
+        {smart && (
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: smart.color }}
+            aria-hidden
+          />
+        )}
+        {!empty && (
           <span className="text-xs text-slate-500">
             {t("tags.filterSummary", {
               folders: matchingFolders.length,
@@ -133,10 +185,86 @@ export function TagFilterPage() {
             })}
           </span>
         )}
+
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          {smart && drifted && (
+            <button
+              type="button"
+              onClick={() => updateSmart.mutate()}
+              disabled={updateSmart.isPending}
+              className="rounded border border-slate-300 px-2.5 py-1 text-xs hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              {t("smart.updateSaved")}
+            </button>
+          )}
+          {smart && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(t("smart.confirmDelete", { name: smart.name }))) {
+                  removeSmart.mutate();
+                }
+              }}
+              title={t("smart.delete")}
+              aria-label={t("smart.delete")}
+              className="rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-red-600 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {!empty && (
+            <button
+              type="button"
+              onClick={() => setSaving(true)}
+              className="flex items-center gap-1 rounded bg-slate-900 px-2.5 py-1 text-xs text-white dark:bg-slate-100 dark:text-slate-900"
+            >
+              <Save className="h-3.5 w-3.5" /> {t("smart.saveAs")}
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Tag picker + match mode */}
+      {/* Query builder: text, favourites, tags, match mode */}
       <div className="space-y-2 rounded-lg border border-slate-200 p-2 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex min-w-[12rem] flex-1 items-center gap-1.5 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
+            <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            <input
+              value={query.text}
+              onChange={(e) => apply({ ...query, text: e.target.value }, { replace: true })}
+              placeholder={t("smart.textPlaceholder")}
+              aria-label={t("smart.textPlaceholder")}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+            />
+            {query.text && (
+              <button
+                type="button"
+                onClick={() => apply({ ...query, text: "" }, { replace: true })}
+                title={t("common.remove")}
+                aria-label={t("common.remove")}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-pressed={query.favorite}
+            onClick={() => apply({ ...query, favorite: !query.favorite })}
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${
+              query.favorite
+                ? "border-amber-400 bg-amber-100 text-amber-800 dark:border-amber-600 dark:bg-amber-900/40 dark:text-amber-300"
+                : "border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Star
+              className={`h-3 w-3 ${query.favorite ? "fill-amber-500 text-amber-500" : ""}`}
+            />
+            {t("smart.onlyFavorites")}
+          </button>
+        </div>
+
         <div className="flex items-center gap-1.5">
           <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
             <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -144,6 +272,7 @@ export function TagFilterPage() {
               value={tagQuery}
               onChange={(e) => setTagQuery(e.target.value)}
               placeholder={t("tags.searchTags")}
+              aria-label={t("tags.searchTags")}
               className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             {tagQuery && (
@@ -177,6 +306,7 @@ export function TagFilterPage() {
             <button
               key={tg.id}
               type="button"
+              data-testid="tag-chip"
               aria-pressed={on}
               onClick={() => toggle(tg.id)}
               className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition"
@@ -199,7 +329,7 @@ export function TagFilterPage() {
           <div className="mr-auto flex items-center gap-1">
             <button
               type="button"
-              onClick={() => setMatchAll(true)}
+              onClick={() => apply({ ...query, match: "all" })}
               className={`rounded-full border px-2.5 py-0.5 text-xs ${
                 matchAll
                   ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
@@ -211,7 +341,7 @@ export function TagFilterPage() {
             </button>
             <button
               type="button"
-              onClick={() => setMatchAll(false)}
+              onClick={() => apply({ ...query, match: "any" })}
               className={`rounded-full border px-2.5 py-0.5 text-xs ${
                 !matchAll
                   ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
@@ -223,10 +353,12 @@ export function TagFilterPage() {
             </button>
           </div>
         )}
-        {selected.length > 0 && (
+        {!empty && (
           <button
             type="button"
-            onClick={() => setSelected([])}
+            onClick={() =>
+              apply({ tagIds: [], match: "any", text: "", favorite: false })
+            }
             className="inline-flex items-center gap-0.5 text-xs text-slate-500 hover:text-red-600"
           >
             <X className="h-3 w-3" /> {t("tags.clearFilter")}
@@ -235,11 +367,9 @@ export function TagFilterPage() {
         </div>
       </div>
 
-      {selected.length === 0 && (
-        <p className="text-sm text-slate-400">{t("tags.pickToFilter")}</p>
-      )}
+      {empty && <p className="text-sm text-slate-400">{t("tags.pickToFilter")}</p>}
 
-      {selected.length > 0 &&
+      {!empty &&
         matchingFolders.length === 0 &&
         matchingBookmarks.length === 0 && (
           <p className="text-sm text-slate-400">{t("tags.filterEmpty")}</p>
@@ -259,7 +389,7 @@ export function TagFilterPage() {
               >
                 {f.iconBlobPath ? (
                   <img
-                    src={api.folderIconUrl(f.id, f.updatedAt)}
+                    src={api.folderIconUrl(f.aliasOf ?? f.id, f.updatedAt)}
                     alt=""
                     className="h-6 w-6 rounded object-cover"
                   />
@@ -289,7 +419,7 @@ export function TagFilterPage() {
               >
                 {b.iconBlobPath ? (
                   <img
-                    src={api.bookmarkIconUrl(b.id, b.updatedAt)}
+                    src={api.bookmarkIconUrl(b.aliasOf ?? b.id, b.updatedAt)}
                     alt=""
                     className="h-8 w-8 shrink-0 rounded object-cover"
                   />
@@ -320,7 +450,128 @@ export function TagFilterPage() {
           </div>
         </section>
       )}
+
+      {saving && (
+        <SaveSmartFolderDialog
+          query={query}
+          suggestion={suggestName(query, allTags, t("smart.defaultName"))}
+          onClose={() => setSaving(false)}
+          onSaved={(id) => {
+            setSaving(false);
+            const params = paramsFromQuery(query);
+            params.set("sf", id);
+            setSp(params, { replace: true });
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** A name the user will usually accept: the tags they picked, or the text. */
+function suggestName(
+  query: SmartQuery,
+  allTags: Array<{ id: string; name: string }>,
+  fallback: string,
+): string {
+  const names = query.tagIds
+    .map((id) => allTags.find((tg) => tg.id === id)?.name)
+    .filter(Boolean) as string[];
+  if (names.length > 0) return names.slice(0, 3).join(query.match === "all" ? " + " : " / ");
+  if (query.text.trim()) return query.text.trim();
+  return fallback;
+}
+
+const SWATCHES = [
+  "#6366f1",
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#8b5cf6",
+  "#64748b",
+];
+
+function SaveSmartFolderDialog({
+  query,
+  suggestion,
+  onClose,
+  onSaved,
+}: {
+  query: SmartQuery;
+  suggestion: string;
+  onClose: () => void;
+  onSaved: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const qc = useQueryClient();
+  const [name, setName] = useState(suggestion);
+  const [color, setColor] = useState(SWATCHES[0]!);
+  const [err, setErr] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.createSmartFolder({ name: name.trim(), query, color }),
+    onSuccess: (sf) => {
+      qc.invalidateQueries({ queryKey: ["smart-folders"] });
+      onSaved(sf.id);
+    },
+    onError: (e) => setErr(e instanceof Error ? e.message : t("common.error")),
+  });
+
+  return (
+    <Modal title={t("smart.saveTitle")} onClose={onClose}>
+      <div className="space-y-3">
+        <label className="block text-xs font-medium text-slate-500">
+          {t("smart.nameLabel")}
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t("smart.namePlaceholder")}
+            className="mt-1 w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          />
+        </label>
+        <div>
+          <span className="text-xs font-medium text-slate-500">
+            {t("smart.colorLabel")}
+          </span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {SWATCHES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={c}
+                aria-pressed={color === c}
+                onClick={() => setColor(c)}
+                className={`h-6 w-6 rounded-full border-2 ${
+                  color === c ? "border-slate-900 dark:border-slate-100" : "border-transparent"
+                }`}
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+        </div>
+        <p className="flex items-start gap-1.5 text-xs text-slate-500">
+          <BookmarkIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          {t("smart.liveNote")}
+        </p>
+        {err && (
+          <div className="rounded bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+            {err}
+          </div>
+        )}
+        <button
+          type="button"
+          disabled={!name.trim() || save.isPending}
+          onClick={() => save.mutate()}
+          className="w-full rounded bg-slate-900 py-2 text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+        >
+          {save.isPending ? t("common.saving") : t("common.create")}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -328,4 +579,23 @@ export function TagFilterPage() {
 export function TagRedirectPage() {
   const { id } = useParams<{ id: string }>();
   return <Navigate to={`/filter?tags=${encodeURIComponent(id ?? "")}`} replace />;
+}
+
+/**
+ * `/smart/:id` resolves a saved folder to the filter URL it stands for, so the
+ * filter page stays the single renderer and the saved query is a shortcut
+ * rather than a parallel implementation.
+ */
+export function SmartFolderPage() {
+  const { id } = useParams<{ id: string }>();
+  const q = useQuery({
+    queryKey: ["smart-folders"],
+    queryFn: api.listSmartFolders,
+  });
+  const { t } = useTranslation();
+  const sf = q.data?.find((s) => s.id === id);
+
+  if (q.isLoading) return <p className="text-sm text-slate-400">{t("common.loading")}</p>;
+  if (!sf) return <Navigate to="/filter" replace />;
+  return <Navigate to={filterUrl(sf.query, sf.id)} replace />;
 }
