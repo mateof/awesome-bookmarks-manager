@@ -15,6 +15,12 @@ export const FolderSchema = z.object({
   iconBlobPath: z.string().nullable(),
   imageBlobPath: z.string().nullable(),
   bgColor: z.string().nullable().optional(),
+  /**
+   * Manual override for the text colour drawn over the card. "auto" (or null)
+   * lets contrast decide, which is right almost always; this exists for the
+   * mid-tone backgrounds where neither white nor near-black is comfortable.
+   */
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   shareOrigin: z.string().nullable().default(null),
   /** Starred by the user; surfaced in the "Favoritos" bar. */
   favorite: z.boolean().default(false),
@@ -36,6 +42,7 @@ export const CreateFolderBodySchema = z.object({
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   favorite: z.boolean().optional(),
 });
 export type CreateFolderBody = z.infer<typeof CreateFolderBodySchema>;
@@ -45,6 +52,7 @@ export const UpdateFolderBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   favorite: z.boolean().optional(),
   // Optimistic concurrency: the rev the client last saw. When present and it
   // no longer matches the stored row, the update is rejected with 409.

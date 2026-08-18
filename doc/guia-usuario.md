@@ -34,6 +34,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 21. [Registro de seguridad](#21-registro-de-seguridad)
 22. [Texto copiable y texto oculto](#22-texto-copiable-y-texto-oculto)
 23. [Copias en la nube](#23-copias-en-la-nube)
+24. [Exportar e importar en el formato de la app](#24-exportar-e-importar-en-el-formato-de-la-app)
 
 ---
 
@@ -538,6 +539,37 @@ archivos que hay en él con su fecha y tamaño. Desde ahí puedes:
 
 Una copia solo se puede restaurar en la cuenta que la hizo: las filas van
 selladas con tu clave.
+
+---
+
+## 24. Exportar e importar en el formato de la app
+
+La exportación a HTML sirve para llevarte los enlaces a un navegador, pero
+pierde casi todo lo demás: tags, descripciones, colores, iconos y favoritos no
+existen en ese formato.
+
+Para eso está el **archivo `.abz`**, el formato propio de la aplicación. En el
+menú de una carpeta tienes **Exportar (formato de la app)** y también
+**Importar archivo aquí**.
+
+Qué lo distingue de una copia en la nube:
+
+- Una **copia en la nube** va cifrada con tu clave. Solo se restaura en tu misma
+  cuenta, y reemplaza por identificador.
+- Un **archivo `.abz`** va descifrado, o con la contraseña que le pongas, así
+  que se puede importar en otra carpeta, en otra cuenta o en otro servidor.
+
+Al importar se crean **copias nuevas**, no se sobrescribe nada: los elementos
+reciben identificadores nuevos y los tags se emparejan **por nombre**, creando
+los que falten. Si importas el mismo archivo dos veces tendrás dos copias, que
+es lo esperable, en vez de un reemplazo silencioso.
+
+Las instantáneas de páginas no se incluyen por defecto: son la mayor parte del
+tamaño y casi nunca es lo que quieres mover.
+
+Si le pones contraseña, el contenido viaja cifrado y hará falta esa misma
+contraseña para importarlo. Sin ella el archivo lleva tus datos en claro, así
+que trátalo como tratarías la exportación de un gestor de contraseñas.
 
 ---
 

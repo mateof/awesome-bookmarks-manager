@@ -438,6 +438,18 @@ const gl = {
     trust: "Confiar neste certificado",
     trusted: "Certificado aceptado ({{short}}…). Só se admitirá ese.",
   },
+  archive: {
+    exportFolder: "Exportar (formato da app)",
+    exportBookmark: "Exportar (formato da app)",
+    importHere: "Importar arquivo aquí",
+    importTitle: "Importar arquivo de AwesomeBookmarks",
+    importHint:
+      "Trae cartafoles, bookmarks, tags, descricións, cores e iconas. Créanse como copias novas dentro deste cartafol: non sobrescribe nada do que xa tes.",
+    pickFile: "Escoller arquivo .abz…",
+    passphraseOptional: "Contrasinal (só se o arquivo está cifrado)",
+    importAction: "Importar",
+    imported: "Importados {{folders}} cartafoles e {{bookmarks}} bookmarks.",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",
@@ -1177,6 +1189,10 @@ const gl = {
     bookmark: "Marcador",
   },
   background: {
+    textTone: "Cor do texto",
+    tone: { auto: "Automático", light: "Claro", dark: "Escuro" },
+    lowContrast: "Contraste baixo ({{ratio}}:1). Proba outra cor ou fixa o ton a man.",
+    goodContrast: "Contraste {{ratio}}:1.",
     dialogTitle: "Aparencia",
     kebabItem: "Aparencia",
     modeNone: "Sen fondo",

@@ -438,6 +438,18 @@ const en = {
     trust: "Trust this certificate",
     trusted: "Certificate accepted ({{short}}…). Only that one will be allowed.",
   },
+  archive: {
+    exportFolder: "Export (app format)",
+    exportBookmark: "Export (app format)",
+    importHere: "Import archive here",
+    importTitle: "Import an AwesomeBookmarks archive",
+    importHint:
+      "Brings folders, bookmarks, tags, descriptions, colours and icons. They are created as new copies inside this folder: nothing you already have is overwritten.",
+    pickFile: "Choose an .abz file…",
+    passphraseOptional: "Passphrase (only if the archive is encrypted)",
+    importAction: "Import",
+    imported: "Imported {{folders}} folders and {{bookmarks}} bookmarks.",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",
@@ -1174,6 +1186,10 @@ const en = {
     bookmark: "Bookmark",
   },
   background: {
+    textTone: "Text colour",
+    tone: { auto: "Automatic", light: "Light", dark: "Dark" },
+    lowContrast: "Low contrast ({{ratio}}:1). Try another colour or set the tone by hand.",
+    goodContrast: "Contrast {{ratio}}:1.",
     dialogTitle: "Appearance",
     kebabItem: "Appearance",
     modeNone: "No background",

@@ -16,3 +16,4 @@ export * from "./duplicates.js";
 export * from "./storage.js";
 export * from "./sessions.js";
 export * from "./security-log.js";
+export * from "./archive.js";

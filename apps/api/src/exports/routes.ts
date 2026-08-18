@@ -1,4 +1,6 @@
+import { ExportArchiveBodySchema } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
+import { buildArchive } from "./archive.js";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { listBookmarks } from "../bookmarks/service.js";
@@ -16,6 +18,19 @@ const ExportBody = z
   });
 
 export const exportRoutes: FastifyPluginAsync = async (app) => {
+  /**
+   * The app's own format: everything the HTML export cannot carry (tags,
+   * descriptions, colours, icons, favourites) in a file this app reads back.
+   */
+  app.post("/export/archive", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const body = ExportArchiveBodySchema.parse(req.body ?? {});
+    const { filename, bytes } = await buildArchive(ctx, body);
+    reply.header("content-type", "application/zip");
+    reply.header("content-disposition", `attachment; filename="${filename}"`);
+    return reply.send(bytes);
+  });
+
   app.post("/export/bookmarks-html", async (req, reply) => {
     const ctx = requireAuth(req);
     const body = ExportBody.parse(req.body);

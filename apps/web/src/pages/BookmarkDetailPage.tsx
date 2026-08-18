@@ -25,6 +25,7 @@ import { LetterIcon } from "../components/LetterIcon.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
+import { KebabMenu } from "../components/KebabMenu.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
@@ -71,11 +72,36 @@ export function BookmarkDetailPage() {
 
   const hasCover = !!(b.imageBlobPath || b.bgColor);
 
+  /** Delete, then go home. Unchanged behaviour; it just needed a name once the
+   *  button moved into the kebab menu. */
+  const remove = async () => {
+    if (
+      !(await dlg.confirm({
+        message: t("folder.confirmDeleteBookmark", { title: b.title }),
+        danger: true,
+      }))
+    ) {
+      return;
+    }
+    try {
+      await api.deleteBookmark(b.id);
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+      nav("/");
+    } catch (e) {
+      await dlg.alert(
+        e instanceof Error
+          ? t("folder.couldNotDelete", { message: e.message })
+          : t("folder.couldNotDeleteGeneric"),
+      );
+    }
+  };
+
   return (
     <div className="space-y-3">
       <Breadcrumbs folderId={b.folderId} trailing={b.title} />
       {hasCover && (
         <EntityBanner
+          textTone={b.textTone}
           imageUrl={
             b.imageBlobPath
               ? api.bookmarkBgImageUrl(b.id, b.updatedAt)
@@ -122,78 +148,67 @@ export function BookmarkDetailPage() {
         {!hasCover && (
           <h1 className="truncate text-xl font-semibold">{b.title}</h1>
         )}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
+          {/* One primary action, two icons, everything else behind the kebab.
+              Seven equal buttons wrapped onto three rows on a phone, and the
+              list only grows; this is the same shape the folder toolbar uses. */}
           <FavoriteToggle bookmark={b} size="h-5 w-5" />
           <a
             href={b.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
+            className="flex items-center gap-1 rounded bg-slate-900 px-3 py-1.5 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
           >
-            <ExternalLink className="h-4 w-4" /> {t("bookmark.openUrl")}
+            <ExternalLink className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("bookmark.openUrl")}</span>
           </a>
           <button
-            onClick={() => void copyRichLink(b.title, b.url)}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            title={t("folder.copyLinkKebab")}
-          >
-            <ClipboardCopy className="h-4 w-4" /> {t("bookmark.copyLink")}
-          </button>
-          <button
-            onClick={() => refresh.mutate()}
-            disabled={refresh.isPending || b.snapshotStatus === "running"}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-            title={t("bookmark.reSnapshotTitle")}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${refresh.isPending ? "animate-spin" : ""}`}
-            />
-            {refresh.isPending
-              ? t("bookmark.enqueuing")
-              : b.snapshotStatus === "running"
-                ? t("bookmark.generating")
-                : t("bookmark.reSnapshot")}
-          </button>
-          <button
             onClick={() => setShowEdit(true)}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            title={t("common.edit")}
+            aria-label={t("common.edit")}
+            className="rounded border border-slate-300 p-1.5 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
-            <PencilLine className="h-4 w-4" /> {t("common.edit")}
+            <PencilLine className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => setShowHistory(true)}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <History className="h-4 w-4" /> {t("versions.title")}
-          </button>
-          <button
-            onClick={() => setShowShare(true)}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <Share2 className="h-4 w-4" /> {t("common.share")}
-          </button>
-          <button
-            onClick={async () => {
-              if (!(await dlg.confirm({
-                message: t("folder.confirmDeleteBookmark", { title: b.title }),
+          <KebabMenu
+            items={[
+              {
+                label: t("bookmark.copyLink"),
+                icon: <ClipboardCopy className="h-4 w-4" />,
+                onClick: () => void copyRichLink(b.title, b.url),
+              },
+              {
+                label:
+                  refresh.isPending
+                    ? t("bookmark.enqueuing")
+                    : b.snapshotStatus === "running"
+                      ? t("bookmark.generating")
+                      : t("bookmark.reSnapshot"),
+                icon: (
+                  <RefreshCw
+                    className={`h-4 w-4 ${refresh.isPending ? "animate-spin" : ""}`}
+                  />
+                ),
+                onClick: () => refresh.mutate(),
+              },
+              {
+                label: t("versions.title"),
+                icon: <History className="h-4 w-4" />,
+                onClick: () => setShowHistory(true),
+              },
+              {
+                label: t("common.share"),
+                icon: <Share2 className="h-4 w-4" />,
+                onClick: () => setShowShare(true),
+              },
+              {
+                label: t("common.delete"),
+                icon: <Trash2 className="h-4 w-4" />,
                 danger: true,
-              }))) return;
-              try {
-                await api.deleteBookmark(b.id);
-                qc.invalidateQueries({ queryKey: ["bookmarks"] });
-                nav("/");
-              } catch (e) {
-                await dlg.alert(
-                  e instanceof Error
-                    ? t("folder.couldNotDelete", { message: e.message })
-                    : t("folder.couldNotDeleteGeneric"),
-                );
-              }
-            }}
-            className="flex items-center gap-1 rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-          >
-            <Trash2 className="h-4 w-4" /> {t("common.delete")}
-          </button>
+                onClick: () => void remove(),
+              },
+            ]}
+          />
         </div>
       </div>
 

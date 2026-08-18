@@ -3,6 +3,7 @@ import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
   ArrowUp,
   ClipboardCopy,
+  FileArchive,
   Copy,
   Download,
   ExternalLink,
@@ -19,6 +20,7 @@ import {
   Share2,
   TabletSmartphone,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,7 +29,12 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { onAppCommand } from "../lib/commands.js";
-import { contrastClass, useCardTone } from "../lib/contrast.js";
+import {
+  contrastClass,
+  resolveTone,
+  useCardTone,
+  useIsDarkPage,
+} from "../lib/contrast.js";
 import { CopyButton } from "../components/CopyButton.js";
 import { FavoriteToggle } from "../components/FavoriteToggle.js";
 import { LetterIcon } from "../components/LetterIcon.js";
@@ -44,6 +51,7 @@ import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
+import { ImportArchiveDialog } from "../components/ImportArchiveDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 import { TagPicker } from "../components/TagPicker.js";
@@ -141,6 +149,7 @@ export function FolderPage() {
     id: string;
   } | null>(null);
   const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [linkTarget, setLinkTarget] = useState<{
     kind: "folder" | "bookmark";
     id: string;
@@ -563,6 +572,27 @@ export function FolderPage() {
             icon: <Download className="h-4 w-4" />,
             onClick: () => void exportCurrentFolder(),
           },
+          {
+            // The app's own format: keeps tags, descriptions, colours, icons
+            // and favourites, none of which survive the Netscape HTML export.
+            label: t("archive.exportFolder"),
+            icon: <FileArchive className="h-4 w-4" />,
+            onClick: () =>
+              void api
+                .exportArchive(
+                  folderId
+                    ? { scope: "folder", id: folderId }
+                    : { scope: "account" },
+                )
+                .catch(async (e) =>
+                  dlg.alert(e instanceof Error ? e.message : t("common.error")),
+                ),
+          },
+          {
+            label: t("archive.importHere"),
+            icon: <Upload className="h-4 w-4" />,
+            onClick: () => setImportOpen(true),
+          },
           ...(folder
             ? [
                 {
@@ -634,6 +664,7 @@ export function FolderPage() {
 
       {hasCover ? (
         <EntityBanner
+          textTone={folder!.textTone}
           imageUrl={
             folder!.imageBlobPath
               ? api.folderBgImageUrl(folder!.id, folder!.updatedAt)
@@ -856,6 +887,13 @@ export function FolderPage() {
           }}
         />
       )}
+      {importOpen && (
+        <ImportArchiveDialog
+          parentId={folderId}
+          onClose={() => setImportOpen(false)}
+          onDone={invalidate}
+        />
+      )}
       {panelFolder && (
         <GeneratePanelDialog
           folderId={panelFolder.id}
@@ -1044,14 +1082,26 @@ function bookmarkBgUrl(b: Bookmark): string | null {
   return b.imageBlobPath ? api.bookmarkBgImageUrl(b.aliasOf ?? b.id, b.updatedAt) : null;
 }
 
-/** Extra class that forces readable text when a card has a custom background;
- * empty for the default (theme) background. */
+/**
+ * Extra class that forces readable text when a card has a custom background;
+ * empty for the default one, where the theme's own colours already apply.
+ *
+ * When the background is set but says nothing about tone (a translucent
+ * colour lets the page through), the page theme decides rather than a fixed
+ * guess. `textTone` overrides all of it when the user has chosen.
+ */
 function useFolderContrast(f: Folder): string {
-  return contrastClass(useCardTone(f.bgColor, folderBgUrl(f)));
+  const tone = useCardTone(f.bgColor, folderBgUrl(f));
+  const isDark = useIsDarkPage();
+  if (!f.bgColor && !f.imageBlobPath) return "";
+  return contrastClass(resolveTone(tone, isDark, f.textTone));
 }
 
 function useBookmarkContrast(b: Bookmark): string {
-  return contrastClass(useCardTone(b.bgColor, bookmarkBgUrl(b)));
+  const tone = useCardTone(b.bgColor, bookmarkBgUrl(b));
+  const isDark = useIsDarkPage();
+  if (!b.bgColor && !b.imageBlobPath) return "";
+  return contrastClass(resolveTone(tone, isDark, b.textTone));
 }
 
 function FolderIcon({ sf, size }: { sf: Folder; size: string }) {

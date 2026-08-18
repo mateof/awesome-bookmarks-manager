@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { requireAuth } from "../auth/session.js";
 import { enqueue } from "../jobs/queue.js";
+import { importArchive } from "../exports/archive.js";
 import { BadRequest } from "../util/errors.js";
 
 const MAX_IMPORT_BYTES = 32 * 1024 * 1024; // 32 MB
@@ -8,6 +9,46 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const importRoutes: FastifyPluginAsync = async (app) => {
+  /**
+   * Import an `.abz` into a chosen folder.
+   *
+   * Runs inline rather than as a job: unlike the HTML importer this does not
+   * fetch anything from the network, so it finishes in the request and the
+   * user gets a real count back instead of a job id to go and watch.
+   */
+  app.post("/import/archive", async (req) => {
+    const ctx = requireAuth(req);
+    if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
+
+    let bytes: Buffer | null = null;
+    let parentId: string | null = null;
+    let passphrase: string | undefined;
+
+    for await (const part of req.parts()) {
+      if (part.type === "file") {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        for await (const chunk of part.file) {
+          const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          size += buf.length;
+          if (size > MAX_IMPORT_BYTES) throw BadRequest("Archivo demasiado grande");
+          chunks.push(buf);
+        }
+        bytes = Buffer.concat(chunks);
+        continue;
+      }
+      const value = String(part.value ?? "");
+      if (part.fieldname === "parentId") {
+        parentId = UUID_RE.test(value) ? value : null;
+      } else if (part.fieldname === "passphrase" && value) {
+        passphrase = value;
+      }
+    }
+
+    if (!bytes) throw BadRequest("Falta el archivo");
+    return importArchive(ctx, bytes, { parentId, passphrase });
+  });
+
   app.post("/import/html", async (req) => {
     const ctx = requireAuth(req);
     if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");

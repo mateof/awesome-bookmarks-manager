@@ -23,6 +23,12 @@ export const BookmarkSchema = z.object({
   iconBlobPath: z.string().nullable(),
   imageBlobPath: z.string().nullable().optional(),
   bgColor: z.string().nullable().optional(),
+  /**
+   * Manual override for the text colour drawn over the card. "auto" (or null)
+   * lets contrast decide, which is right almost always; this exists for the
+   * mid-tone backgrounds where neither white nor near-black is comfortable.
+   */
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   snapshotStatus: SnapshotStatusSchema,
   snapshotError: z.string().nullable().optional(),
   hasSnapshot: z.boolean(),
@@ -46,6 +52,7 @@ export const CreateBookmarkBodySchema = z.object({
   description: z.string().max(1_000_000).optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   favorite: z.boolean().optional(),
   fetchSnapshot: z.boolean().default(true),
 });
@@ -64,6 +71,7 @@ export const UpdateBookmarkBodySchema = z.object({
   description: z.string().max(1_000_000).nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
   bgColor: BgColor.nullable().optional(),
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
   favorite: z.boolean().optional(),
   // Optimistic concurrency: the rev the client last saw (see folders).
   baseRev: z.number().int().optional(),

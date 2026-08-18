@@ -1,5 +1,7 @@
 import type {
   AdminStorageRow,
+  ArchiveScope,
+  ImportArchiveResult,
   CloudBackup,
   PeerCertificate,
   AdminUser,
@@ -428,6 +430,70 @@ export const api = {
     signalAuthInvalidated(res.status);
     if (!res.ok) throw new ApiError(res.status, "import_failed", "Import failed");
     return (await res.json()) as { jobId: string };
+  },
+
+  /** The app's own format: everything, importable back into a folder. */
+  exportArchive: async (body: {
+    scope: ArchiveScope;
+    id?: string;
+    includeSnapshots?: boolean;
+    passphrase?: string;
+  }): Promise<void> => {
+    const res = await fetch(`${BASE}/export/archive`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = `Export failed (HTTP ${res.status})`;
+      try {
+        msg = (JSON.parse(text) as { error?: string }).error ?? msg;
+      } catch {
+        /* keep default */
+      }
+      throw new ApiError(res.status, "export_failed", msg);
+    }
+    const disposition = res.headers.get("content-disposition") ?? "";
+    const filename =
+      /filename="([^"]+)"/.exec(disposition)?.[1] ?? "awesomebookmarks.abz";
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  importArchive: async (
+    file: File,
+    options: { parentId?: string | null; passphrase?: string } = {},
+  ): Promise<ImportArchiveResult> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    if (options.parentId) fd.append("parentId", options.parentId);
+    if (options.passphrase) fd.append("passphrase", options.passphrase);
+    const res = await fetch(`${BASE}/import/archive`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    const text = await res.text();
+    const body = text ? JSON.parse(text) : null;
+    if (!res.ok) {
+      throw new ApiError(
+        res.status,
+        body?.code ?? "import_failed",
+        body?.error ?? `HTTP ${res.status}`,
+      );
+    }
+    return body as ImportArchiveResult;
   },
 
   exportBookmarksHtml: async (body: {

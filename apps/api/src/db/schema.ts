@@ -314,6 +314,8 @@ export const folders = sqliteTable(
     iconBlobPath: text("icon_blob_path"),
     imageBlobPath: text("image_blob_path"),
     bgColor: text("bg_color"),
+    /** "light" | "dark" to force the overlaid text colour; null = automatic. */
+    textTone: text("text_tone"),
     // Set (to the source group name) when this was imported from a group
     // share, so the UI can mark it as "shared".
     shareOrigin: text("share_origin"),
@@ -356,6 +358,8 @@ export const bookmarks = sqliteTable(
     iconBlobPath: text("icon_blob_path"),
     imageBlobPath: text("image_blob_path"),
     bgColor: text("bg_color"),
+    /** See folders.textTone. */
+    textTone: text("text_tone"),
     snapshotHtmlPath: text("snapshot_html_path"),
     snapshotScreenshotPath: text("snapshot_screenshot_path"),
     snapshotTextPath: text("snapshot_text_path"),

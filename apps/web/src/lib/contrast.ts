@@ -7,7 +7,15 @@ export type Tone = "light" | "dark" | null;
  * or `rgb()`/`rgba()`). Returns null when it can't be parsed or is too
  * translucent to imply a tone.
  */
-export function colorLuminance(color: string | null | undefined): number | null {
+interface Rgba {
+  r: number;
+  g: number;
+  b: number;
+  a: number;
+}
+
+/** Parse `#rgb` / `#rrggbb` / `#rrggbbaa` / `rgb()` / `rgba()`. */
+export function parseColor(color: string | null | undefined): Rgba | null {
   if (!color) return null;
   const c = color.trim();
   let r: number;
@@ -40,14 +48,66 @@ export function colorLuminance(color: string | null | undefined): number | null 
     if (parts.length >= 4) a = parts[3] ?? 1;
   }
 
-  if (a < 0.5) return null;
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return { r, g, b, a };
+}
+
+export function colorLuminance(color: string | null | undefined): number | null {
+  const rgb = parseColor(color);
+  if (!rgb || rgb.a < 0.5) return null;
+  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
 }
 
 /** dark background (low luminance) -> light text; light background -> dark text. */
 export function toneForLuminance(l: number | null): Tone {
   if (l === null) return null;
   return l < 0.5 ? "light" : "dark";
+}
+
+/**
+ * WCAG relative luminance. Unlike the perceptual average above it applies the
+ * sRGB gamma curve, which is what the contrast-ratio formula expects.
+ */
+function wcagLuminance(r: number, g: number, b: number): number {
+  const channel = (v: number) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** Contrast ratio between two luminances, 1 (identical) to 21 (black/white). */
+function ratio(a: number, b: number): number {
+  const [hi, lo] = a > b ? [a, b] : [b, a];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const WHITE = wcagLuminance(255, 255, 255);
+const NEAR_BLACK = wcagLuminance(15, 23, 42); // slate-900, the text colour used
+
+/**
+ * Which text colour actually reads better on this background.
+ *
+ * A flat "luminance below 0.5 means light text" cut gets mid-tone colours
+ * wrong, and greens and blues worst of all: their perceived brightness and
+ * their WCAG luminance disagree. Comparing the real contrast ratio of the two
+ * candidates picks the winner instead of guessing at a threshold.
+ *
+ * Returns null when the colour cannot be read (unparseable, or translucent
+ * enough that what shows through decides the outcome).
+ */
+export function bestTextTone(color: string | null | undefined): Tone {
+  const rgb = parseColor(color);
+  if (!rgb || rgb.a < 0.5) return null;
+  const bg = wcagLuminance(rgb.r, rgb.g, rgb.b);
+  return ratio(bg, WHITE) >= ratio(bg, NEAR_BLACK) ? "light" : "dark";
+}
+
+/** Best-effort contrast of the winning text colour, for warning the user. */
+export function bestContrastRatio(color: string | null | undefined): number | null {
+  const rgb = parseColor(color);
+  if (!rgb || rgb.a < 0.5) return null;
+  const bg = wcagLuminance(rgb.r, rgb.g, rgb.b);
+  return Math.max(ratio(bg, WHITE), ratio(bg, NEAR_BLACK));
 }
 
 const imgCache = new Map<string, number>();
@@ -122,7 +182,51 @@ export function useCardTone(
 ): Tone {
   const imgLum = useImageLuminance(imageUrl);
   if (imageUrl && imgLum !== null) return toneForLuminance(imgLum);
-  return toneForLuminance(colorLuminance(bgColor));
+  return bestTextTone(bgColor);
+}
+
+/**
+ * Whether the page itself is currently dark.
+ *
+ * Needed as the fallback when a background colour tells us nothing: a
+ * translucent colour lets the page show through, so the page is what the text
+ * has to contrast against. Reading the class the theme module toggles keeps
+ * this in step with light, dark and "system" alike.
+ */
+export function useIsDarkPage(): boolean {
+  const [dark, setDark] = useState(
+    () =>
+      typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark"),
+  );
+  useEffect(() => {
+    const target = document.documentElement;
+    const update = () => setDark(target.classList.contains("dark"));
+    const observer = new MutationObserver(update);
+    observer.observe(target, { attributes: true, attributeFilter: ["class"] });
+    update();
+    return () => observer.disconnect();
+  }, []);
+  return dark;
+}
+
+/**
+ * The tone to actually render with, never null.
+ *
+ * `override` is the user's explicit choice when they have made one. Otherwise
+ * the background decides, and when the background cannot decide (translucent,
+ * or unreadable) the page theme does. The previous code defaulted to dark text
+ * regardless of theme, which is why a translucent colour on a dark page came
+ * out as near-black text on a near-black banner.
+ */
+export function resolveTone(
+  computed: Tone,
+  isDarkPage: boolean,
+  override?: Tone | "auto" | null,
+): Exclude<Tone, null> {
+  if (override === "light" || override === "dark") return override;
+  if (computed) return computed;
+  return isDarkPage ? "light" : "dark";
 }
 
 export function contrastClass(tone: Tone): string {

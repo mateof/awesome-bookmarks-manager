@@ -356,6 +356,9 @@ export function ensureSchema() {
   tryAddColumn("folders", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "bg_color", "TEXT");
   tryAddColumn("bookmarks", "image_blob_path", "TEXT");
+  // Manual override of the text colour drawn over a card's background.
+  tryAddColumn("folders", "text_tone", "TEXT");
+  tryAddColumn("bookmarks", "text_tone", "TEXT");
   // Per-panel identity overrides: heading shown inside the panel, browser tab
   // title and an emoji favicon.
   tryAddColumn("panels", "display_title", "TEXT");

@@ -90,6 +90,13 @@ one port.
   card. Batch open-in-tabs, export, and delete.
 - **Export to HTML** in the standard Netscape Bookmark format — re-importable
   by Chrome / Firefox / Edge / Safari.
+- **Portable archive (`.abz`)** — the app's own format, for everything HTML
+  cannot carry: tags, descriptions, colours, icons and favourites. Exports a
+  whole account, one folder's subtree or a single bookmark, and imports back
+  **into a chosen folder as copies** (fresh ids, tags matched by name), so it
+  never overwrites what you already have. Optionally sealed with a passphrase.
+  Unlike a cloud backup, whose contents are sealed with the owner's key, an
+  archive travels between accounts and instances.
 - **Browser bookmarks bar** in the header (Chrome-style dropdowns); click a
   folder to open all its bookmarks in tabs at once.
 - **Light / dark / system theme** with persisted preference.

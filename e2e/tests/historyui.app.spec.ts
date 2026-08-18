@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { seedSpanish, signup } from "../fixtures/app.js";
 
 /**
@@ -6,6 +6,17 @@ import { seedSpanish, signup } from "../fixtures/app.js";
  * restoring from the list, duplicating a past version, and the activity tab of
  * a folder.
  */
+/** Open a bookmark's history from the kebab menu. */
+async function openHistory(page: Page) {
+  await page.getByRole("button", { name: "Más acciones" }).first().click();
+  // The menu renders twice, a dropdown for wide screens and a bottom sheet for
+  // narrow ones, so the label matches more than once.
+  await page
+    .getByRole("button", { name: "Historial", exact: true })
+    .first()
+    .click();
+}
+
 const user = {
   email: "history.ui.e2e@example.com",
   nickname: "historyuiuser",
@@ -34,7 +45,9 @@ test("historial (UI): listar, restaurar y duplicar desde el diálogo", async ({
   // Open the bookmark and its history.
   await page.goto(`/bookmark/${bm.id}`);
   await expect(page.getByRole("heading", { name: "Titulo B" })).toBeVisible();
-  await page.getByRole("button", { name: "Historial" }).click();
+  // Secondary actions on a bookmark live in the kebab now: seven equally
+  // weighted buttons did not fit a phone.
+  await openHistory(page);
   await expect(page.getByRole("heading", { name: "Historial" })).toBeVisible();
 
   // Both revisions are listed, newest first.
@@ -65,8 +78,12 @@ test("historial (UI): listar, restaurar y duplicar desde el diálogo", async ({
 
   // The folder's activity tab lists events for the folder and its bookmarks.
   await page.goto(`/folder/${folder.id}`);
+  // The folder kebab is already open at this point; only the item is left.
   await page.getByRole("button", { name: "Más acciones" }).first().click();
-  await page.getByRole("button", { name: "Historial" }).click();
+  await page
+    .getByRole("button", { name: "Historial", exact: true })
+    .first()
+    .click();
   await page.getByRole("button", { name: "Actividad" }).click();
   await expect(page.getByText("Sin actividad todavía.")).toHaveCount(0);
   await expect(page.getByText("Titulo A").first()).toBeVisible();

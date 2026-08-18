@@ -29,6 +29,7 @@ interface FolderRow {
   iconBlobPath: string | null;
   imageBlobPath: string | null;
   bgColor: string | null;
+  textTone: string | null;
   shareOrigin: string | null;
   favorite: boolean;
   aliasOf: string | null;
@@ -50,6 +51,7 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
     bgColor: row.bgColor,
+    textTone: (row.textTone as Folder["textTone"]) ?? null,
     shareOrigin: row.shareOrigin,
     favorite: row.favorite,
     aliasOf: row.aliasOf,
@@ -107,6 +109,7 @@ function decodeAllFolders(ctx: AuthedContext): Folder[] {
             iconBlobPath: r.iconBlobPath,
             imageBlobPath: r.imageBlobPath,
             bgColor: r.bgColor,
+            textTone: r.textTone,
             shareOrigin: r.shareOrigin,
             favorite: r.favorite,
             aliasOf: r.aliasOf,
@@ -177,6 +180,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       iconBlobPath: row.iconBlobPath,
       imageBlobPath: row.imageBlobPath,
       bgColor: row.bgColor,
+      textTone: row.textTone,
       shareOrigin: row.shareOrigin,
       favorite: row.favorite,
       aliasOf: row.aliasOf,
@@ -295,6 +299,7 @@ export function updateFolder(
     description?: string | null;
     tagIds?: string[];
     bgColor?: string | null;
+    textTone?: "auto" | "light" | "dark" | null;
     favorite?: boolean;
     /** Optimistic concurrency: reject with 409 if the row no longer has it. */
     baseRev?: number;
@@ -315,6 +320,11 @@ export function updateFolder(
     update.descriptionCt = clean
       ? sealField(ctx.dek, ctx.userId, "folder.description", clean)
       : null;
+  }
+  if (input.textTone !== undefined) {
+    // "auto" is stored as NULL: the absence of an override, not a third value
+    // to reason about everywhere it is read.
+    update.textTone = input.textTone === "auto" ? null : input.textTone;
   }
   if (input.bgColor !== undefined) {
     update.bgColor = input.bgColor;
