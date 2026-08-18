@@ -3,6 +3,7 @@ import type { Tag } from "@awesome-bookmarks/shared";
 import { Check, Filter, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { Modal } from "../components/Modal.js";
@@ -111,12 +112,13 @@ export function TagsPage() {
             <button
               onClick={async () => {
                 if (
-                  !confirm(
-                    t("tags.confirmDelete", {
+                  !(await dlg.confirm({
+                    message: t("tags.confirmDelete", {
                       name: tg.name,
                       count: usage.get(tg.id) ?? 0,
                     }),
-                  )
+                    danger: true,
+                  }))
                 )
                   return;
                 del.mutate(tg.id);

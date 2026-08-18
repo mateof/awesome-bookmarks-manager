@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { Modal } from "../components/Modal.js";
@@ -252,7 +253,10 @@ function GroupDetail({ id }: { id: string }) {
           {g.myRole !== "owner" && (
             <button
               onClick={async () => {
-                if (!confirm(t("groups.confirmLeave"))) return;
+                if (!(await dlg.confirm({
+                  message: t("groups.confirmLeave"),
+                  danger: true,
+                }))) return;
                 await api.leaveGroup(id);
                 nav("/groups");
               }}
@@ -264,7 +268,10 @@ function GroupDetail({ id }: { id: string }) {
           {g.myRole === "owner" && (
             <button
               onClick={async () => {
-                if (!confirm(t("groups.confirmDeleteGroup"))) return;
+                if (!(await dlg.confirm({
+                  message: t("groups.confirmDeleteGroup"),
+                  danger: true,
+                }))) return;
                 await api.deleteGroup(id);
                 nav("/groups");
               }}
@@ -300,7 +307,10 @@ function GroupDetail({ id }: { id: string }) {
               {canManage && m.role !== "owner" && (
                 <button
                   onClick={async () => {
-                    if (!confirm(t("groups.confirmRemoveMember", { email: m.email }))) return;
+                    if (!(await dlg.confirm({
+                      message: t("groups.confirmRemoveMember", { email: m.email }),
+                      danger: true,
+                    }))) return;
                     await api.removeGroupMember(id, m.userId);
                     qc.invalidateQueries({ queryKey: ["group-members", id] });
                   }}
@@ -440,7 +450,10 @@ function GroupDetail({ id }: { id: string }) {
                 </span>
                 <button
                   onClick={async () => {
-                    if (!confirm(t("groups.confirmRemoveShare"))) return;
+                    if (!(await dlg.confirm({
+                      message: t("groups.confirmRemoveShare"),
+                      danger: true,
+                    }))) return;
                     await api.deleteGroupShare(id, s.id);
                     qc.invalidateQueries({ queryKey: ["group-shares", id] });
                   }}

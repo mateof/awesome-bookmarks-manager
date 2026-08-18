@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { api } from "../api.js";
 import { LetterIcon } from "../components/LetterIcon.js";
 import { fmtDateTime } from "../lib/date.js";
@@ -154,8 +155,11 @@ export function TrashPage() {
             {oldCount > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm(t("trash.confirmPurgeOld", { count: oldCount }))) {
+                onClick={async () => {
+                  if (await dlg.confirm({
+                    message: t("trash.confirmPurgeOld", { count: oldCount }),
+                    danger: true,
+                  })) {
                     purgeAll.mutate(30);
                   }
                 }}
@@ -167,8 +171,11 @@ export function TrashPage() {
             )}
             <button
               type="button"
-              onClick={() => {
-                if (confirm(t("trash.confirmPurgeAll", { count: items.length }))) {
+              onClick={async () => {
+                if (await dlg.confirm({
+                  message: t("trash.confirmPurgeAll", { count: items.length }),
+                  danger: true,
+                })) {
                   purgeAll.mutate(undefined);
                 }
               }}
@@ -248,8 +255,11 @@ export function TrashPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm(t("trash.confirmPurgeItem", { title: lead.title }))) {
+                  onClick={async () => {
+                    if (await dlg.confirm({
+                      message: t("trash.confirmPurgeItem", { title: lead.title }),
+                      danger: true,
+                    })) {
                       purgeOne.mutate(lead);
                     }
                   }}

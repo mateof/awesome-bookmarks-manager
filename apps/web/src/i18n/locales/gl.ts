@@ -333,6 +333,10 @@ const gl = {
     colUsed: "En uso",
     colQuota: "Límite",
   },
+  dialog: {
+    confirmTitle: "Seguro?",
+    noticeTitle: "Aviso",
+  },
   tags: {
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { fmtDate } from "../lib/date.js";
@@ -204,8 +205,11 @@ function SharedList() {
               <AccessBadge access={s.access} />
               <button
                 type="button"
-                onClick={() => {
-                  if (!confirm(t("groups.confirmRemoveShare"))) return;
+                onClick={async () => {
+                  if (!(await dlg.confirm({
+                    message: t("groups.confirmRemoveShare"),
+                    danger: true,
+                  }))) return;
                   revoke.mutate({ groupId: s.groupId, id: s.id });
                 }}
                 title={t("shared.revoke")}

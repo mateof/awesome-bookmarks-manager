@@ -16,7 +16,10 @@ export async function seedSpanish(context: BrowserContext) {
       /* storage may be unavailable on some origins; ignore */
     }
   });
-  // Native confirm() dialogs (deletes) — accept by default so flows proceed.
+  // Any native dialog the browser still raises on its own (beforeunload and
+  // friends) — accept so flows proceed. The app's own confirmations are React
+  // components now, not window.confirm, so they are clicked like any button;
+  // see acceptDialog below.
   context.on("page", (page) => {
     page.on("dialog", (d) => d.accept().catch(() => {}));
   });
@@ -120,4 +123,25 @@ export async function adminSession(
   const page = await ctx.newPage();
   await login(page, admin);
   return { ctx, page };
+}
+
+/**
+ * Accept the app's own confirmation dialog.
+ *
+ * Destructive actions no longer go through `window.confirm`, so nothing
+ * auto-accepts them: the dialog is a real element and has to be clicked. That
+ * is the point — a test that deletes something now proves the confirmation
+ * exists, instead of silently sailing past it.
+ */
+export async function acceptDialog(page: Page, label = "Confirmar") {
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("button", { name: label, exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
+/** Dismiss the app's confirmation dialog, leaving the action undone. */
+export async function dismissDialog(page: Page) {
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(dialog).toBeHidden();
 }

@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./auth.js";
+import { DialogProvider } from "./components/dialogs.js";
 import { Layout } from "./components/Layout.js";
 import { useSelectAllOnFirstClick } from "./lib/selectAllOnFirstClick.js";
 import { BookmarkDetailPage } from "./pages/BookmarkDetailPage.js";
@@ -28,6 +29,7 @@ import { TrashPage } from "./pages/TrashPage.js";
 export default function App() {
   useSelectAllOnFirstClick();
   return (
+    <DialogProvider>
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -67,5 +69,6 @@ export default function App() {
         />
       </Routes>
     </AuthProvider>
+    </DialogProvider>
   );
 }

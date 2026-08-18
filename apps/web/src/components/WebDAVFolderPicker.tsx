@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "./dialogs.js";
 import { ApiError, api } from "../api.js";
 import { Modal } from "./Modal.js";
 
@@ -53,7 +54,7 @@ export function WebDAVFolderPicker({
     const name = prompt(t("webdav.promptNewFolder"));
     if (!name) return;
     if (/[/\\]/.test(name)) {
-      alert(t("webdav.nameCannotContain"));
+      await dlg.alert(t("webdav.nameCannotContain"));
       return;
     }
     const newPath = (path === "/" ? "" : path) + "/" + name;
@@ -61,7 +62,7 @@ export function WebDAVFolderPicker({
       await create.mutateAsync(newPath);
       navigate(newPath);
     } catch (e) {
-      alert(e instanceof ApiError ? e.message : t("webdav.creatingError"));
+      await dlg.alert(e instanceof ApiError ? e.message : t("webdav.creatingError"));
     }
   };
 
@@ -102,7 +103,7 @@ export function WebDAVFolderPicker({
                       try {
                         await create.mutateAsync(path);
                       } catch (e) {
-                        alert(
+                        await dlg.alert(
                           e instanceof ApiError ? e.message : t("webdav.creatingError"),
                         );
                       }

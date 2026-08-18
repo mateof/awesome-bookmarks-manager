@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
@@ -176,14 +177,14 @@ export function FolderPage() {
     return subs + bks;
   };
 
-  const openAllInTabs = (recursive: boolean) => {
+  const openAllInTabs = async (recursive: boolean) => {
     const urls = recursive
       ? collectDescendantBookmarks(folderId)
       : items.map((b) => b.url);
     if (urls.length === 0) return;
     if (
       urls.length > 20 &&
-      !confirm(t("folder.confirmTooManyTabs", { count: urls.length }))
+      !(await dlg.confirm(t("folder.confirmTooManyTabs", { count: urls.length })))
     ) {
       return;
     }
@@ -234,7 +235,7 @@ export function FolderPage() {
     [selection],
   );
 
-  const openSelectionInTabs = () => {
+  const openSelectionInTabs = async () => {
     if (selection.size === 0) return;
     const urls = new Set<string>();
     for (const fid of selectedFolderIds) {
@@ -247,12 +248,12 @@ export function FolderPage() {
       }
     }
     if (urls.size === 0) {
-      alert(t("folder.selectionNoLinks"));
+      await dlg.alert(t("folder.selectionNoLinks"));
       return;
     }
     if (
       urls.size > 20 &&
-      !confirm(t("folder.confirmTooManyTabs", { count: urls.size }))
+      !(await dlg.confirm(t("folder.confirmTooManyTabs", { count: urls.size })))
     ) {
       return;
     }
@@ -269,7 +270,7 @@ export function FolderPage() {
           : { bookmarkIds: [target.bookmarkId] },
       );
     } catch (e) {
-      alert(
+      await dlg.alert(
         e instanceof Error
           ? t("folder.couldNotExport", { message: e.message })
           : t("folder.couldNotExportGeneric"),
@@ -286,7 +287,7 @@ export function FolderPage() {
       });
       clearSelection();
     } catch (e) {
-      alert(
+      await dlg.alert(
         e instanceof Error
           ? t("folder.couldNotExport", { message: e.message })
           : t("folder.couldNotExportGeneric"),
@@ -303,13 +304,13 @@ export function FolderPage() {
         .filter((b) => b.folderId === null)
         .map((b) => b.id);
       if (ids.length === 0 && bIds.length === 0) {
-        alert(t("folder.nothingToExport"));
+        await dlg.alert(t("folder.nothingToExport"));
         return;
       }
       try {
         await api.exportBookmarksHtml({ folderIds: ids, bookmarkIds: bIds });
       } catch (e) {
-        alert(
+        await dlg.alert(
           e instanceof Error
             ? t("folder.couldNotExport", { message: e.message })
             : t("folder.couldNotExportGeneric"),
@@ -321,13 +322,16 @@ export function FolderPage() {
   };
 
   const deleteFolder = async (target: Folder) => {
-    if (!confirm(t("folder.confirmDeleteFolder", { name: target.name }))) return;
+    if (!(await dlg.confirm({
+      message: t("folder.confirmDeleteFolder", { name: target.name }),
+      danger: true,
+    }))) return;
     try {
       await api.deleteFolder(target.id);
       invalidate();
       if (target.id === folderId) nav("/");
     } catch (e) {
-      alert(
+      await dlg.alert(
         e instanceof Error
           ? t("folder.couldNotDelete", { message: e.message })
           : t("folder.couldNotDeleteGeneric"),
@@ -336,12 +340,15 @@ export function FolderPage() {
   };
 
   const deleteBookmark = async (b: Bookmark) => {
-    if (!confirm(t("folder.confirmDeleteBookmark", { title: b.title }))) return;
+    if (!(await dlg.confirm({
+      message: t("folder.confirmDeleteBookmark", { title: b.title }),
+      danger: true,
+    }))) return;
     try {
       await api.deleteBookmark(b.id);
       invalidate();
     } catch (e) {
-      alert(
+      await dlg.alert(
         e instanceof Error
           ? t("folder.couldNotDelete", { message: e.message })
           : t("folder.couldNotDeleteGeneric"),
@@ -352,9 +359,10 @@ export function FolderPage() {
   const deleteSelection = async () => {
     if (selection.size === 0) return;
     if (
-      !confirm(
-        t("folder.confirmDeleteSelection", { count: selection.size }),
-      )
+      !(await dlg.confirm({
+        message: t("folder.confirmDeleteSelection", { count: selection.size }),
+        danger: true,
+      }))
     ) {
       return;
     }
@@ -383,7 +391,7 @@ export function FolderPage() {
     ]);
     clearSelection();
     invalidate();
-    if (failures.length > 0) alert(failures.join("\n"));
+    if (failures.length > 0) await dlg.alert(failures.join("\n"));
   };
 
   // Move folders/bookmarks into `dest` (null = root). Position 0 mirrors the
@@ -416,7 +424,7 @@ export function FolderPage() {
       ),
     ]);
     invalidate();
-    if (failures.length > 0) alert(failures.join("\n"));
+    if (failures.length > 0) await dlg.alert(failures.join("\n"));
   };
 
   const folderKebab = (f: Folder): KebabItem[] => [

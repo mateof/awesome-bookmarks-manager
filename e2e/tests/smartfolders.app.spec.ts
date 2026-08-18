@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seedSpanish, signup } from "../fixtures/app.js";
+import { acceptDialog, seedSpanish, signup } from "../fixtures/app.js";
 
 /**
  * Smart folders: a filter saved under a name. They own no content, so the
@@ -91,6 +91,7 @@ test("guardar un filtro como carpeta inteligente y verlo vivo", async ({
 
   // Deleting it leaves the items alone and drops the sidebar entry.
   await page.getByRole("button", { name: "Eliminar carpeta inteligente" }).click();
+  await acceptDialog(page);
   await expect(page.getByRole("link", { name: "Cola de lectura" })).toHaveCount(0);
   await page.goto("/");
   await expect(page.getByText("Articulo pendiente", { exact: true })).toBeVisible();

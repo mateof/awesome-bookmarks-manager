@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { ApiError, api, panelPublicUrl } from "../api.js";
 import { Modal } from "../components/Modal.js";
 import { FaviconPicker } from "../components/FaviconPicker.js";
@@ -141,8 +142,11 @@ function PanelsTab() {
           </button>
           <button
             className="flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-            onClick={() => {
-              if (confirm(t("panels.confirmDelete", { title: p.title }))) del.mutate(p.id);
+            onClick={async () => {
+              if (await dlg.confirm({
+                message: t("panels.confirmDelete", { title: p.title }),
+                danger: true,
+              })) del.mutate(p.id);
             }}
           >
             <Trash2 className="h-4 w-4" />
@@ -495,7 +499,7 @@ function TemplatesTab() {
       await api.createTemplate({ name: parsed.name ?? "Importada", config: parsed.config });
       qc.invalidateQueries({ queryKey: ["panel-templates"] });
     } catch {
-      alert(t("panels.importError"));
+      await dlg.alert(t("panels.importError"));
     }
   };
 
@@ -552,8 +556,11 @@ function TemplatesTab() {
               {!tpl.builtin && (
                 <button
                   className="flex items-center gap-1 rounded border border-red-300 px-2.5 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-                  onClick={() => {
-                    if (confirm(t("panels.confirmDeleteTemplate"))) del.mutate(tpl.id);
+                  onClick={async () => {
+                    if (await dlg.confirm({
+                      message: t("panels.confirmDeleteTemplate"),
+                      danger: true,
+                    })) del.mutate(tpl.id);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />

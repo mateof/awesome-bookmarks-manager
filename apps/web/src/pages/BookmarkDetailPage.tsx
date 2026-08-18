@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
@@ -50,8 +51,8 @@ export function BookmarkDetailPage() {
       qc.invalidateQueries({ queryKey: ["bookmark", id] });
       qc.invalidateQueries({ queryKey: ["bookmarks"] });
     },
-    onError: (e) => {
-      alert(
+    onError: async (e) => {
+      await dlg.alert(
         e instanceof Error
           ? t("bookmark.cannotEnqueue", { message: e.message })
           : t("bookmark.cannotEnqueueGeneric"),
@@ -173,13 +174,16 @@ export function BookmarkDetailPage() {
           </button>
           <button
             onClick={async () => {
-              if (!confirm(t("folder.confirmDeleteBookmark", { title: b.title }))) return;
+              if (!(await dlg.confirm({
+                message: t("folder.confirmDeleteBookmark", { title: b.title }),
+                danger: true,
+              }))) return;
               try {
                 await api.deleteBookmark(b.id);
                 qc.invalidateQueries({ queryKey: ["bookmarks"] });
                 nav("/");
               } catch (e) {
-                alert(
+                await dlg.alert(
                   e instanceof Error
                     ? t("folder.couldNotDelete", { message: e.message })
                     : t("folder.couldNotDeleteGeneric"),

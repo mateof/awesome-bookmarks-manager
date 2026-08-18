@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seedSpanish, signup } from "../fixtures/app.js";
+import { acceptDialog, seedSpanish, signup } from "../fixtures/app.js";
 
 /**
  * The trash. Deletes were always soft, so what is under test is the other
@@ -97,6 +97,7 @@ test("restaurar una carpeta borrada devuelve todo su contenido", async ({
 
   // Emptying the trash is the only destructive step, and it is explicit.
   await page.getByRole("button", { name: "Vaciar papelera" }).click();
+  await acceptDialog(page);
   await expect(page.getByText("La papelera está vacía.")).toBeVisible();
   await expect(page.getByTestId("trash-item")).toHaveCount(0);
 

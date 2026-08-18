@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
@@ -506,8 +507,11 @@ function PasskeysCard() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    if (confirm(t("twofa.passkeyConfirmDelete"))) del.mutate(c.id);
+                  onClick={async () => {
+                    if (await dlg.confirm({
+                      message: t("twofa.passkeyConfirmDelete"),
+                      danger: true,
+                    })) del.mutate(c.id);
                   }}
                   className={btnDanger}
                 >
@@ -659,7 +663,10 @@ function Cloud() {
             </button>
             <button
               onClick={async () => {
-                if (!confirm(t("settings.cloud.confirmDelete"))) return;
+                if (!(await dlg.confirm({
+                  message: t("settings.cloud.confirmDelete"),
+                  danger: true,
+                }))) return;
                 await api.deleteConnection(c.id);
                 qc.invalidateQueries({ queryKey: ["cloud", "connections"] });
               }}
@@ -1225,7 +1232,10 @@ function ApiTokens() {
               <button
                 onClick={async () => {
                   if (
-                    !confirm(t("settings.api.confirmRevoke", { label: tok.label }))
+                    !(await dlg.confirm({
+                      message: t("settings.api.confirmRevoke", { label: tok.label }),
+                      danger: true,
+                    }))
                   )
                     return;
                   revoke.mutate(tok.id);
@@ -1430,8 +1440,11 @@ function Admin() {
               <option value="admin">{t("settings.admin.roleAdmin")}</option>
             </select>
             <button
-              onClick={() => {
-                if (!confirm(t("settings.admin.confirmReset2fa", { email: u.email })))
+              onClick={async () => {
+                if (!(await dlg.confirm({
+                  message: t("settings.admin.confirmReset2fa", { email: u.email }),
+                  danger: true,
+                })))
                   return;
                 reset2fa.mutate(u.id);
               }}
@@ -1443,7 +1456,10 @@ function Admin() {
             </button>
             <button
               onClick={async () => {
-                if (!confirm(t("settings.admin.confirmDeleteUser", { email: u.email })))
+                if (!(await dlg.confirm({
+                  message: t("settings.admin.confirmDeleteUser", { email: u.email }),
+                  danger: true,
+                })))
                   return;
                 del.mutate(u.id);
               }}
@@ -1628,9 +1644,9 @@ function Logs() {
             <button
               onClick={async () => {
                 if (
-                  !confirm(
+                  !(await dlg.confirm(
                     t("settings.logs.confirmCleanErrors", { count: errored.length }),
-                  )
+                  ))
                 )
                   return;
                 purge.mutate("error");

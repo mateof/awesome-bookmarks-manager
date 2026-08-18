@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Info, Merge, Star, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { LetterIcon } from "../components/LetterIcon.js";
@@ -104,8 +105,13 @@ export function DuplicatesPage() {
           <button
             type="button"
             disabled={busy}
-            onClick={() => {
-              if (confirm(t("duplicates.confirmMergeAll", { count: totalExtra }))) {
+            onClick={async () => {
+              if (
+                await dlg.confirm({
+                  message: t("duplicates.confirmMergeAll", { count: totalExtra }),
+                  danger: true,
+                })
+              ) {
                 mergeAll.mutate(groups);
               }
             }}

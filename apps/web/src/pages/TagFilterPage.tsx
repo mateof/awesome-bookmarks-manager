@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { dlg } from "../components/dialogs.js";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { Modal } from "../components/Modal.js";
@@ -200,8 +201,11 @@ export function TagFilterPage() {
           {smart && (
             <button
               type="button"
-              onClick={() => {
-                if (confirm(t("smart.confirmDelete", { name: smart.name }))) {
+              onClick={async () => {
+                if (await dlg.confirm({
+                  message: t("smart.confirmDelete", { name: smart.name }),
+                  danger: true,
+                })) {
                   removeSmart.mutate();
                 }
               }}

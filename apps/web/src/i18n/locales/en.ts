@@ -333,6 +333,10 @@ const en = {
     colUsed: "Used",
     colQuota: "Limit",
   },
+  dialog: {
+    confirmTitle: "Are you sure?",
+    noticeTitle: "Notice",
+  },
   tags: {
     pageTitle: "Tags",
     newTag: "New tag",
