@@ -260,6 +260,145 @@ Delete a tag (removed from all bookmarks/folders). → `204`.
 
 ---
 
+## Smart folders (saved queries)
+
+A smart folder stores a **query**, not a list of items. It owns nothing: its
+contents are recomputed on every read, so tagging something makes it appear and
+untagging makes it leave, with no copying and no sync step.
+
+A smart folder:
+
+```json
+{ "id": "…", "name": "Por leer", "color": "#6366f1", "position": 0,
+  "query": { "tagIds": ["…"], "match": "any", "text": "", "favorite": false },
+  "createdAt": "…", "updatedAt": "…" }
+```
+
+The query fields:
+
+| field | type | notes |
+|-------|------|-------|
+| `tagIds` | uuid[] (≤50) | empty = no tag restriction |
+| `match` | `"all"` \| `"any"` | AND or OR across `tagIds`. Default `"any"` |
+| `text` | string (≤200) | matched against title/name, URL and description |
+| `favorite` | boolean | restrict to starred items |
+
+An all-empty query selects **nothing** (it is the state a half-built filter is
+in), rather than the whole library.
+
+### `GET /smart-folders`
+List them, ordered by `position`.
+
+### `GET /smart-folders/:id`
+One saved folder, definition only.
+
+### `GET /smart-folders/:id/items`
+Evaluate the query now and return what it selects. This is the endpoint worth
+using: it saves downloading the whole library to filter client-side.
+
+```bash
+auth "$HOST/api/v1/smart-folders/$SFID/items"
+```
+```json
+{ "smartFolder": { … }, "folders": [ … ], "bookmarks": [ … ] }
+```
+
+### `POST /smart-folders`
+Body: `{ "name": string(1–120), "query": { … }, "color"?: "#rrggbb" }`. → `201`.
+
+### `PATCH /smart-folders/:id`
+Update `name`, `color`, `position` and/or `query`. `query` is replaced whole,
+not merged field by field.
+
+### `DELETE /smart-folders/:id`
+Removes the saved query only. The folders and bookmarks it listed are
+untouched. → `204`.
+
+---
+
+## Duplicates
+
+### `GET /bookmarks/duplicates`
+Bookmarks pointing at the same URL, grouped. Matching runs on the stored
+`url_hash` (a keyed hash of the *normalised* URL), so a trailing slash, a
+default port and a `#fragment` do not split a group, and no URL has to be
+decrypted to find them. Symlinks are excluded: pointing at the same URL from
+two places is what they are for.
+
+```json
+[ { "key": "9f2c…", "url": "https://example.com/guide",
+    "bookmarks": [ { "id": "…", "title": "…", … } ] } ]
+```
+
+Groups come back largest first; inside a group the oldest bookmark is first,
+which is the natural one to keep.
+
+### `POST /bookmarks/merge`
+Body: `{ "keepId": uuid, "mergeIds": uuid[] (1–200) }`.
+
+The keeper gains every tag from the copies, plus any description or real title
+it was missing, stays starred if any copy was, and inherits symlinks that
+pointed at the merged rows. The copies are **soft-deleted**, so they land in
+the trash and a merge can be undone.
+
+Every id must resolve to the same URL; otherwise the call is rejected with
+`400` rather than silently destroying a different bookmark.
+
+```json
+{ "keptId": "…", "merged": 2, "tagsAdded": 3, "aliasesRepointed": 1 }
+```
+
+---
+
+## Trash
+
+Deletes across the whole API are **soft**: the row keeps its data and gets a
+`deletedAt` stamp. These endpoints are the other half of that.
+
+Deleting a folder stamps its whole subtree in one action, so rows sharing a
+`groupKey` were removed together and come back together.
+
+### `GET /trash`
+```json
+[ { "type": "bookmark", "id": "…", "title": "…", "url": "…",
+    "parentId": "…", "path": "Trabajo / Referencias",
+    "deletedAt": "…", "groupKey": "…", "siblings": 12 } ]
+```
+Optional `?rootLabel=Inicio` sets the label used for items that lived at the
+root.
+
+### `GET /trash/count`
+`{ "count": 37 }`.
+
+### `POST /trash/restore`
+Body: `{ "type": "folder" | "bookmark", "id": uuid }`.
+
+Restoring a folder brings back everything deleted **in the same action**, to
+its original place; something removed separately at another time stays in the
+trash. If the parent folder no longer exists the item lands at the root rather
+than becoming unreachable.
+
+```json
+{ "folders": 3, "bookmarks": 34, "movedToRoot": false }
+```
+
+### `DELETE /trash/:type/:id`
+**Irreversible.** Destroys one trashed item together with its version history,
+snapshot, index entry and images. → `204`.
+
+### `DELETE /trash`
+**Irreversible.** Empties the trash. Optional `?olderThanDays=30` spares
+anything deleted more recently. Returns what was destroyed:
+
+```json
+{ "folders": 3, "bookmarks": 34 }
+```
+
+Nothing expires on its own: these two endpoints are the only ones in the API
+that destroy data instead of moving it.
+
+---
+
 ## Search
 
 ### `GET /search`

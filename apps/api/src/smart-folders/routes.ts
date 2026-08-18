@@ -10,6 +10,7 @@ import {
   deleteSmartFolder,
   getSmartFolder,
   listSmartFolders,
+  resolveSmartFolder,
   updateSmartFolder,
 } from "./service.js";
 
@@ -22,6 +23,13 @@ export const smartFolderRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
     return getSmartFolder(ctx, id);
+  });
+
+  // What the saved query currently selects, evaluated server-side.
+  app.get("/smart-folders/:id/items", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return resolveSmartFolder(ctx, id);
   });
 
   app.post("/smart-folders", async (req, reply) => {

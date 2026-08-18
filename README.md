@@ -119,8 +119,11 @@ one port.
 - **Cloud backups** to Google Drive, OneDrive, or Synology (WebDAV) — manual
   or scheduled.
 - **MCP server** at `/api/mcp` so an AI client (Claude and friends) can manage
-  bookmarks, folders, tags, favourites, panels and panel templates with an API
-  token. See [doc/mcp.md](doc/mcp.md).
+  bookmarks, folders, tags, favourites, panels, panel templates, smart folders,
+  duplicates and the trash with an API token. The two irreversible tools
+  (purging) require an explicit confirmation, and emptying the trash also
+  requires the caller to state how many items it expects to destroy, so an
+  assistant that never looked cannot call it. See [doc/mcp.md](doc/mcp.md).
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
 - **Importer** for the standard HTML bookmarks export of Chrome / Firefox / Edge.
 - **Installable PWA and share target** — install it from the browser on Android

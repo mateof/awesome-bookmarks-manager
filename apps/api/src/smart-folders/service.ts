@@ -1,16 +1,21 @@
 import {
+  type Bookmark,
   type CreateSmartFolderBody,
+  type Folder,
   type SmartFolder,
   type SmartQuery,
   SmartQuerySchema,
   type UpdateSmartFolderBody,
+  isEmptySmartQuery,
 } from "@awesome-bookmarks/shared";
 import { and, asc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { openField, sealField } from "../auth/encryption.js";
 import type { AuthedContext } from "../auth/session.js";
+import { listBookmarks } from "../bookmarks/service.js";
 import { getDb } from "../db/client.js";
 import { smartFolders } from "../db/schema.js";
+import { listFolders } from "../folders/service.js";
 import { BadRequest, NotFound } from "../util/errors.js";
 
 const NAME_AAD = "smartFolder.name";
@@ -161,4 +166,65 @@ export function updateSmartFolder(
 export function deleteSmartFolder(ctx: AuthedContext, id: string) {
   getSmartFolder(ctx, id); // ownership check
   getDb().delete(smartFolders).where(eq(smartFolders.id, id)).run();
+}
+
+export interface SmartFolderContents {
+  folders: Folder[];
+  bookmarks: Bookmark[];
+}
+
+/**
+ * Evaluate a saved query and return what it currently selects.
+ *
+ * The web app applies the same predicates client-side over lists it has
+ * already loaded, which is why this exists rather than replacing it: a
+ * round-trip per keystroke would be worse there, but an API or MCP client
+ * should not have to download the whole library to answer "what is in this
+ * folder?". The two must agree, so keep them in step — the rules are: tags
+ * combine with AND or OR, `text` matches title/name, URL and description
+ * case-insensitively, and `favorite` restricts to starred items.
+ */
+export function resolveSmartQuery(
+  ctx: AuthedContext,
+  query: SmartQuery,
+): SmartFolderContents {
+  // An empty query selects nothing rather than everything: it is the state a
+  // half-built filter is in, and returning the entire library there would be
+  // both surprising and expensive.
+  if (isEmptySmartQuery(query)) return { folders: [], bookmarks: [] };
+
+  const needle = query.text.trim().toLowerCase();
+  const tagHit = (tagIds: string[] | undefined) => {
+    if (query.tagIds.length === 0) return true;
+    const own = new Set(tagIds ?? []);
+    return query.match === "all"
+      ? query.tagIds.every((id) => own.has(id))
+      : query.tagIds.some((id) => own.has(id));
+  };
+
+  const folders = listFolders(ctx).filter(
+    (f) =>
+      tagHit(f.tagIds) &&
+      (!query.favorite || f.favorite) &&
+      (!needle || f.name.toLowerCase().includes(needle)),
+  );
+  const bookmarks = listBookmarks(ctx, {}).filter(
+    (b) =>
+      tagHit(b.tagIds) &&
+      (!query.favorite || b.favorite) &&
+      (!needle ||
+        b.title.toLowerCase().includes(needle) ||
+        b.url.toLowerCase().includes(needle) ||
+        (b.description?.toLowerCase().includes(needle) ?? false)),
+  );
+  return { folders, bookmarks };
+}
+
+/** Resolve a saved folder by id. Throws NotFound when it does not exist. */
+export function resolveSmartFolder(
+  ctx: AuthedContext,
+  id: string,
+): SmartFolderContents & { smartFolder: SmartFolder } {
+  const smartFolder = getSmartFolder(ctx, id);
+  return { smartFolder, ...resolveSmartQuery(ctx, smartFolder.query) };
 }

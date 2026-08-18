@@ -160,6 +160,58 @@ a `bin` named `awesomebookmarks-mcp`.
 | `delete_panel_template` | delete one of your templates |
 | `list_panel_scenes` | list the animated background scenes usable as `config.scene` |
 
+### Smart folders (saved queries)
+
+A smart folder stores a query, not a list: its contents are recomputed on every
+read, so nothing is copied and nothing goes stale.
+
+| tool | what it does |
+|------|--------------|
+| `list_smart_folders` | list your saved queries |
+| `preview_smart_query` | run a query without saving it, to see what it would select |
+| `get_smart_folder_items` | resolve a saved folder now: the folders and bookmarks it selects |
+| `create_smart_folder` | save a query (`name`, `tagIds`, `match`, `text`, `favorite`, optional `color`) |
+| `update_smart_folder` | rename, recolour, or replace the query |
+| `delete_smart_folder` | delete the saved query (items are untouched) |
+
+`match` is `"all"` (AND across `tagIds`) or `"any"` (OR); `text` matches the
+title/name, URL and description. A query with no tags, no text and
+`favorite: false` selects nothing.
+
+### Duplicates
+
+| tool | what it does |
+|------|--------------|
+| `find_duplicate_bookmarks` | group bookmarks that point at the same URL |
+| `merge_duplicate_bookmarks` | fold copies into one (`keepId`, `mergeIds`) |
+
+Matching ignores trailing slashes, default ports and `#fragments`. Merging is
+additive — the keeper gains every tag and description — and the copies go to
+the **trash**, so a merge is undoable.
+
+### Trash
+
+| tool | what it does |
+|------|--------------|
+| `list_trash` | everything currently in the trash, with where it will return to |
+| `count_trash` | how many items are in the trash |
+| `restore_from_trash` | restore an item (a folder brings back its whole deletion) |
+| `delete_from_trash_permanently` | **irreversible**: destroy one trashed item |
+| `empty_trash` | **irreversible**: destroy trashed items for good |
+
+The two destructive tools are guarded on purpose, because they are the only
+ones in the whole MCP surface that cannot be undone:
+
+- Both require `confirm: true`.
+- `empty_trash` additionally requires `expectedItemCount` to match what
+  `count_trash` returns *right now*. On a mismatch nothing is destroyed and
+  the real count comes back instead. An assistant that never looked at the
+  trash cannot supply that number, which is the point: "tidy up my bookmarks"
+  must not be able to turn into "shred the trash".
+
+To simply remove something, use `delete_bookmark` — it is soft, so the item
+lands in the trash and stays recoverable.
+
 `add_bookmark` / `update_bookmark` take **tag names** (not ids) for
 convenience — missing tags are created automatically. All tools return the
 JSON result as text.
@@ -183,6 +235,10 @@ Panels rebuild themselves in the background when their content changes, so
   template, titled 'Mi recetario' with a 🍳 as the tab icon."
 - "Create a template like Terminal but with the galaxy background, wider cards
   and no breadcrumb, then apply it to my Programming panel."
+- "Make me a smart folder called 'Por leer' with everything tagged pendiente or
+  articulo, and tell me how many items it has right now."
+- "Find duplicated bookmarks and merge each group, keeping the oldest."
+- "What did I delete recently? Restore the Recipes folder."
 
 ## Security
 
