@@ -459,6 +459,25 @@ ves en Compartidos.
 
 ---
 
+## 18b. Editar el texto sin abrir el formulario
+
+En la carpeta o en la ficha del bookmark, el bloque de texto lleva un **lápiz
+en su esquina superior derecha**. Abre un editor con la descripción sola.
+
+Es a propósito que no abra el formulario completo: ese ya lo tienes a un clic
+en el mismo sitio, y para cambiar una nota tendrías que pasar por el nombre, la
+URL, los tags y los colores para llegar al único campo que te interesaba.
+
+Guarda **solo la descripción**, así que no puede pisar nada que hayas cambiado
+por otro lado (o que haya cambiado otra persona del grupo mientras tanto). Si
+vacías el editor del todo, la descripción se borra de verdad en vez de quedarse
+un párrafo vacío que mantendría el bloque en pantalla sin nada dentro.
+
+Para **añadir** texto donde no lo hay todavía, sigue siendo el botón de editar
+de siempre: el lápiz vive en el texto, y si no hay texto no hay dónde ponerlo.
+
+---
+
 ## 19. Almacenamiento y cuotas
 
 En **Ajustes → Almacenamiento** ves cuánto ocupan tus datos en el servidor,

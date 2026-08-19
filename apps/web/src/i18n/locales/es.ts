@@ -985,6 +985,8 @@ const es = {
     tooLarge: "La imagen excede 4MB",
   },
   richText: {
+    editText: "Editar el texto",
+    editTitle: "Editar el texto de {{name}}",
     copyable: "Texto copiable (clic para copiar)",
     spoiler: "Texto oculto (clic para mostrar)",
     clickToCopy: "Clic para copiar",

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, PencilLine } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RichTextView } from "./RichTextView.js";
@@ -30,6 +30,12 @@ interface Props {
    */
   fadeFrom?: string;
   className?: string;
+  /**
+   * When given, a pencil sits in the text's top-right corner. Present only
+   * where the text is the reader's to change: a shared or public view passes
+   * nothing and gets no button.
+   */
+  onEdit?: () => void;
 }
 
 export function CollapsibleRichText({
@@ -37,6 +43,7 @@ export function CollapsibleRichText({
   collapsedHeight = 160,
   fadeFrom = "from-slate-50 dark:from-slate-950",
   className,
+  onEdit,
 }: Props) {
   const { t } = useTranslation();
   const innerRef = useRef<HTMLDivElement>(null);
@@ -78,7 +85,21 @@ export function CollapsibleRichText({
   const clamp = overflows && !expanded;
 
   return (
-    <div className={className}>
+    <div className={`group relative ${className ?? ""}`}>
+      {onEdit && (
+        <button
+          type="button"
+          onClick={onEdit}
+          title={t("richText.editText")}
+          aria-label={t("richText.editText")}
+          // Always visible rather than hover-only: on a touch screen there is
+          // no hover to reveal it, and a note nobody knows they can edit is
+          // the same as one they cannot.
+          className="absolute right-0 top-0 z-10 rounded border border-slate-300 bg-white/80 p-1 text-slate-400 backdrop-blur hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        >
+          <PencilLine className="h-3.5 w-3.5" />
+        </button>
+      )}
       <div
         id={regionId}
         data-testid="collapsible-text"
@@ -92,7 +113,10 @@ export function CollapsibleRichText({
         }}
       >
         <div ref={innerRef}>
-          <RichTextView html={html} />
+          <RichTextView
+            html={html}
+            className={onEdit ? "[&>*:first-child]:pr-9" : undefined}
+          />
         </div>
         {clamp && (
           // Fades the cut instead of slicing a line in half, so it reads as

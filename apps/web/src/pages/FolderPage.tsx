@@ -53,6 +53,7 @@ import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
+import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { ImportArchiveDialog } from "../components/ImportArchiveDialog.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
@@ -155,6 +156,7 @@ export function FolderPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [copiedOutline, setCopiedOutline] = useState(false);
+  const [editDescription, setEditDescription] = useState(false);
   const [linkTarget, setLinkTarget] = useState<{
     kind: "folder" | "bookmark";
     id: string;
@@ -731,7 +733,26 @@ export function FolderPage() {
         </div>
       )}
 
-      {folder?.description && <CollapsibleRichText html={folder.description} />}
+      {folder?.description && (
+        <CollapsibleRichText
+          html={folder.description}
+          onEdit={() => setEditDescription(true)}
+        />
+      )}
+
+      {editDescription && folder && (
+        <DescriptionEditDialog
+          entity="folder"
+          id={folder.id}
+          title={folder.name}
+          html={folder.description ?? ""}
+          baseRev={folder.rev}
+          onClose={() => setEditDescription(false)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["folders"] });
+          }}
+        />
+      )}
 
       {selection.size > 0 && (
         <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">

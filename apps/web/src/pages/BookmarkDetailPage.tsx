@@ -29,6 +29,7 @@ import { EntityBanner } from "../components/EntityBanner.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { KebabMenu } from "../components/KebabMenu.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
+import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 
@@ -66,6 +67,7 @@ export function BookmarkDetailPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [editDescription, setEditDescription] = useState(false);
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
 
   if (!q.data) return <div className="text-slate-400">{t("common.loading")}</div>;
@@ -239,7 +241,27 @@ export function BookmarkDetailPage() {
         />
       )}
 
-      {b.description && <CollapsibleRichText html={b.description} />}
+      {b.description && (
+        <CollapsibleRichText
+          html={b.description}
+          onEdit={() => setEditDescription(true)}
+        />
+      )}
+
+      {editDescription && (
+        <DescriptionEditDialog
+          entity="bookmark"
+          id={b.id}
+          title={b.title}
+          html={b.description ?? ""}
+          baseRev={b.rev}
+          onClose={() => setEditDescription(false)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
+            qc.invalidateQueries({ queryKey: ["bookmarks"] });
+          }}
+        />
+      )}
 
       <div className="space-y-2">
         <div className="flex items-center gap-2">
