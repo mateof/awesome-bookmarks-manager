@@ -94,9 +94,12 @@ one port.
   cannot carry: tags, descriptions, colours, icons and favourites. Exports a
   whole account, one folder's subtree or a single bookmark, and imports back
   **into a chosen folder as copies** (fresh ids, tags matched by name), so it
-  never overwrites what you already have. Optionally sealed with a passphrase.
-  Unlike a cloud backup, whose contents are sealed with the owner's key, an
-  archive travels between accounts and instances.
+  never overwrites what you already have. Exporting opens a dialog for the two
+  choices only you can make: whether to include the archived page snapshots
+  (off by default, they are the bulk of the size) and an optional passphrase,
+  asked twice because a typo produces a file nobody can open. Unlike a cloud
+  backup, whose contents are sealed with the owner's key, an archive travels
+  between accounts and instances.
 - **Browser bookmarks bar** in the header (Chrome-style dropdowns); click a
   folder to open all its bookmarks in tabs at once.
 - **Light / dark / system theme** with persisted preference.

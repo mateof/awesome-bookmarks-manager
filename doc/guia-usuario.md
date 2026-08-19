@@ -562,7 +562,17 @@ existen en ese formato.
 
 Para eso está el **archivo `.abz`**, el formato propio de la aplicación. En el
 menú de una carpeta tienes **Exportar (formato de la app)** y también
-**Importar archivo aquí**.
+**Importar archivo aquí**; en la ficha de un bookmark, el menú tiene la misma
+opción de exportar para ese enlace suelto.
+
+Al exportar se abre un diálogo con las dos decisiones que no se pueden tomar
+por ti:
+
+- **Incluir copias archivadas de las páginas.** Desactivado por defecto: son la
+  mayor parte del tamaño del archivo.
+- **Contraseña.** Si la pones, el contenido viaja cifrado y hará falta esa misma
+  contraseña para importarlo. Se pide dos veces porque no hay forma de
+  recuperarla: una errata no falla, produce un archivo que no abre nadie.
 
 Qué lo distingue de una copia en la nube:
 
@@ -576,12 +586,9 @@ reciben identificadores nuevos y los tags se emparejan **por nombre**, creando
 los que falten. Si importas el mismo archivo dos veces tendrás dos copias, que
 es lo esperable, en vez de un reemplazo silencioso.
 
-Las instantáneas de páginas no se incluyen por defecto: son la mayor parte del
-tamaño y casi nunca es lo que quieres mover.
-
-Si le pones contraseña, el contenido viaja cifrado y hará falta esa misma
-contraseña para importarlo. Sin ella el archivo lleva tus datos en claro, así
-que trátalo como tratarías la exportación de un gestor de contraseñas.
+Sin contraseña el archivo lleva tus datos en claro, así que trátalo como
+tratarías la exportación de un gestor de contraseñas. El diálogo te lo avisa
+mientras el campo esté vacío.
 
 ---
 

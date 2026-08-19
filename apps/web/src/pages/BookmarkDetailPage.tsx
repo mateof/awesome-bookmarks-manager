@@ -4,6 +4,7 @@ import {
   Bookmark,
   ClipboardCopy,
   ExternalLink,
+  FileArchive,
   History,
   Image as ImageIcon,
   Maximize2,
@@ -25,6 +26,7 @@ import { LetterIcon } from "../components/LetterIcon.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
+import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { KebabMenu } from "../components/KebabMenu.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
@@ -63,6 +65,7 @@ export function BookmarkDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
 
   if (!q.data) return <div className="text-slate-400">{t("common.loading")}</div>;
@@ -202,6 +205,13 @@ export function BookmarkDetailPage() {
                 onClick: () => setShowShare(true),
               },
               {
+                // The app's own format, for one bookmark: the server has
+                // always supported the scope, it just had nothing calling it.
+                label: t("archive.exportBookmark"),
+                icon: <FileArchive className="h-4 w-4" />,
+                onClick: () => setShowExport(true),
+              },
+              {
                 label: t("common.delete"),
                 icon: <Trash2 className="h-4 w-4" />,
                 danger: true,
@@ -278,6 +288,13 @@ export function BookmarkDetailPage() {
           sourceType="bookmark"
           sourceId={b.id}
           onClose={() => setShowShare(false)}
+        />
+      )}
+      {showExport && (
+        <ExportArchiveDialog
+          scope="bookmark"
+          id={b.id}
+          onClose={() => setShowExport(false)}
         />
       )}
       {showHistory && (

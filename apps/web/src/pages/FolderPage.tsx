@@ -51,6 +51,7 @@ import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { ImportArchiveDialog } from "../components/ImportArchiveDialog.js";
+import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { TagChipList } from "../components/TagChip.js";
 import { TagPicker } from "../components/TagPicker.js";
@@ -149,6 +150,7 @@ export function FolderPage() {
   } | null>(null);
   const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [linkTarget, setLinkTarget] = useState<{
     kind: "folder" | "bookmark";
     id: string;
@@ -574,18 +576,12 @@ export function FolderPage() {
           {
             // The app's own format: keeps tags, descriptions, colours, icons
             // and favourites, none of which survive the Netscape HTML export.
+            // It opens a dialog rather than downloading on the spot because
+            // the passphrase and the snapshots are choices only the user can
+            // make.
             label: t("archive.exportFolder"),
             icon: <FileArchive className="h-4 w-4" />,
-            onClick: () =>
-              void api
-                .exportArchive(
-                  folderId
-                    ? { scope: "folder", id: folderId }
-                    : { scope: "account" },
-                )
-                .catch(async (e) =>
-                  dlg.alert(e instanceof Error ? e.message : t("common.error")),
-                ),
+            onClick: () => setExportOpen(true),
           },
           {
             label: t("archive.importHere"),
@@ -886,6 +882,14 @@ export function FolderPage() {
           }}
         />
       )}
+      {exportOpen && (
+        <ExportArchiveDialog
+          scope={folderId ? "folder" : "account"}
+          {...(folderId ? { id: folderId } : {})}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
+
       {importOpen && (
         <ImportArchiveDialog
           parentId={folderId}
