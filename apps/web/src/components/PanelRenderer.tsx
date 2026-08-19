@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { fuzzyScoreAny } from "../fuzzy.js";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
+import { opaqueSurface } from "../lib/contrast.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
 import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
 import { downloadPanelBookmarks } from "../lib/panelExport.js";
@@ -428,7 +429,11 @@ function PanelSearch({
       <div
         onClick={(e) => e.stopPropagation()}
         className="mt-[8vh] w-full max-w-xl overflow-hidden motion-safe:animate-[spotPop_.14s_ease-out] sm:rounded-2xl"
-        style={{ background: t.surface, color: t.text, border: `1px solid ${t.border}` }}
+        style={{
+          background: opaqueSurface(t.surface, t.bg, t.text),
+          color: t.text,
+          border: `1px solid ${t.border}`,
+        }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 1rem", borderBottom: `1px solid ${t.border}` }}>
           <Search size={18} style={{ color: t.muted, flexShrink: 0 }} />
@@ -1130,9 +1135,13 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
+        data-testid="panel-modal"
         className="flex w-full flex-col overflow-y-auto overscroll-contain rounded-t-2xl sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
         style={{
-          background: t.surface,
+          // Opaque on purpose: several templates make the surface translucent,
+          // which reads well on a card over the background and makes a modal's
+          // text unreadable. See opaqueSurface.
+          background: opaqueSurface(t.surface, t.bg, t.text),
           color: t.text,
           border: `1px solid ${t.border}`,
           padding: "1.25rem",

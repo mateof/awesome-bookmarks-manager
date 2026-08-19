@@ -137,3 +137,56 @@ test("panel en árbol: el icono de texto también está en las ramas", async ({
   await page.getByLabel("Ver el texto de Rama").click();
   await expect(page.getByText("CODIGO-COPIABLE")).toBeVisible();
 });
+
+test("panel: la ventana es opaca aunque la plantilla sea translúcida", async ({
+  browser,
+}) => {
+  // Several templates make `surface` translucent, which is right for a card
+  // sitting over the background scene and wrong for a modal: whatever is
+  // behind shows through the text. The tree template is the extreme case at 4%
+  // opaque, so it is the one worth asserting on.
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "panel.desc.opaque.e2e@example.com",
+    nickname: "paneldescopaque",
+    password: "OpaqueModalPanel26x",
+  });
+  const req = page.request;
+
+  const root = await (
+    await req.post("/api/folders", { data: { name: "Opaca" } })
+  ).json();
+  await req.post("/api/folders", {
+    data: { name: "Con notas", parentId: root.id, description: FOLDER_HTML },
+  });
+  await req.post("/api/panels", {
+    data: {
+      title: "Opaca",
+      slug: "opaca-e2e",
+      folderId: root.id,
+      accessMode: "public",
+      templateId: "builtin:tree",
+    },
+  });
+
+  await page.goto("/panel/opaca-e2e");
+  await page.getByLabel("Ver el texto de Con notas").click();
+  await expect(page.getByText("CODIGO-COPIABLE")).toBeVisible();
+
+  // The card in the panel keeps its translucency; the modal does not.
+  const cardBg = await page
+    .getByRole("button", { name: /^Con notas/ })
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  // Still an rgba with an alpha below 1: a card is meant to let the panel's
+  // background through.
+  expect(cardBg).toMatch(/^rgba\(/);
+
+  const modalBg = await page
+    .getByTestId("panel-modal")
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  // `rgb(...)` without an alpha channel is the whole point: anything with one
+  // lets the panel show through the text.
+  expect(modalBg).toMatch(/^rgb\(\d+, \d+, \d+\)$/);
+});

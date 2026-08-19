@@ -234,3 +234,45 @@ export function contrastClass(tone: Tone): string {
   if (tone === "dark") return "on-light-bg";
   return "";
 }
+
+/**
+ * An opaque version of a panel template's `surface`.
+ *
+ * Several templates make the surface translucent, which is right for a card
+ * floating over the page: the background scene shows through and the card sits
+ * *in* the design. It is wrong for a modal, where whatever is behind it shows
+ * through the text instead, and the more translucent the template, the less
+ * readable it gets (one of the tree templates is 4% opaque).
+ *
+ * So the modal composites the surface over an opaque base rather than picking
+ * an arbitrary panel colour: the result is the exact colour the card *appears*
+ * to be over its own background, just without letting anything through.
+ *
+ * The base is the template's own `bg` when that is a plain colour. When it is
+ * a gradient or an image (a string this cannot parse), the theme's text colour
+ * decides: light text means the design is dark, so the base is near-black, and
+ * the other way round. That is the same inference the rest of the panel makes.
+ */
+export function opaqueSurface(
+  surface: string,
+  bg: string,
+  text: string,
+): string {
+  const s = parseColor(surface);
+  const fallbackDark = (colorLuminance(text) ?? 0) > 0.5;
+  const base =
+    parseColor(bg) ??
+    (fallbackDark
+      ? { r: 17, g: 20, b: 26, a: 1 }
+      : { r: 255, g: 255, b: 255, a: 1 });
+
+  if (!s) {
+    // An unparseable surface (a gradient of its own, say) cannot be
+    // composited; the base alone is opaque and in keeping with the theme.
+    return `rgb(${base.r}, ${base.g}, ${base.b})`;
+  }
+  if (s.a >= 0.99) return surface;
+
+  const mix = (a: number, b: number) => Math.round(a * s.a + b * (1 - s.a));
+  return `rgb(${mix(s.r, base.r)}, ${mix(s.g, base.g)}, ${mix(s.b, base.b)})`;
+}
