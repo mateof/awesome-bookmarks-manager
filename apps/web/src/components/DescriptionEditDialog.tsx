@@ -71,9 +71,16 @@ export function DescriptionEditDialog({
   });
 
   return (
-    <Modal title={t("richText.editTitle", { name: title })} onClose={onClose} size="lg">
-      <div className="space-y-2">
-        <RichTextEditor value={value} onChange={setValue} />
+    <Modal
+      title={t("richText.editTitle", { name: title })}
+      onClose={onClose}
+      size="lg"
+      fill
+    >
+      {/* Fixed height, and the text is the only part that scrolls: the toolbar
+          and the buttons stay put however long the note gets. */}
+      <RichTextEditor value={value} onChange={setValue} fill />
+      <div className="shrink-0 space-y-2">
         {err && <div className="text-sm text-red-600">{err}</div>}
         <div className="flex justify-end gap-2">
           <button

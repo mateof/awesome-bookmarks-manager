@@ -23,6 +23,13 @@ interface Props {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
+  /**
+   * Take the height its container gives it and scroll the text inside, rather
+   * than growing with the content. For a dialog whose whole job is this
+   * editor: growing pushes the toolbar and the save button out of the dialog's
+   * own scroll, which is the moment you most want them.
+   */
+  fill?: boolean;
 }
 
 /**
@@ -31,7 +38,7 @@ interface Props {
  * passwords, usernames, etc. — content is server-side encrypted at rest.
  * Use the eye toggle to redact sensitive fields when shoulder-surfing.
  */
-export function RichTextEditor({ value, onChange, placeholder }: Props) {
+export function RichTextEditor({ value, onChange, placeholder, fill = false }: Props) {
   const { t } = useTranslation();
   const [redactSensitive, setRedactSensitive] = useState(false);
   const editor = useEditor({
@@ -68,14 +75,19 @@ export function RichTextEditor({ value, onChange, placeholder }: Props) {
     <div
       className={`rounded border border-slate-300 dark:border-slate-700 ${
         redactSensitive ? "[&_.tiptap_*]:blur-sm" : ""
-      }`}
+      } ${fill ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}`}
     >
       <Toolbar
         editor={editor}
         redactSensitive={redactSensitive}
         onToggleRedact={() => setRedactSensitive((r) => !r)}
       />
-      <div className="p-2">
+      {/* With `fill`, this is the only thing that scrolls: the toolbar above
+          and whatever the dialog puts below stay where they are. */}
+      <div
+        data-testid="editor-scroll"
+        className={fill ? "min-h-0 flex-1 overflow-y-auto p-2" : "p-2"}
+      >
         <EditorContent
           editor={editor}
           className="tiptap"
@@ -97,7 +109,7 @@ function Toolbar({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
+    <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
       <Btn
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}

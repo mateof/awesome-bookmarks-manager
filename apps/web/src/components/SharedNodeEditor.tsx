@@ -93,15 +93,17 @@ export function SharedNodeEditor({
   });
 
   return (
-    <Modal title={t("shared.editNode")} onClose={onClose} size="lg">
-      <div className="space-y-2">
+    // Same shape as the description dialog and the same reason: the editor is
+    // the point of this dialog, so it is what should scroll.
+    <Modal title={t("shared.editNode")} onClose={onClose} size="lg" fill>
+      <div className="flex min-h-0 flex-1 flex-col gap-2">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={
             isBookmark ? t("bookmark.fieldTitle") : t("folder.fieldFolderName")
           }
-          className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+          className="w-full shrink-0 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
         />
         {isBookmark && (
           <input
@@ -109,12 +111,12 @@ export function SharedNodeEditor({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder={t("bookmark.fieldUrl")}
-            className="w-full rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
+            className="w-full shrink-0 rounded border border-slate-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
           />
         )}
-        <RichTextEditor value={description} onChange={setDescription} />
-        {err && <div className="text-sm text-red-600">{err}</div>}
-        <div className="flex justify-end gap-2">
+        <RichTextEditor value={description} onChange={setDescription} fill />
+        {err && <div className="shrink-0 text-sm text-red-600">{err}</div>}
+        <div className="flex shrink-0 justify-end gap-2">
           <button
             type="button"
             onClick={onClose}

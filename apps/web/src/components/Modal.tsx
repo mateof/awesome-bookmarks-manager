@@ -8,6 +8,17 @@ interface Props {
   children: React.ReactNode;
   onClose: () => void;
   size?: "sm" | "md" | "lg" | "xl";
+  /**
+   * Give the dialog a fixed height and let its content do the scrolling.
+   *
+   * The default is the right shape for a form: the dialog is as tall as it
+   * needs to be and scrolls as a whole. It is the wrong shape for an editor,
+   * where scrolling the dialog takes the toolbar and the save button off
+   * screen exactly when a long text makes you want them. With `fill`, the
+   * children get a flex column to lay themselves out in and are responsible
+   * for their own overflow.
+   */
+  fill?: boolean;
 }
 
 const SIZE = {
@@ -17,7 +28,13 @@ const SIZE = {
   xl: "max-w-5xl",
 };
 
-export function Modal({ title, children, onClose, size = "md" }: Props) {
+export function Modal({
+  title,
+  children,
+  onClose,
+  size = "md",
+  fill = false,
+}: Props) {
   const { t } = useTranslation();
   const backdrop = useBackdropDismiss(onClose);
   useEffect(() => {
@@ -34,10 +51,14 @@ export function Modal({ title, children, onClose, size = "md" }: Props) {
       {...backdrop}
     >
       <div
-        className={`w-full ${SIZE[size]} max-h-[90vh] overflow-auto space-y-3 rounded-t-lg sm:rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900`}
+        className={`w-full ${SIZE[size]} rounded-t-lg sm:rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 ${
+          fill
+            ? "flex h-[85vh] max-h-[90vh] flex-col gap-3 overflow-hidden"
+            : "max-h-[90vh] space-y-3 overflow-auto"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center">
+        <div className={`flex items-center ${fill ? "shrink-0" : ""}`}>
           <h3 className="text-base font-semibold">{title}</h3>
           <button
             onClick={onClose}

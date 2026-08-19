@@ -135,3 +135,53 @@ test("el texto compartido no trae lápiz", async ({ browser }) => {
   await page.goto("/panel/sin-lapiz-e2e");
   await expect(page.getByRole("button", { name: "Editar el texto" })).toHaveCount(0);
 });
+
+test("el editor de texto: barra y botones fijos, y el scroll va dentro", async ({
+  browser,
+}) => {
+  // The dialog used to scroll as a whole, so a long note pushed the toolbar
+  // and the save button out of view exactly when you wanted them.
+  const ctx = await browser.newContext({ viewport: { width: 1000, height: 780 } });
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "desc.editor.scroll.e2e@example.com",
+    nickname: "desceditorscroll",
+    password: "ScrollInsideText26x",
+  });
+
+  const long = Array.from(
+    { length: 40 },
+    (_, i) => `<p>Parrafo ${i + 1} de unas notas muy largas.</p>`,
+  ).join("");
+  const folder = await (
+    await page.request.post("/api/folders", {
+      data: { name: "Notas largas", description: long },
+    })
+  ).json();
+
+  await page.goto(`/folder/${folder.id}`);
+  await page.getByRole("button", { name: "Editar el texto" }).click();
+
+  const save = page.getByRole("button", { name: "Guardar" });
+  const bold = page.getByRole("button", { name: "Negrita" });
+  await expect(save).toBeInViewport();
+  await expect(bold).toBeInViewport();
+  const saveBefore = (await save.boundingBox())!;
+  const boldBefore = (await bold.boundingBox())!;
+
+  // The text area is the thing that scrolls.
+  const area = page.getByTestId("editor-scroll");
+  await area.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect
+    .poll(() => area.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(100);
+
+  // And the chrome has not moved a pixel.
+  await expect(save).toBeInViewport();
+  await expect(bold).toBeInViewport();
+  expect((await save.boundingBox())!.y).toBeCloseTo(saveBefore.y, 0);
+  expect((await bold.boundingBox())!.y).toBeCloseTo(boldBefore.y, 0);
+});
