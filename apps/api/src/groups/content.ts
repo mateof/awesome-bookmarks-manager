@@ -306,6 +306,13 @@ function loadFolder(
 export function mergeEditorFieldEdits(
   fresh: SharedContent,
   old: SharedContent,
+  /**
+   * Nodes a member created that have not been written back to the owner's rows
+   * yet. `fresh` is built from those rows, so it does not know about them; if
+   * they were not carried over, an owner's edit anywhere in the subtree would
+   * silently delete a bookmark a member had just added.
+   */
+  pendingIds: Set<string> = new Set(),
 ): SharedContent {
   const oldById = new Map<string, SharedContent>();
   const index = (n: SharedContent): void => {
@@ -331,12 +338,21 @@ export function mergeEditorFieldEdits(
   };
   const applyFolder = (n: SharedFolderContent): SharedFolderContent => {
     const prev = oldById.get(n.id);
+    const prevFolder = prev && prev.type === "folder" ? prev : null;
+    // Anything the group added here and the owner has not received yet, put
+    // back where it was.
+    const keptBookmarks = (prevFolder?.bookmarks ?? []).filter(
+      (b) => pendingIds.has(b.id) && !n.bookmarks.some((x) => x.id === b.id),
+    );
+    const keptFolders = (prevFolder?.subfolders ?? []).filter(
+      (f) => pendingIds.has(f.id) && !n.subfolders.some((x) => x.id === f.id),
+    );
     return {
       ...n,
-      name: prev && prev.type === "folder" ? prev.name : n.name,
+      name: prevFolder ? prevFolder.name : n.name,
       description: prev ? prev.description : n.description,
-      bookmarks: n.bookmarks.map(applyBookmark),
-      subfolders: n.subfolders.map(applyFolder),
+      bookmarks: [...n.bookmarks.map(applyBookmark), ...keptBookmarks],
+      subfolders: [...n.subfolders.map(applyFolder), ...keptFolders],
     };
   };
 

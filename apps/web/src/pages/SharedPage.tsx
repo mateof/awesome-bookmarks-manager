@@ -22,8 +22,10 @@ import {
   type SharedFolderPayload,
   type SharedPayload,
 } from "../components/SharedNodeEditor.js";
+import { SharedFolderActions } from "../components/SharedFolderActions.js";
 import {
   SharedFolderBody,
+  type ShareEditContext,
   SharedTrail,
   UpLevelButton,
   useSharedPath,
@@ -285,6 +287,17 @@ function SharedItemView({ shareId }: { shareId: string }) {
           shareId={shareId}
           root={data.content}
           canEdit={canEdit}
+          {...(canEdit
+            ? {
+                edit: {
+                  baseRev: data.rev,
+                  onDone: () =>
+                    qc.invalidateQueries({
+                      queryKey: ["shared-content", shareId],
+                    }),
+                },
+              }
+            : {})}
           onEdit={setEditing}
         />
       ) : (
@@ -355,11 +368,13 @@ function FolderShareView({
   shareId,
   root,
   canEdit,
+  edit,
   onEdit,
 }: {
   shareId: string;
   root: SharedFolderPayload;
   canEdit: boolean;
+  edit?: ShareEditContext;
   onEdit: (node: SharedPayload) => void;
 }) {
   const nav = useSharedPath(root);
@@ -388,10 +403,20 @@ function FolderShareView({
         <h1 className="text-xl font-semibold">{nav.node.name}</h1>
         {canEdit && <EditButton onClick={() => onEdit(nav.node)} />}
       </div>
+      {canEdit && edit && (
+        <SharedFolderActions
+          shareId={shareId}
+          folderId={nav.node.id}
+          baseRev={edit.baseRev}
+          onDone={edit.onDone}
+        />
+      )}
+
       <SharedFolderBody
         shareId={shareId}
         node={nav.node}
         canEdit={canEdit}
+        {...(edit ? { edit } : {})}
         onOpen={nav.open}
         onEdit={onEdit}
       />

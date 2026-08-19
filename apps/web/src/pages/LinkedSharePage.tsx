@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { SharedFolderActions } from "../components/SharedFolderActions.js";
 import {
   SharedFolderBody,
   SharedTrail,
@@ -47,6 +48,8 @@ export function LinkedSharePage() {
   // against an empty root while the share is loading.
   const nav = useSharedPath(root);
   const [editing, setEditing] = useState<SharedPayload | null>(null);
+  const refresh = () =>
+    qc.invalidateQueries({ queryKey: ["shared-content", shareId] });
 
   if (folders.isLoading)
     return <div className="text-slate-400">{t("common.loading")}</div>;
@@ -101,10 +104,20 @@ export function LinkedSharePage() {
         )}
       </div>
 
+      {canEdit && (
+        <SharedFolderActions
+          shareId={shareId}
+          folderId={nav.node.id}
+          baseRev={data.rev}
+          onDone={refresh}
+        />
+      )}
+
       <SharedFolderBody
         shareId={shareId}
         node={nav.node}
         canEdit={canEdit}
+        {...(canEdit ? { edit: { baseRev: data.rev, onDone: refresh } } : {})}
         onOpen={nav.open}
         onEdit={setEditing}
       />

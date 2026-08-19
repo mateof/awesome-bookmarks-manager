@@ -120,6 +120,25 @@ recorre carpeta a carpeta con el mismo botón de *Subir de nivel* que usas en la
 tuya. Si cambias cualquiera de esas cosas después de compartir, el grupo lo ve
 en cuanto se vuelve a sellar la copia, que ocurre solo con guardar el cambio.
 
+**Con permiso de edición se puede trabajar dentro.** Si compartes en modo
+*editor*, quien reciba la carpeta puede crear subcarpetas y bookmarks dentro,
+renombrarlos, cambiarles el texto y borrarlos, desde la carpeta enlazada en su
+inicio o desde *Compartidos*.
+
+Eso ocurre en dos tiempos, y conviene saberlo:
+
+- **El grupo lo ve al momento.** El cambio entra en la copia compartida, que va
+  cifrada con la clave del grupo, así que cualquiera que abra el compartido lo
+  ve enseguida.
+- **La carpeta original lo recibe cuando su dueño vuelva a entrar.** Tus
+  carpetas están cifradas con *tu* clave y nadie más la tiene, ni el servidor
+  mientras tú no estés. El cambio queda en cola y se aplica solo, sin que tengas
+  que hacer nada, la próxima vez que inicies sesión.
+
+Lo que se crea conserva su identidad en los dos sitios, así que cuando llega a
+tu carpeta no aparece como una copia nueva: es el mismo elemento que el grupo
+lleva viendo desde el principio.
+
 Un detalle que conviene saber: los iconos y los fondos van cifrados con tu
 clave, así que nadie más puede leerlos directamente. Lo que se comparte es una
 **copia** de esas imágenes recifrada con la clave del grupo, y esa copia ocupa

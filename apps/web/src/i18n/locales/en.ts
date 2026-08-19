@@ -766,6 +766,15 @@ const en = {
     empty: "This shared folder is empty.",
     itemCount: "{{count}} items",
   },
+  sharedEdit: {
+    newFolder: "New folder",
+    newBookmark: "New bookmark",
+    newFolderTitle: "New folder in the shared folder",
+    newBookmarkTitle: "New bookmark in the shared folder",
+    deleteNode: "Remove from the shared folder",
+    confirmDelete: "Remove \"{{name}}\" from the shared folder? It goes for the whole group.",
+    syncHint: "The group sees it at once; it reaches the original folder when its owner next signs in.",
+  },
   shareToGroup: {
     titleFolder: "Share folder with group",
     titleBookmark: "Share bookmark with group",

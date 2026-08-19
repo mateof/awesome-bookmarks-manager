@@ -6,6 +6,7 @@ import { lookStyle, useLookClass } from "../lib/entityLook.js";
 import { CollapsibleRichText } from "./CollapsibleRichText.js";
 import { LetterIcon } from "./LetterIcon.js";
 import { RichTextView } from "./RichTextView.js";
+import { SharedDeleteButton } from "./SharedFolderActions.js";
 import { TagChip } from "./TagChip.js";
 import type {
   SharedBookmarkPayload,
@@ -132,6 +133,13 @@ function SharedTags({ tags }: { tags: SharedPayload["tags"] }) {
   );
 }
 
+/** What a card needs to offer removal: the share's current rev (for the
+ * optimistic-concurrency check) and what to do once it lands. */
+export interface ShareEditContext {
+  baseRev: number;
+  onDone: () => void;
+}
+
 function CardEdit({ onEdit }: { onEdit: () => void }) {
   const { t } = useTranslation();
   return (
@@ -154,12 +162,14 @@ function FolderCard({
   shareId,
   folder,
   canEdit,
+  edit,
   onOpen,
   onEdit,
 }: {
   shareId: string;
   folder: SharedFolderPayload;
   canEdit: boolean;
+  edit?: ShareEditContext;
   onOpen: () => void;
   onEdit: () => void;
 }) {
@@ -200,7 +210,20 @@ function FolderCard({
           <SharedTags tags={folder.tags} />
         </div>
       </button>
-      {canEdit && <CardEdit onEdit={onEdit} />}
+      {canEdit && (
+        <span className="flex shrink-0 items-center">
+          <CardEdit onEdit={onEdit} />
+          {edit && (
+            <SharedDeleteButton
+              shareId={shareId}
+              nodeId={folder.id}
+              label={folder.name}
+              baseRev={edit.baseRev}
+              onDone={edit.onDone}
+            />
+          )}
+        </span>
+      )}
     </div>
   );
 }
@@ -209,11 +232,13 @@ function BookmarkCard({
   shareId,
   bookmark,
   canEdit,
+  edit,
   onEdit,
 }: {
   shareId: string;
   bookmark: SharedBookmarkPayload;
   canEdit: boolean;
+  edit?: ShareEditContext;
   onEdit: () => void;
 }) {
   const look = {
@@ -266,7 +291,20 @@ function BookmarkCard({
           <SharedTags tags={bookmark.tags} />
         </div>
       </a>
-      {canEdit && <CardEdit onEdit={onEdit} />}
+      {canEdit && (
+        <span className="flex shrink-0 items-center">
+          <CardEdit onEdit={onEdit} />
+          {edit && (
+            <SharedDeleteButton
+              shareId={shareId}
+              nodeId={bookmark.id}
+              label={bookmark.title}
+              baseRev={edit.baseRev}
+              onDone={edit.onDone}
+            />
+          )}
+        </span>
+      )}
     </div>
   );
 }
@@ -276,12 +314,15 @@ export function SharedFolderBody({
   shareId,
   node,
   canEdit,
+  edit,
   onOpen,
   onEdit,
 }: {
   shareId: string;
   node: SharedFolderPayload;
   canEdit: boolean;
+  /** Present when the viewer may change the share's shape. */
+  edit?: ShareEditContext;
   onOpen: (id: string) => void;
   onEdit: (node: SharedPayload) => void;
 }) {
@@ -302,6 +343,7 @@ export function SharedFolderBody({
               shareId={shareId}
               folder={sf}
               canEdit={canEdit}
+              {...(edit ? { edit } : {})}
               onOpen={() => onOpen(sf.id)}
               onEdit={() => onEdit(sf)}
             />
@@ -317,6 +359,7 @@ export function SharedFolderBody({
               shareId={shareId}
               bookmark={b}
               canEdit={canEdit}
+              {...(edit ? { edit } : {})}
               onEdit={() => onEdit(b)}
             />
           ))}

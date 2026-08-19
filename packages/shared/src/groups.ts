@@ -118,3 +118,38 @@ export const SentInvitationSchema = z.object({
   status: InvitationStatusSchema,
 });
 export type SentInvitation = z.infer<typeof SentInvitationSchema>;
+
+/* ------------------------------------------------------------------ */
+/* Structural edits inside an editor share                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What a member with editor access can do to the *shape* of a shared folder,
+ * as opposed to the text of a node that was already there.
+ *
+ * The id of a new node is chosen by the server when the operation is accepted
+ * and used both in the share payload and later in the owner's real row, so the
+ * two never have to be matched up by name afterwards.
+ */
+export const CreateSharedFolderBodySchema = z.object({
+  /** Node id inside the share; null = the share's own root. */
+  parentId: z.string().uuid().nullable().optional(),
+  name: z.string().trim().min(1).max(256),
+  baseRev: z.number().int().optional(),
+});
+export type CreateSharedFolderBody = z.infer<typeof CreateSharedFolderBodySchema>;
+
+export const CreateSharedBookmarkBodySchema = z.object({
+  folderId: z.string().uuid().nullable().optional(),
+  url: z.string().url().max(8192),
+  title: z.string().trim().min(1).max(1024).optional(),
+  baseRev: z.number().int().optional(),
+});
+export type CreateSharedBookmarkBody = z.infer<
+  typeof CreateSharedBookmarkBodySchema
+>;
+
+export const DeleteSharedNodeBodySchema = z.object({
+  baseRev: z.number().int().optional(),
+});
+export type DeleteSharedNodeBody = z.infer<typeof DeleteSharedNodeBodySchema>;

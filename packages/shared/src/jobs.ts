@@ -8,6 +8,8 @@ export const JobTypeSchema = z.enum([
   "import",
   "share_seal",
   "group_share_seal",
+  // A member edited an editor share; replay it into the owner's real rows.
+  "group_share_apply",
   "panel_rebuild",
 ]);
 export type JobType = z.infer<typeof JobTypeSchema>;

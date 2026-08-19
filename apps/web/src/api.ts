@@ -733,6 +733,27 @@ export const api = {
   listShared: () => request<SharedItem[]>("/shared"),
   getSharedContent: (shareId: string) =>
     request<unknown>(`/shared/${shareId}`),
+  createSharedFolder: (
+    shareId: string,
+    body: { parentId?: string | null; name: string; baseRev?: number },
+  ) =>
+    request<{ id: string; rev: number }>(`/shared/${shareId}/folders`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  createSharedBookmark: (
+    shareId: string,
+    body: { folderId?: string | null; url: string; title?: string; baseRev?: number },
+  ) =>
+    request<{ id: string; rev: number }>(`/shared/${shareId}/bookmarks`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteSharedNode: (shareId: string, nodeId: string, baseRev?: number) =>
+    request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ baseRev }),
+    }),
   editSharedNode: (shareId: string, nodeId: string, body: EditSharedNodeBody) =>
     request<unknown>(`/shared/${shareId}/node/${nodeId}`, {
       method: "PATCH",

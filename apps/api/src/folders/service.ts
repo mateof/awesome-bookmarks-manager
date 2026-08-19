@@ -242,6 +242,9 @@ function nextPosition(ctx: AuthedContext, parentId: string | null): number {
 export function createFolder(
   ctx: AuthedContext,
   input: {
+    /** Reuse a known id instead of minting one. Only the share write-back
+     * passes this: the id already exists in the shared payload. */
+    id?: string;
     parentId?: string | null;
     name: string;
     description?: string;
@@ -258,7 +261,7 @@ export function createFolder(
   const tagIds = input.tagIds ?? [];
   ensureTagsExist(ctx, tagIds);
 
-  const id = uuidv4();
+  const id = input.id ?? uuidv4();
   const db = getDb();
   const cleanDescription = sanitizeRichText(input.description ?? null);
   db.insert(folders)

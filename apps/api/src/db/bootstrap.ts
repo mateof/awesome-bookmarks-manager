@@ -298,6 +298,21 @@ export function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS group_shares_group_idx ON group_shares(group_id);
 
+    -- Structural edits a group member made inside an editor share, waiting to
+    -- be written back to the owner's real rows. They cannot be applied when
+    -- they happen: the owner's content is encrypted with the owner's key, and
+    -- the member does not have it. See groups/ops.ts.
+    CREATE TABLE IF NOT EXISTS group_share_ops (
+      id TEXT PRIMARY KEY,
+      share_id TEXT NOT NULL REFERENCES group_shares(id) ON DELETE CASCADE,
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      actor_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL,
+      payload_ct BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS group_share_ops_share_idx ON group_share_ops(share_id);
+
     CREATE TABLE IF NOT EXISTS entity_versions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

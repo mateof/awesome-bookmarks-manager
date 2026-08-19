@@ -132,7 +132,13 @@ one port.
   refused with a `413` while reading, editing and deleting keep working, so a
   user can always free their own space.
 - **Groups** — invite people by email, share folders or bookmarks with the
-  group; group members see them in a "Shared with me" section. A share travels
+  group; group members see them in a "Shared with me" section. An **editor**
+  share is genuinely collaborative: members create folders and bookmarks inside
+  it, rename them and delete them. That happens in two stages by necessity —
+  the owner's rows are encrypted with the owner's key, which nobody else has —
+  so the change lands in the shared copy at once (the whole group sees it) and
+  is replayed into the owner's real folders the next time they sign in, keeping
+  the same ids so nothing turns into a duplicate of itself. A share travels
   with the look its owner gave it: background colour or image, custom icon,
   forced text tone and tags, all browsed one folder at a time with the same
   up-one-level button as your own view. Because icons and backgrounds are

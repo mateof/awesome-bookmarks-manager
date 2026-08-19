@@ -301,6 +301,37 @@ export const groupShares = sqliteTable(
   }),
 );
 
+/**
+ * A structural edit made by a group member inside an editor share, queued
+ * until the owner is next online.
+ *
+ * The member's change lands in the share payload straight away, so the group
+ * sees it at once; this row is what later carries it into the owner's real
+ * folders, which is the only way the two stop drifting apart. Sealed with the
+ * group key, like the payload it came from.
+ */
+export const groupShareOps = sqliteTable(
+  "group_share_ops",
+  {
+    id: text("id").primaryKey(),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => groupShares.id, { onDelete: "cascade" }),
+    groupId: text("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    payloadCt: blob("payload_ct", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    shareIdx: index("group_share_ops_share_idx").on(t.shareId),
+  }),
+);
+
 export const folders = sqliteTable(
   "folders",
   {

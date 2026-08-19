@@ -13,6 +13,7 @@ import {
   sealGroupField,
   unwrapGroupDek,
 } from "../../groups/encryption.js";
+import { pendingNodeIds } from "../../groups/ops.js";
 
 interface Payload {
   groupShareId: string;
@@ -94,7 +95,13 @@ export async function runGroupShareSealJob(
   // edits on surviving nodes so a re-seal never wipes collaborative work.
   let finalContent: SharedContent = content;
   if (row.share.access === "editor" && previousPayload) {
-    finalContent = mergeEditorFieldEdits(content, previousPayload);
+    finalContent = mergeEditorFieldEdits(
+      content,
+      previousPayload,
+      // What a member added and the owner has not received yet: rebuilding
+      // from the owner's rows alone would drop it.
+      pendingNodeIds(row.share.id, row.group.id, groupDek),
+    );
   }
 
   // Copy this share's icons/backgrounds under the group key, then blank out

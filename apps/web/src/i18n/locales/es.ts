@@ -766,6 +766,15 @@ const es = {
     empty: "Esta carpeta compartida está vacía.",
     itemCount: "{{count}} elementos",
   },
+  sharedEdit: {
+    newFolder: "Nueva carpeta",
+    newBookmark: "Nuevo bookmark",
+    newFolderTitle: "Nueva carpeta en la carpeta compartida",
+    newBookmarkTitle: "Nuevo bookmark en la carpeta compartida",
+    deleteNode: "Eliminar de la carpeta compartida",
+    confirmDelete: "¿Eliminar \"{{name}}\" de la carpeta compartida? Se quitará para todo el grupo.",
+    syncHint: "El grupo lo ve al momento; llega a la carpeta original cuando su dueño vuelva a entrar.",
+  },
   shareToGroup: {
     titleFolder: "Compartir carpeta con grupo",
     titleBookmark: "Compartir bookmark con grupo",

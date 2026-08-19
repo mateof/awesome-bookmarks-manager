@@ -5,6 +5,7 @@ import { isQuotaError } from "../storage/usage.js";
 import { runBackupJob } from "./handlers/backup.js";
 import { runRestoreJob } from "./handlers/restore.js";
 import { runFaviconJob } from "./handlers/favicon.js";
+import { runGroupShareApplyJob } from "./handlers/group_share_apply.js";
 import { runGroupShareSealJob } from "./handlers/group_share_seal.js";
 import { runPanelRebuildJob } from "./handlers/panel_rebuild.js";
 import { runImportJob } from "./handlers/import.js";
@@ -197,6 +198,16 @@ async function dispatch(job: ClaimedJob): Promise<void> {
       const dek = keyCache.get(job.userId);
       if (!dek) throw new Error("DEK not in cache");
       await runGroupShareSealJob(
+        job.userId,
+        dek,
+        job.payload as { groupShareId: string },
+      );
+      return;
+    }
+    case "group_share_apply": {
+      const dek = keyCache.get(job.userId);
+      if (!dek) throw new Error("DEK not in cache");
+      await runGroupShareApplyJob(
         job.userId,
         dek,
         job.payload as { groupShareId: string },

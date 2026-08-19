@@ -337,6 +337,9 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
 export function createBookmark(
   ctx: AuthedContext,
   input: {
+    /** See createFolder: the share write-back reuses the id the member's
+     * change already put in the shared payload. */
+    id?: string;
     folderId?: string | null;
     url: string;
     title?: string;
@@ -354,7 +357,7 @@ export function createBookmark(
   const tagIds = input.tagIds ?? [];
   ensureTagsExist(ctx, tagIds);
 
-  const id = uuidv4();
+  const id = input.id ?? uuidv4();
   const title = input.title?.trim() || input.url;
   // The user can opt-out per-bookmark (input.fetchSnapshot=false), but the
   // global pref overrides any "yes" — once auto_snapshots is off, the only

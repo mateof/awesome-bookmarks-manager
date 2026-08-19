@@ -767,6 +767,15 @@ const gl = {
     empty: "Este cartafol compartido está baleiro.",
     itemCount: "{{count}} elementos",
   },
+  sharedEdit: {
+    newFolder: "Novo cartafol",
+    newBookmark: "Novo bookmark",
+    newFolderTitle: "Novo cartafol no cartafol compartido",
+    newBookmarkTitle: "Novo bookmark no cartafol compartido",
+    deleteNode: "Eliminar do cartafol compartido",
+    confirmDelete: "Queres eliminar \"{{name}}\" do cartafol compartido? Quitarase para todo o grupo.",
+    syncHint: "O grupo veo ao momento; chega ao cartafol orixinal cando o seu dono volva entrar.",
+  },
   shareToGroup: {
     titleFolder: "Compartir cartafol con grupo",
     titleBookmark: "Compartir marcador con grupo",

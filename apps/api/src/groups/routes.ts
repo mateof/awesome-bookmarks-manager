@@ -1,5 +1,8 @@
 import {
   CreateGroupBodySchema,
+  CreateSharedBookmarkBodySchema,
+  CreateSharedFolderBodySchema,
+  DeleteSharedNodeBodySchema,
   EditSharedNodeBodySchema,
   InviteMemberBodySchema,
   ShareToGroupBodySchema,
@@ -15,6 +18,12 @@ import {
   readGroupShareContent,
 } from "./content.js";
 import { copyShareToHome, linkShareToHome } from "./import.js";
+import {
+  createSharedBookmark,
+  createSharedFolder,
+  deleteSharedNode,
+  queueFieldEdit,
+} from "./ops.js";
 import {
   acceptInvitation,
   cancelInvitation,
@@ -253,6 +262,46 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
       return { error: "not_found" };
     }
-    return editSharedNode(ctx, shareId, nodeId, body);
+    const out = editSharedNode(ctx, shareId, nodeId, body);
+    // The payload now has the edit; this is what eventually carries it into
+    // the owner's own folder instead of leaving the two to drift apart.
+    queueFieldEdit(ctx, shareId, nodeId, body);
+    return out;
+  });
+
+  /* --- Structural editing inside an editor share. The change lands in the
+     shared payload at once and is replayed into the owner's real rows when
+     they are next online; see groups/ops.ts. --- */
+
+  app.post("/shared/:shareId/folders", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId } = GroupShareIdParam.parse(req.params);
+    const body = CreateSharedFolderBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    reply.code(201);
+    return createSharedFolder(ctx, shareId, body);
+  });
+
+  app.post("/shared/:shareId/bookmarks", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId } = GroupShareIdParam.parse(req.params);
+    const body = CreateSharedBookmarkBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    reply.code(201);
+    return createSharedBookmark(ctx, shareId, body);
+  });
+
+  app.delete("/shared/:shareId/node/:nodeId", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = DeleteSharedNodeBodySchema.parse(req.body ?? {});
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return deleteSharedNode(ctx, shareId, nodeId, body.baseRev);
   });
 };
