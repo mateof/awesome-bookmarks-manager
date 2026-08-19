@@ -113,6 +113,18 @@ A partir de ahí, quien esté en el grupo ve la carpeta en su sección
 
 ![Lo que ve la persona invitada](images/12-alan-shared.png)
 
+**Se comparte también el aspecto.** La carpeta llega con el fondo (color o
+imagen), el icono, el tono de texto forzado y los tags que le pusiste, y se
+recorre carpeta a carpeta con el mismo botón de *Subir de nivel* que usas en la
+tuya. Si cambias cualquiera de esas cosas después de compartir, el grupo lo ve
+en cuanto se vuelve a sellar la copia, que ocurre solo con guardar el cambio.
+
+Un detalle que conviene saber: los iconos y los fondos van cifrados con tu
+clave, así que nadie más puede leerlos directamente. Lo que se comparte es una
+**copia** de esas imágenes recifrada con la clave del grupo, y esa copia ocupa
+espacio en **tu** cuota, no en la de quien la recibe. Al revocar el compartido
+se borra.
+
 ---
 
 ## 5. Publicar un panel

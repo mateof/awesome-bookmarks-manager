@@ -114,7 +114,13 @@ one port.
   refused with a `413` while reading, editing and deleting keep working, so a
   user can always free their own space.
 - **Groups** — invite people by email, share folders or bookmarks with the
-  group; group members see them in a "Shared with me" section.
+  group; group members see them in a "Shared with me" section. A share travels
+  with the look its owner gave it: background colour or image, custom icon,
+  forced text tone and tags, all browsed one folder at a time with the same
+  up-one-level button as your own view. Because icons and backgrounds are
+  sealed with the owner's key, each share keeps its own copy of them re-sealed
+  with the group key, which is what lets a member see them while the owner is
+  offline (and what makes them count against the owner's quota).
 - **Public share links** with optional password and expiration.
 - **Panels** — turn any folder into a shareable, template-styled dashboard
   (homepage-style) at `/panel/{slug}`. Navigable subfolders, clickable tag

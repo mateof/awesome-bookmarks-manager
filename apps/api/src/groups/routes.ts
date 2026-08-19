@@ -8,7 +8,12 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
-import { editSharedNode, readGroupShareContent } from "./content.js";
+import { detectImageContentType, imageNotModified } from "../util/image.js";
+import {
+  editSharedNode,
+  readGroupShareAsset,
+  readGroupShareContent,
+} from "./content.js";
 import { copyShareToHome, linkShareToHome } from "./import.js";
 import {
   acceptInvitation,
@@ -38,6 +43,9 @@ const GroupShareIdParam = z.object({ shareId: z.string().uuid() });
 const NodeParams = z.object({
   shareId: z.string().uuid(),
   nodeId: z.string().uuid(),
+});
+const AssetParams = NodeParams.extend({
+  kind: z.enum(["icon", "image"]),
 });
 const GroupAndUserParams = z.object({
   id: z.string().uuid(),
@@ -198,8 +206,14 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     reply.code(201);
     const parentId = body.parentId ?? null;
     return body.mode === "copy"
-      ? copyShareToHome(ctx, content, parentId)
-      : linkShareToHome(ctx, content, parentId, item.groupName, shareId);
+      ? await copyShareToHome(ctx, content, parentId, shareId)
+      : await linkShareToHome(
+          ctx,
+          content,
+          parentId,
+          item.groupName,
+          shareId,
+        );
   });
 
   app.get("/shared/:shareId", async (req) => {
@@ -212,6 +226,22 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
       return { error: "not_found" };
     }
     return readGroupShareContent(ctx, shareId);
+  });
+
+  // A node's icon or background inside a share. The share keeps its own copy
+  // sealed with the group key (the owner's blobs need the owner's key, and
+  // they may be offline), so a member sees the folder as its owner designed it.
+  app.get("/shared/:shareId/asset/:nodeId/:kind", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId, kind } = AssetParams.parse(req.params);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    const version = (req.query as { v?: string } | undefined)?.v;
+    if (version && imageNotModified(req, reply, version)) return;
+    const bytes = await readGroupShareAsset(shareId, nodeId, kind);
+    if (!bytes) return reply.code(404).send({ error: "not_found" });
+    return reply.type(detectImageContentType(bytes)).send(bytes);
   });
 
   // Edit a node inside an editable ("editor") share. Membership re-checked

@@ -1,8 +1,10 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
-import { folders, groupShares } from "../db/schema.js";
+import { folders, groupShares, groups, jobs } from "../db/schema.js";
 import { enqueue } from "../jobs/queue.js";
+import type { SharedContent } from "./content.js";
+import { openGroupField, unwrapGroupDek } from "./encryption.js";
 
 /**
  * Keep group shares in sync with the owner's live content: when the owner
@@ -37,6 +39,76 @@ function enqueueSeal(userId: string, shareId: string): void {
     type: "group_share_seal",
     payload: { groupShareId: shareId },
   });
+}
+
+/**
+ * Catch-up for shares sealed before the payload carried the owner's design
+ * (background, icon, tone, tags). Those payloads sit on disk unchanged until
+ * something in the subtree is edited, so without this an existing share would
+ * keep looking generic until its owner happened to touch it.
+ *
+ * Run at boot. The seal job needs the sharer's DEK, so it parks in
+ * `pending_user_key` until they next log in, which is the earliest their
+ * content can be re-read anyway.
+ */
+export function backfillShareAppearance(): void {
+  const rows = getDb()
+    .select({
+      id: groupShares.id,
+      groupId: groupShares.groupId,
+      sharedBy: groupShares.sharedBy,
+      payloadCt: groupShares.payloadCt,
+      payloadStatus: groupShares.payloadStatus,
+      groupDekWrapped: groups.groupDekWrapped,
+    })
+    .from(groupShares)
+    .innerJoin(groups, eq(groups.id, groupShares.groupId))
+    .all();
+
+  let queued = 0;
+  for (const r of rows) {
+    if (r.payloadStatus !== "ready" || !r.payloadCt) continue;
+    let tree: SharedContent;
+    try {
+      const groupDek = unwrapGroupDek(
+        r.groupId,
+        Buffer.from(r.groupDekWrapped),
+      );
+      tree = JSON.parse(
+        openGroupField(
+          groupDek,
+          r.groupId,
+          "share.payload",
+          Buffer.from(r.payloadCt),
+        ),
+      ) as SharedContent;
+    } catch {
+      continue; // unreadable payload: a re-seal is not going to help
+    }
+    // `tags` only exists in payloads built by the current seal job.
+    if (Array.isArray(tree.tags)) continue;
+    if (sealAlreadyQueued(r.id)) continue;
+    enqueueSeal(r.sharedBy, r.id);
+    queued++;
+  }
+  if (queued > 0) {
+    console.log(`[groups] re-sealing ${queued} share(s) to carry appearance`);
+  }
+}
+
+/** Restarting before the owner logs in must not stack up duplicate jobs. */
+function sealAlreadyQueued(shareId: string): boolean {
+  return !!getDb()
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.type, "group_share_seal"),
+        eq(jobs.payload, JSON.stringify({ groupShareId: shareId })),
+        or(eq(jobs.status, "pending"), eq(jobs.status, "pending_user_key")),
+      ),
+    )
+    .get();
 }
 
 /** Re-seal my shares whose folder source is at or above this folder. */

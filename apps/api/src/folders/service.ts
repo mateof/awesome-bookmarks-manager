@@ -247,6 +247,7 @@ export function createFolder(
     description?: string;
     tagIds?: string[];
     bgColor?: string | null;
+    textTone?: string | null;
     favorite?: boolean;
     shareOrigin?: string | null;
     linkedShareId?: string | null;
@@ -270,6 +271,7 @@ export function createFolder(
         ? sealField(ctx.dek, ctx.userId, "folder.description", cleanDescription)
         : null,
       bgColor: input.bgColor ?? null,
+      textTone: input.textTone ?? null,
       shareOrigin: input.shareOrigin ?? null,
       favorite: input.favorite ?? false,
       linkedShareId: input.linkedShareId ?? null,

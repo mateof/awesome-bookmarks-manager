@@ -14,6 +14,7 @@ import {
 import { enqueue } from "../jobs/queue.js";
 import { pushNotification } from "../notifications/service.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
+import { deleteShareAssets } from "./assets.js";
 import {
   generateGroupDek,
   openGroupField,
@@ -154,7 +155,15 @@ export function updateGroup(
 export function deleteGroup(ctx: AuthedContext, id: string) {
   const role = ensureMember(ctx, id);
   if (role !== "owner") throw Forbidden("Only the owner can delete a group");
+  // The shares cascade with the group; their asset copies are files, so list
+  // them before the rows are gone.
+  const shares = getDb()
+    .select({ id: groupShares.id, sharedBy: groupShares.sharedBy })
+    .from(groupShares)
+    .where(eq(groupShares.groupId, id))
+    .all();
   getDb().delete(groups).where(eq(groups.id, id)).run();
+  for (const s of shares) void deleteShareAssets(s.sharedBy, s.id);
 }
 
 export function listMembers(ctx: AuthedContext, groupId: string): GroupMember[] {
@@ -587,4 +596,7 @@ export function deleteShare(ctx: AuthedContext, shareId: string) {
   // Only the sharer or a group owner/admin can revoke
   if (row.sharedBy !== ctx.userId) ensureOwnerOrAdmin(ctx, row.groupId);
   getDb().delete(groupShares).where(eq(groupShares.id, shareId)).run();
+  // The share's own copies of the icons/backgrounds go with it; they are the
+  // sharer's bytes and count against the sharer's quota.
+  void deleteShareAssets(row.sharedBy, shareId);
 }

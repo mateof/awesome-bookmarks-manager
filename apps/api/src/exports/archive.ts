@@ -347,6 +347,7 @@ export async function importArchive(
       name: f.name,
       description: f.description ?? undefined,
       bgColor: f.bgColor,
+      textTone: f.textTone,
       favorite: f.favorite,
       tagIds: resolveTags(f.tags),
     });
@@ -363,6 +364,7 @@ export async function importArchive(
       title: b.title,
       description: b.description ?? undefined,
       bgColor: b.bgColor,
+      textTone: b.textTone,
       favorite: b.favorite,
       tagIds: resolveTags(b.tags),
       // An import is not the moment to fire hundreds of page fetches.

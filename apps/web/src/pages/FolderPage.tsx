@@ -30,11 +30,10 @@ import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { onAppCommand } from "../lib/commands.js";
 import {
-  contrastClass,
-  resolveTone,
-  useCardTone,
-  useIsDarkPage,
-} from "../lib/contrast.js";
+  lookStyle,
+  useLookClass,
+  type EntityLook,
+} from "../lib/entityLook.js";
 import { CopyButton } from "../components/CopyButton.js";
 import { FavoriteToggle } from "../components/FavoriteToggle.js";
 import { LetterIcon } from "../components/LetterIcon.js";
@@ -1052,28 +1051,6 @@ function stopBubble(e: React.MouseEvent | React.KeyboardEvent) {
   e.stopPropagation();
 }
 
-function folderBgStyle(f: Folder): React.CSSProperties {
-  const s: React.CSSProperties = {};
-  if (f.bgColor) s.backgroundColor = f.bgColor;
-  if (f.imageBlobPath) {
-    s.backgroundImage = `url('${api.folderBgImageUrl(f.id, f.updatedAt)}')`;
-    s.backgroundSize = "cover";
-    s.backgroundPosition = "center";
-  }
-  return s;
-}
-
-function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
-  const s: React.CSSProperties = {};
-  if (b.bgColor) s.backgroundColor = b.bgColor;
-  if (b.imageBlobPath) {
-    s.backgroundImage = `url('${api.bookmarkBgImageUrl(b.aliasOf ?? b.id, b.updatedAt)}')`;
-    s.backgroundSize = "cover";
-    s.backgroundPosition = "center";
-  }
-  return s;
-}
-
 function folderBgUrl(f: Folder): string | null {
   return f.imageBlobPath ? api.folderBgImageUrl(f.id, f.updatedAt) : null;
 }
@@ -1082,26 +1059,34 @@ function bookmarkBgUrl(b: Bookmark): string | null {
   return b.imageBlobPath ? api.bookmarkBgImageUrl(b.aliasOf ?? b.id, b.updatedAt) : null;
 }
 
-/**
- * Extra class that forces readable text when a card has a custom background;
- * empty for the default one, where the theme's own colours already apply.
- *
- * When the background is set but says nothing about tone (a translucent
- * colour lets the page through), the page theme decides rather than a fixed
- * guess. `textTone` overrides all of it when the user has chosen.
- */
+// The painting itself lives in lib/entityLook so the shared views (which read
+// the same look out of a group share's payload) cannot drift from this one.
+function folderLook(f: Folder): EntityLook {
+  return { bgColor: f.bgColor, imageUrl: folderBgUrl(f), textTone: f.textTone };
+}
+
+function bookmarkLook(b: Bookmark): EntityLook {
+  return {
+    bgColor: b.bgColor,
+    imageUrl: bookmarkBgUrl(b),
+    textTone: b.textTone,
+  };
+}
+
+function folderBgStyle(f: Folder): React.CSSProperties {
+  return lookStyle(folderLook(f));
+}
+
+function bookmarkBgStyle(b: Bookmark): React.CSSProperties {
+  return lookStyle(bookmarkLook(b));
+}
+
 function useFolderContrast(f: Folder): string {
-  const tone = useCardTone(f.bgColor, folderBgUrl(f));
-  const isDark = useIsDarkPage();
-  if (!f.bgColor && !f.imageBlobPath) return "";
-  return contrastClass(resolveTone(tone, isDark, f.textTone));
+  return useLookClass(folderLook(f));
 }
 
 function useBookmarkContrast(b: Bookmark): string {
-  const tone = useCardTone(b.bgColor, bookmarkBgUrl(b));
-  const isDark = useIsDarkPage();
-  if (!b.bgColor && !b.imageBlobPath) return "";
-  return contrastClass(resolveTone(tone, isDark, b.textTone));
+  return useLookClass(bookmarkLook(b));
 }
 
 function FolderIcon({ sf, size }: { sf: Folder; size: string }) {

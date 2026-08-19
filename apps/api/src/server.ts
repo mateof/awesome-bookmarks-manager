@@ -19,6 +19,7 @@ import { registerSession } from "./auth/session.js";
 import { bookmarkRoutes } from "./bookmarks/routes.js";
 import { snapshotRoutes } from "./bookmarks/snapshot-routes.js";
 import { cloudRoutes } from "./cloud/routes.js";
+import { backfillShareAppearance } from "./groups/resync.js";
 import { groupRoutes } from "./groups/routes.js";
 import { notificationRoutes } from "./notifications/routes.js";
 import { ensureSchema } from "./db/bootstrap.js";
@@ -237,6 +238,7 @@ async function start() {
   // ensure DB exists & schema is up-to-date before anything else touches it
   getDb();
   ensureSchema();
+  backfillShareAppearance();
 
   const app = await buildServer();
 

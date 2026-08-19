@@ -1,58 +1,189 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AuthedContext } from "../auth/session.js";
 import { openField } from "../auth/encryption.js";
 import { getDb } from "../db/client.js";
 import {
+  bookmarkTags,
   bookmarks,
+  folderTags,
   folders,
   groupShares,
   groups,
+  tags,
 } from "../db/schema.js";
 import { Conflict, Forbidden, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
+import { readShareAsset, type ShareAssetKind } from "./assets.js";
 import { openGroupField, sealGroupField, unwrapGroupDek } from "./encryption.js";
 
-export interface SharedBookmarkContent {
+/** A tag as it travels in a share: by name and colour, never by id. The
+ * member has their own tag table and none of the owner's ids mean anything
+ * in it. */
+export interface SharedTag {
+  name: string;
+  color: string;
+}
+
+/**
+ * The look of a node, carried so a member sees the folder the way its owner
+ * designed it rather than a generic card.
+ *
+ * `icon` and `image` are cache-busting version tokens (the source row's
+ * updatedAt), non-null only when the seal job managed to copy the asset into
+ * the share. The bytes deliberately live outside this payload (see
+ * assets.ts): the whole payload is decrypted and JSON-parsed on every read of
+ * the share, and a 4 MB background inlined here would be paid for on each one.
+ */
+interface SharedAppearance {
+  bgColor: string | null;
+  textTone: string | null;
+  favorite: boolean;
+  tags: SharedTag[];
+  icon: string | null;
+  image: string | null;
+}
+
+// Optional because payloads sealed before this existed are still on disk and
+// are read back as-is until their next re-seal. Readers must tolerate the gap.
+export interface SharedBookmarkContent extends Partial<SharedAppearance> {
   type: "bookmark";
   id: string;
   title: string;
   url: string;
   description: string | null;
-  bgColor: string | null;
 }
 
-export interface SharedFolderContent {
+export interface SharedFolderContent extends Partial<SharedAppearance> {
   type: "folder";
   id: string;
   name: string;
   description: string | null;
-  bgColor: string | null;
   bookmarks: SharedBookmarkContent[];
   subfolders: SharedFolderContent[];
 }
 
 export type SharedContent = SharedBookmarkContent | SharedFolderContent;
 
+/** An icon/background the seal job has to copy into the share. */
+export interface ShareAssetSource {
+  nodeId: string;
+  kind: "icon" | "image";
+  /** AAD field the source blob was sealed with, e.g. "folder.icon". */
+  field: string;
+  srcPath: string;
+  version: string;
+}
+
 /**
  * Build (and re-cipher) the snapshot payload for a group share. Called by the
  * worker. Requires the sharer's DEK to be cached (they were online when they
  * shared) so we can decrypt the source content with their key.
+ *
+ * Icons and backgrounds are only *declared* here (with their source path
+ * pushed onto `assets`); copying the bytes is async and belongs to the caller.
  */
 export function buildPayloadForShare(
   sharerUserId: string,
   sharerDek: Buffer,
   shareRow: typeof groupShares.$inferSelect,
+  assets: ShareAssetSource[] = [],
 ): SharedContent {
   if (shareRow.sourceType === "bookmark") {
-    return loadBookmark(sharerUserId, sharerDek, shareRow.sourceId);
+    return loadBookmark(sharerUserId, sharerDek, shareRow.sourceId, assets);
   }
-  return loadFolder(sharerUserId, sharerDek, shareRow.sourceId);
+  return loadFolder(sharerUserId, sharerDek, shareRow.sourceId, assets);
+}
+
+/** Tag names + colours for a set of entities, keyed by entity id. */
+function tagsFor(
+  userId: string,
+  kind: "folder" | "bookmark",
+  ids: string[],
+): Map<string, SharedTag[]> {
+  const out = new Map<string, SharedTag[]>();
+  if (ids.length === 0) return out;
+  const rows =
+    kind === "folder"
+      ? getDb()
+          .select({
+            entityId: folderTags.folderId,
+            name: tags.name,
+            color: tags.color,
+          })
+          .from(folderTags)
+          .innerJoin(tags, eq(tags.id, folderTags.tagId))
+          .where(
+            and(inArray(folderTags.folderId, ids), eq(tags.userId, userId)),
+          )
+          .all()
+      : getDb()
+          .select({
+            entityId: bookmarkTags.bookmarkId,
+            name: tags.name,
+            color: tags.color,
+          })
+          .from(bookmarkTags)
+          .innerJoin(tags, eq(tags.id, bookmarkTags.tagId))
+          .where(
+            and(inArray(bookmarkTags.bookmarkId, ids), eq(tags.userId, userId)),
+          )
+          .all();
+  for (const r of rows) {
+    const list = out.get(r.entityId) ?? [];
+    list.push({ name: r.name, color: r.color });
+    out.set(r.entityId, list);
+  }
+  return out;
+}
+
+/**
+ * Record the node's icon/background as something to copy, and return the
+ * version tokens to put in the payload. A node whose blob is missing simply
+ * gets nulls: the share still works, it just falls back to the default look.
+ */
+function declareAssets(
+  assets: ShareAssetSource[],
+  entity: "folder" | "bookmark",
+  row: {
+    id: string;
+    iconBlobPath: string | null;
+    imageBlobPath: string | null;
+    updatedAt: string;
+  },
+): { icon: string | null; image: string | null } {
+  const out: { icon: string | null; image: string | null } = {
+    icon: null,
+    image: null,
+  };
+  if (row.iconBlobPath) {
+    assets.push({
+      nodeId: row.id,
+      kind: "icon",
+      field: `${entity}.icon`,
+      srcPath: row.iconBlobPath,
+      version: row.updatedAt,
+    });
+    out.icon = row.updatedAt;
+  }
+  if (row.imageBlobPath) {
+    assets.push({
+      nodeId: row.id,
+      kind: "image",
+      field: `${entity}.bg`,
+      srcPath: row.imageBlobPath,
+      version: row.updatedAt,
+    });
+    out.image = row.updatedAt;
+  }
+  return out;
 }
 
 function loadBookmark(
   userId: string,
   dek: Buffer,
   bookmarkId: string,
+  assets: ShareAssetSource[],
+  knownTags?: Map<string, SharedTag[]>,
 ): SharedBookmarkContent {
   const row = getDb()
     .select()
@@ -80,6 +211,13 @@ function loadBookmark(
         )
       : null,
     bgColor: row.bgColor ?? null,
+    textTone: row.textTone ?? null,
+    favorite: row.favorite,
+    tags:
+      knownTags?.get(row.id) ??
+      tagsFor(userId, "bookmark", [row.id]).get(row.id) ??
+      [],
+    ...declareAssets(assets, "bookmark", row),
   };
 }
 
@@ -87,6 +225,7 @@ function loadFolder(
   userId: string,
   dek: Buffer,
   folderId: string,
+  assets: ShareAssetSource[],
 ): SharedFolderContent {
   const row = getDb()
     .select()
@@ -124,6 +263,12 @@ function loadFolder(
     )
     .all();
 
+  const bookmarkTagsById = tagsFor(
+    userId,
+    "bookmark",
+    childBookmarks.map((b) => b.id),
+  );
+
   return {
     type: "folder",
     id: row.id,
@@ -137,8 +282,16 @@ function loadFolder(
         )
       : null,
     bgColor: row.bgColor ?? null,
-    bookmarks: childBookmarks.map((b) => loadBookmark(userId, dek, b.id)),
-    subfolders: childFolders.map((f) => loadFolder(userId, dek, f.id)),
+    textTone: row.textTone ?? null,
+    favorite: row.favorite,
+    tags: tagsFor(userId, "folder", [row.id]).get(row.id) ?? [],
+    ...declareAssets(assets, "folder", row),
+    bookmarks: childBookmarks.map((b) =>
+      loadBookmark(userId, dek, b.id, assets, bookmarkTagsById),
+    ),
+    subfolders: childFolders.map((f) =>
+      loadFolder(userId, dek, f.id, assets),
+    ),
   };
 }
 
@@ -238,6 +391,39 @@ export function readGroupShareContent(
     access: row.access as "viewer" | "editor",
     rev: row.rev,
   };
+}
+
+/**
+ * The plaintext bytes of one icon/background inside a share. Membership is
+ * verified at the route layer; the group AAD does the rest, so a file that
+ * belongs to another group cannot be opened here even if its path were
+ * guessed.
+ */
+export async function readGroupShareAsset(
+  shareId: string,
+  nodeId: string,
+  kind: ShareAssetKind,
+): Promise<Buffer | null> {
+  const row = getDb()
+    .select({
+      groupId: groupShares.groupId,
+      sharedBy: groupShares.sharedBy,
+      groupDekWrapped: groups.groupDekWrapped,
+    })
+    .from(groupShares)
+    .innerJoin(groups, eq(groups.id, groupShares.groupId))
+    .where(eq(groupShares.id, shareId))
+    .get();
+  if (!row) return null;
+  const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
+  return readShareAsset(
+    row.sharedBy,
+    shareId,
+    nodeId,
+    kind,
+    row.groupId,
+    groupDek,
+  );
 }
 
 function findNode(tree: SharedContent, nodeId: string): SharedContent | null {

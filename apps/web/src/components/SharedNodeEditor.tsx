@@ -5,21 +5,39 @@ import { api, isConflict } from "../api.js";
 import { Modal } from "./Modal.js";
 import { RichTextEditor } from "./RichTextEditor.js";
 
-export interface SharedBookmarkPayload {
+/**
+ * The look the owner gave a node, carried in the share so the recipient sees
+ * the same folder rather than a generic card.
+ *
+ * Every field is optional: shares sealed before this existed are read back
+ * from disk unchanged until their owner next triggers a re-seal.
+ *
+ * `icon` and `image` are cache-busting version tokens, not paths. The bytes
+ * come from `api.sharedAssetUrl`, because the owner's own icon endpoint needs
+ * the owner's key.
+ */
+export interface SharedAppearance {
+  bgColor?: string | null;
+  textTone?: "auto" | "light" | "dark" | null;
+  favorite?: boolean;
+  tags?: { name: string; color: string }[];
+  icon?: string | null;
+  image?: string | null;
+}
+
+export interface SharedBookmarkPayload extends SharedAppearance {
   type: "bookmark";
   id: string;
   title: string;
   url: string;
   description: string | null;
-  bgColor?: string | null;
 }
 
-export interface SharedFolderPayload {
+export interface SharedFolderPayload extends SharedAppearance {
   type: "folder";
   id: string;
   name: string;
   description: string | null;
-  bgColor?: string | null;
   bookmarks: SharedBookmarkPayload[];
   subfolders: SharedFolderPayload[];
 }

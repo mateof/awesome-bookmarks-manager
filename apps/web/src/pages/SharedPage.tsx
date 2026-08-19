@@ -16,26 +16,18 @@ import { api } from "../api.js";
 import { fmtDate } from "../lib/date.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
-import { SharedNodeEditor } from "../components/SharedNodeEditor.js";
-
-interface BookmarkPayload {
-  type: "bookmark";
-  id: string;
-  title: string;
-  url: string;
-  description: string | null;
-}
-
-interface FolderPayload {
-  type: "folder";
-  id: string;
-  name: string;
-  description: string | null;
-  bookmarks: BookmarkPayload[];
-  subfolders: FolderPayload[];
-}
-
-type Payload = BookmarkPayload | FolderPayload;
+import {
+  SharedNodeEditor,
+  type SharedBookmarkPayload,
+  type SharedFolderPayload,
+  type SharedPayload,
+} from "../components/SharedNodeEditor.js";
+import {
+  SharedFolderBody,
+  SharedTrail,
+  UpLevelButton,
+  useSharedPath,
+} from "../components/SharedTreeView.js";
 
 export function SharedPage() {
   const { shareId } = useParams();
@@ -262,7 +254,7 @@ function SharedList() {
 }
 
 interface SharedResponse {
-  content: Payload;
+  content: SharedPayload;
   access: "viewer" | "editor";
   rev: number;
 }
@@ -277,35 +269,31 @@ function SharedItemView({ shareId }: { shareId: string }) {
         SharedResponse | { error: string }
       >,
   });
-  const [editing, setEditing] = useState<Payload | null>(null);
+  const [editing, setEditing] = useState<SharedPayload | null>(null);
+  const data = q.data && "content" in q.data ? q.data : null;
 
   if (q.isLoading)
     return <div className="text-slate-400">{t("common.loading")}</div>;
-  const data = q.data && "content" in q.data ? q.data : null;
   if (!data)
     return <div className="text-slate-400">{t("shared.cannotLoad")}</div>;
 
   const canEdit = data.access === "editor";
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Link
-          to="/shared"
-          className="text-sm text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-        >
-          {t("shared.backArrow")}
-        </Link>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs ${
-            canEdit
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-          }`}
-        >
-          {canEdit ? t("shared.canEdit") : t("shared.readOnly")}
-        </span>
-      </div>
-      <Render payload={data.content} canEdit={canEdit} onEdit={setEditing} />
+      {data.content.type === "folder" ? (
+        <FolderShareView
+          shareId={shareId}
+          root={data.content}
+          canEdit={canEdit}
+          onEdit={setEditing}
+        />
+      ) : (
+        <BookmarkShareView
+          content={data.content}
+          canEdit={canEdit}
+          onEdit={setEditing}
+        />
+      )}
       {editing && (
         <SharedNodeEditor
           shareId={shareId}
@@ -318,6 +306,29 @@ function SharedItemView({ shareId }: { shareId: string }) {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function ShareHeader({ canEdit }: { canEdit: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-2">
+      <Link
+        to="/shared"
+        className="text-sm text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+      >
+        {t("shared.backArrow")}
+      </Link>
+      <span
+        className={`rounded-full px-2 py-0.5 text-xs ${
+          canEdit
+            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+            : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+        }`}
+      >
+        {canEdit ? t("shared.canEdit") : t("shared.readOnly")}
+      </span>
     </div>
   );
 }
@@ -335,90 +346,88 @@ function EditButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function Render({
-  payload,
+/**
+ * A shared folder, browsed one level at a time like the owner's own view (and
+ * like the linked-folder portal) rather than as one nested dump: the same
+ * cards, the same backgrounds and icons, and an up-level button.
+ */
+function FolderShareView({
+  shareId,
+  root,
   canEdit,
   onEdit,
 }: {
-  payload: Payload;
+  shareId: string;
+  root: SharedFolderPayload;
   canEdit: boolean;
-  onEdit: (node: Payload) => void;
+  onEdit: (node: SharedPayload) => void;
 }) {
-  if (payload.type === "bookmark") {
-    return (
+  const nav = useSharedPath(root);
+  const inSubfolder = nav.path.length > 0;
+  return (
+    <>
+      <ShareHeader canEdit={canEdit} />
+      {/* At the root the crumb would just repeat the heading, so the trail
+          only appears once there is somewhere to go back to. */}
+      {inSubfolder && (
+        <div className="flex items-center gap-2">
+          <UpLevelButton onClick={nav.up} />
+          <nav className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+            <button
+              type="button"
+              onClick={() => nav.goTo(0)}
+              className="font-medium text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-slate-100"
+            >
+              {root.name}
+            </button>
+            <SharedTrail trail={nav.trail} onGoTo={nav.goTo} />
+          </nav>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <h1 className="text-xl font-semibold">{nav.node.name}</h1>
+        {canEdit && <EditButton onClick={() => onEdit(nav.node)} />}
+      </div>
+      <SharedFolderBody
+        shareId={shareId}
+        node={nav.node}
+        canEdit={canEdit}
+        onOpen={nav.open}
+        onEdit={onEdit}
+      />
+    </>
+  );
+}
+
+function BookmarkShareView({
+  content,
+  canEdit,
+  onEdit,
+}: {
+  content: SharedBookmarkPayload;
+  canEdit: boolean;
+  onEdit: (node: SharedPayload) => void;
+}) {
+  return (
+    <>
+      <ShareHeader canEdit={canEdit} />
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold">{payload.title}</h1>
-          {canEdit && <EditButton onClick={() => onEdit(payload)} />}
+          <h1 className="text-xl font-semibold">{content.title}</h1>
+          {canEdit && <EditButton onClick={() => onEdit(content)} />}
         </div>
         <a
-          href={payload.url}
+          href={content.url}
           target="_blank"
           rel="noopener noreferrer"
           className="break-all text-sm text-blue-600 hover:underline"
         >
-          {payload.url}
+          {content.url}
         </a>
-        {payload.description && (
-          <CollapsibleRichText html={payload.description} />
+        {content.description && (
+          <CollapsibleRichText html={content.description} />
         )}
       </div>
-    );
-  }
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold">{payload.name}</h1>
-        {canEdit && <EditButton onClick={() => onEdit(payload)} />}
-      </div>
-      {payload.description && <CollapsibleRichText html={payload.description} />}
-      {payload.bookmarks.map((b) => (
-        <div
-          key={b.id}
-          className="rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-        >
-          <div className="flex items-center gap-2">
-            <a
-              href={b.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium hover:underline"
-            >
-              {b.title}
-            </a>
-            {canEdit && <EditButton onClick={() => onEdit(b)} />}
-          </div>
-          <a
-            href={b.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-xs text-slate-500 hover:underline"
-          >
-            {b.url}
-          </a>
-          {b.description && (
-            <div className="mt-1 text-sm">
-              <CollapsibleRichText
-                html={b.description}
-                collapsedHeight={120}
-                fadeFrom="from-white dark:from-slate-900"
-              />
-            </div>
-          )}
-        </div>
-      ))}
-      {payload.subfolders.map((sf) => (
-        <details
-          key={sf.id}
-          className="rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-          open
-        >
-          <summary className="cursor-pointer font-medium">{sf.name}</summary>
-          <div className="mt-2 pl-4">
-            <Render payload={sf} canEdit={canEdit} onEdit={onEdit} />
-          </div>
-        </details>
-      ))}
-    </div>
+    </>
   );
 }

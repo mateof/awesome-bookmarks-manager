@@ -1,23 +1,17 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ChevronRight,
-  Folder as FolderIcon,
-  Globe,
-  Home,
-  PencilLine,
-  Share2,
-} from "lucide-react";
+import { ChevronRight, Home, Share2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
-import { contrastClass, useCardTone } from "../lib/contrast.js";
-import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
-import { RichTextView } from "../components/RichTextView.js";
+import {
+  SharedFolderBody,
+  SharedTrail,
+  UpLevelButton,
+  useSharedPath,
+} from "../components/SharedTreeView.js";
 import {
   SharedNodeEditor,
-  type SharedBookmarkPayload,
-  type SharedFolderPayload,
   type SharedPayload,
 } from "../components/SharedNodeEditor.js";
 
@@ -25,22 +19,6 @@ interface SharedResponse {
   content: SharedPayload;
   access: "viewer" | "editor";
   rev: number;
-}
-
-/** Resolve the folder node reached by walking `path` (node ids) from root. */
-function resolvePath(
-  root: SharedFolderPayload,
-  path: string[],
-): { node: SharedFolderPayload; trail: SharedFolderPayload[] } {
-  let node = root;
-  const trail: SharedFolderPayload[] = [];
-  for (const id of path) {
-    const next = node.subfolders.find((f) => f.id === id);
-    if (!next) break;
-    trail.push(next);
-    node = next;
-  }
-  return { node, trail };
 }
 
 export function LinkedSharePage() {
@@ -60,7 +38,14 @@ export function LinkedSharePage() {
       >,
   });
 
-  const [path, setPath] = useState<string[]>([]);
+  const data = q.data && "content" in q.data ? q.data : null;
+  const root =
+    data && data.content.type === "folder"
+      ? data.content
+      : { type: "folder" as const, id: "", name: "", description: null, bookmarks: [], subfolders: [] };
+  // Hooks cannot sit behind the early returns below, so the path is resolved
+  // against an empty root while the share is loading.
+  const nav = useSharedPath(root);
   const [editing, setEditing] = useState<SharedPayload | null>(null);
 
   if (folders.isLoading)
@@ -69,52 +54,43 @@ export function LinkedSharePage() {
     return <div className="text-slate-400">{t("linked.notLinked")}</div>;
   if (q.isLoading)
     return <div className="text-slate-400">{t("common.loading")}</div>;
-
-  const data = q.data && "content" in q.data ? q.data : null;
   if (!data || data.content.type !== "folder")
     return <div className="text-slate-400">{t("linked.unavailable")}</div>;
 
   const canEdit = data.access === "editor";
-  const root = data.content;
-  const { node, trail } = resolvePath(root, path);
+  const inSubfolder = nav.path.length > 0;
 
   return (
     <div className="space-y-4">
-      {/* Breadcrumb: back to home context + drill trail inside the share. */}
-      <nav className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-        <Link
-          to={portal.parentId ? `/folder/${portal.parentId}` : "/"}
-          className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100"
-        >
-          <Home className="h-3.5 w-3.5" />
-          {t("linked.home")}
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <button
-          type="button"
-          onClick={() => setPath([])}
-          className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-slate-100"
-        >
-          <Share2 className="h-3.5 w-3.5 text-blue-500" />
-          {portal.name}
-        </button>
-        {trail.map((f, i) => (
-          <span key={f.id} className="inline-flex items-center gap-1">
-            <ChevronRight className="h-3.5 w-3.5" />
-            <button
-              type="button"
-              onClick={() => setPath(path.slice(0, i + 1))}
-              className="hover:text-slate-900 dark:hover:text-slate-100"
-            >
-              {f.name}
-            </button>
-          </span>
-        ))}
-      </nav>
+      {/* Breadcrumb: back to home context + drill trail inside the share.
+          The up-level button only appears once there is a level to go up to;
+          at the root of the share, the "Inicio" crumb is that exit. */}
+      <div className="flex items-center gap-2">
+        {inSubfolder && <UpLevelButton onClick={nav.up} />}
+        <nav className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
+          <Link
+            to={portal.parentId ? `/folder/${portal.parentId}` : "/"}
+            className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            <Home className="h-3.5 w-3.5" />
+            {t("linked.home")}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            onClick={() => nav.goTo(0)}
+            className="inline-flex items-center gap-1 font-medium text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-slate-100"
+          >
+            <Share2 className="h-3.5 w-3.5 text-blue-500" />
+            {portal.name}
+          </button>
+          <SharedTrail trail={nav.trail} onGoTo={nav.goTo} />
+        </nav>
+      </div>
 
       <div className="flex items-center gap-2">
         <h1 className="text-xl font-semibold">
-          {path.length === 0 ? portal.name : node.name}
+          {inSubfolder ? nav.node.name : portal.name}
         </h1>
         <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
           <Share2 className="h-3 w-3" />
@@ -125,38 +101,13 @@ export function LinkedSharePage() {
         )}
       </div>
 
-      {node.description && <CollapsibleRichText html={node.description} />}
-
-      {node.subfolders.length === 0 && node.bookmarks.length === 0 && (
-        <div className="text-sm text-slate-400">{t("linked.empty")}</div>
-      )}
-
-      {node.subfolders.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {node.subfolders.map((sf) => (
-            <FolderCard
-              key={sf.id}
-              folder={sf}
-              canEdit={canEdit}
-              onOpen={() => setPath([...path, sf.id])}
-              onEdit={() => setEditing(sf)}
-            />
-          ))}
-        </div>
-      )}
-
-      {node.bookmarks.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {node.bookmarks.map((b) => (
-            <BookmarkCard
-              key={b.id}
-              bookmark={b}
-              canEdit={canEdit}
-              onEdit={() => setEditing(b)}
-            />
-          ))}
-        </div>
-      )}
+      <SharedFolderBody
+        shareId={shareId}
+        node={nav.node}
+        canEdit={canEdit}
+        onOpen={nav.open}
+        onEdit={setEditing}
+      />
 
       {editing && (
         <SharedNodeEditor
@@ -170,102 +121,6 @@ export function LinkedSharePage() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function CardEdit({ onEdit }: { onEdit: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onEdit();
-      }}
-      title={t("common.edit")}
-      className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-    >
-      <PencilLine className="h-4 w-4" />
-    </button>
-  );
-}
-
-function FolderCard({
-  folder,
-  canEdit,
-  onOpen,
-  onEdit,
-}: {
-  folder: SharedFolderPayload;
-  canEdit: boolean;
-  onOpen: () => void;
-  onEdit: () => void;
-}) {
-  const count = folder.subfolders.length + folder.bookmarks.length;
-  const { t } = useTranslation();
-  const tone = contrastClass(useCardTone(folder.bgColor ?? null, null));
-  return (
-    <div
-      style={folder.bgColor ? { backgroundColor: folder.bgColor } : undefined}
-      className={`flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${tone}`}
-    >
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex min-w-0 flex-1 items-center gap-3 text-left"
-      >
-        <FolderIcon className="h-9 w-9 shrink-0 text-amber-500" />
-        <div className="min-w-0">
-          <div className="truncate font-medium">{folder.name}</div>
-          <div className="text-xs text-slate-400">
-            {t("linked.itemCount", { count })}
-          </div>
-        </div>
-      </button>
-      {canEdit && <CardEdit onEdit={onEdit} />}
-    </div>
-  );
-}
-
-function BookmarkCard({
-  bookmark,
-  canEdit,
-  onEdit,
-}: {
-  bookmark: SharedBookmarkPayload;
-  canEdit: boolean;
-  onEdit: () => void;
-}) {
-  const tone = contrastClass(useCardTone(bookmark.bgColor ?? null, null));
-  return (
-    <div
-      style={
-        bookmark.bgColor ? { backgroundColor: bookmark.bgColor } : undefined
-      }
-      className={`flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900 ${tone}`}
-    >
-      <a
-        href={bookmark.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex min-w-0 flex-1 items-start gap-3"
-      >
-        <Globe className="mt-0.5 h-8 w-8 shrink-0 text-slate-400" />
-        <div className="min-w-0">
-          <div className="truncate font-medium hover:underline">
-            {bookmark.title}
-          </div>
-          <div className="truncate text-xs text-slate-400">{bookmark.url}</div>
-          {bookmark.description && (
-            <div className="mt-1 text-sm">
-              <RichTextView html={bookmark.description} />
-            </div>
-          )}
-        </div>
-      </a>
-      {canEdit && <CardEdit onEdit={onEdit} />}
     </div>
   );
 }

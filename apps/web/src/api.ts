@@ -554,6 +554,18 @@ export const api = {
   bookmarkBgImageUrl: (id: string, v?: string) =>
     `${BASE}/bookmarks/${id}/bg-image${v ? `?v=${encodeURIComponent(v)}` : ""}`,
   bookmarkSnapshotUrl: (id: string) => `${BASE}/bookmarks/${id}/snapshot.html`,
+  // A node's icon/background *inside a group share*. Not the same URL as the
+  // owner's: the share keeps its own copy sealed with the group key, since
+  // the owner's blobs need the owner's key and they may be offline.
+  sharedAssetUrl: (
+    shareId: string,
+    nodeId: string,
+    kind: "icon" | "image",
+    v?: string,
+  ) =>
+    `${BASE}/shared/${shareId}/asset/${nodeId}/${kind}${
+      v ? `?v=${encodeURIComponent(v)}` : ""
+    }`,
   uploadFolderIcon: async (id: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);

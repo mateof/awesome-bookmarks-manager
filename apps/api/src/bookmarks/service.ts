@@ -343,6 +343,7 @@ export function createBookmark(
     description?: string;
     tagIds?: string[];
     bgColor?: string | null;
+    textTone?: string | null;
     favorite?: boolean;
     fetchSnapshot?: boolean;
     shareOrigin?: string | null;
@@ -380,6 +381,7 @@ export function createBookmark(
         : null,
       urlHash: urlHash(input.url, ctx.userId),
       bgColor: input.bgColor ?? null,
+      textTone: input.textTone ?? null,
       shareOrigin: input.shareOrigin ?? null,
       favorite: input.favorite ?? false,
       snapshotStatus: fetch ? "pending" : "none",
