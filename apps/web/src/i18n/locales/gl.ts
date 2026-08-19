@@ -530,6 +530,10 @@ const gl = {
     selectionOpenTabs: "Abrir en lapelas",
     selectionOpenTabsTitle:
       "Abrir todos os enlaces da selección (recursivo nos cartafoles)",
+    selectionCopyList: "Copiar lista",
+    selectionCopyListTitle: "Copia a selección como lista xerárquica (título e URL), cos bookmarks das subcarpetas",
+    selectionCopied: "Copiado",
+    couldNotCopy: "Non se puido copiar ao portapapeis.",
     selectionExport: "Exportar",
     selectionMove: "Mover a",
     selectionDelete: "Eliminar",

@@ -34,7 +34,8 @@ paneles y guardar pestañas desde la extensión de Chrome.
 21. [Registro de seguridad](#21-registro-de-seguridad)
 22. [Texto copiable y texto oculto](#22-texto-copiable-y-texto-oculto)
 23. [Copias en la nube](#23-copias-en-la-nube)
-24. [Exportar e importar en el formato de la app](#24-exportar-e-importar-en-el-formato-de-la-app)
+24. [Copiar una selección como lista](#24-copiar-una-selección-como-lista)
+25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
 
 ---
 
@@ -554,7 +555,32 @@ selladas con tu clave.
 
 ---
 
-## 24. Exportar e importar en el formato de la app
+## 24. Copiar una selección como lista
+
+Marca varias carpetas o bookmarks con sus casillas y en la barra de selección
+aparece **Copiar lista**. Copia todo al portapapeles como una lista jerárquica
+con el título y la URL de cada enlace, incluyendo los bookmarks que haya dentro
+de las subcarpetas, en árbol:
+
+```
+- **Cocina**
+  - **Postres**
+    - [Tarta de queso](https://tarta.example/)
+  - [Pan de masa madre](https://pan.example/)
+- [Suelto](https://suelto.example/)
+```
+
+Se copia en dos formatos a la vez, así que pega bien en los dos sitios para los
+que sirve: en un chat aparece ese texto (y en Slack, Discord o GitHub se
+convierte en una lista de verdad), y en un correo o un documento pega como una
+lista anidada con los enlaces ya pinchables.
+
+Si marcas una carpeta y además algo que está dentro de ella, no sale dos veces:
+la carpeta ya lo incluye.
+
+---
+
+## 25. Exportar e importar en el formato de la app
 
 La exportación a HTML sirve para llevarte los enlaces a un navegador, pero
 pierde casi todo lo demás: tags, descripciones, colores, iconos y favoritos no

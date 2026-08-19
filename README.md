@@ -87,7 +87,11 @@ one port.
 - **Five view modes** for folders/bookmarks: grid, compact list, large cards,
   detail table, icon mosaic. Persisted per device.
 - **Multi-select** on hover with checkboxes + 3-dot kebab menus for each
-  card. Batch open-in-tabs, export, and delete.
+  card. Batch open-in-tabs, move, export, delete, and **copy as a list**: the
+  selection lands on the clipboard as a hierarchical outline with every
+  subfolder expanded, as Markdown for chats and as a nested list of real links
+  for email and documents. Selecting a folder and something inside it does not
+  produce the entry twice.
 - **Export to HTML** in the standard Netscape Bookmark format — re-importable
   by Chrome / Firefox / Edge / Safari.
 - **Portable archive (`.abz`)** — the app's own format, for everything HTML

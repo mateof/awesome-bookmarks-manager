@@ -530,6 +530,10 @@ const es = {
     selectionOpenTabs: "Abrir en pestañas",
     selectionOpenTabsTitle:
       "Abrir todos los enlaces de la selección (recursivo en carpetas)",
+    selectionCopyList: "Copiar lista",
+    selectionCopyListTitle: "Copia la selección como lista jerárquica (título y URL), con los bookmarks de las subcarpetas",
+    selectionCopied: "Copiado",
+    couldNotCopy: "No se pudo copiar al portapapeles.",
     selectionExport: "Exportar",
     selectionMove: "Mover a",
     selectionDelete: "Eliminar",

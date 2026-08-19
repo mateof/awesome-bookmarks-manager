@@ -530,6 +530,10 @@ const en = {
     selectionOpenTabs: "Open in tabs",
     selectionOpenTabsTitle:
       "Open all links in the selection (recursive for folders)",
+    selectionCopyList: "Copy list",
+    selectionCopyListTitle: "Copy the selection as a hierarchical list (title and URL), including the bookmarks in subfolders",
+    selectionCopied: "Copied",
+    couldNotCopy: "Could not copy to the clipboard.",
     selectionExport: "Export",
     selectionMove: "Move to",
     selectionDelete: "Delete",

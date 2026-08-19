@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
   ArrowUp,
+  Check,
   ClipboardCopy,
   FileArchive,
   Copy,
@@ -14,6 +15,7 @@ import {
   History,
   LayoutDashboard,
   Link2,
+  ListTree,
   Palette,
   PencilLine,
   Plus,
@@ -28,6 +30,7 @@ import { dlg } from "../components/dialogs.js";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
+import { buildOutline, copyOutline } from "../lib/outline.js";
 import { onAppCommand } from "../lib/commands.js";
 import {
   lookStyle,
@@ -151,6 +154,7 @@ export function FolderPage() {
   const [panelFolder, setPanelFolder] = useState<Folder | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [copiedOutline, setCopiedOutline] = useState(false);
   const [linkTarget, setLinkTarget] = useState<{
     kind: "folder" | "bookmark";
     id: string;
@@ -286,6 +290,32 @@ export function FolderPage() {
           : t("folder.couldNotExportGeneric"),
       );
     }
+  };
+
+  /**
+   * The selection as a hierarchical list on the clipboard, folders expanded
+   * all the way down. Markdown for chats, a nested list of links for email;
+   * see lib/outline.
+   */
+  const copySelectionOutline = async () => {
+    if (selection.size === 0) return;
+    const outline = buildOutline(
+      { folderIds: selectedFolderIds, bookmarkIds: selectedBookmarkIds },
+      folders.data ?? [],
+      allBookmarks.data ?? [],
+    );
+    if (outline.links === 0) {
+      await dlg.alert(t("folder.selectionNoLinks"));
+      return;
+    }
+    if (!(await copyOutline(outline))) {
+      await dlg.alert(t("folder.couldNotCopy"));
+      return;
+    }
+    // Same brief confirmation the single-link copy button gives, rather than a
+    // modal: the selection stays put in case they want to paste it twice.
+    setCopiedOutline(true);
+    setTimeout(() => setCopiedOutline(false), 1500);
   };
 
   const exportSelection = async () => {
@@ -725,6 +755,20 @@ export function FolderPage() {
             className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             <FolderInput className="h-4 w-4" /> {t("folder.selectionMove")}
+          </button>
+          <button
+            onClick={copySelectionOutline}
+            title={t("folder.selectionCopyListTitle")}
+            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            {copiedOutline ? (
+              <Check className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <ListTree className="h-4 w-4" />
+            )}{" "}
+            {copiedOutline
+              ? t("folder.selectionCopied")
+              : t("folder.selectionCopyList")}
           </button>
           <button
             onClick={exportSelection}
