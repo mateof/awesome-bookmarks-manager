@@ -1160,6 +1160,10 @@ const en = {
     info: "Info",
     added: "Added",
     tags: "Tags",
+    snapshot_pending: "Queued",
+    snapshot_running: "Capturing",
+    snapshot_ready: "Saved",
+    snapshot_error: "Error",
     dragHandle: "Drag to reorder",
   },
   iconLib: {

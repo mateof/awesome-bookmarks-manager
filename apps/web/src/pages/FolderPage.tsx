@@ -1879,8 +1879,12 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         {relativeTime(sf.createdAt)}
       </td>
       <td className="px-2 py-2" onClick={stopBubble}>
-        <FavoriteToggle folder={sf} />
-        <KebabMenu items={p.folderKebab(sf)} />
+        {/* Right-aligned, like the bookmark rows: the kebab lands in the same
+            column on every row even though folders have one action fewer. */}
+        <div className="flex items-center justify-end gap-1">
+          <FavoriteToggle folder={sf} />
+          <KebabMenu items={p.folderKebab(sf)} />
+        </div>
       </td>
     </tr>
   );
@@ -1942,13 +1946,17 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
         />
       </td>
       <td className="px-2 py-2 text-[10px] uppercase tracking-wide text-slate-400">
-        {b.snapshotStatus}
+        {b.snapshotStatus === "none" ? (
+          <span className="text-slate-400">—</span>
+        ) : (
+          t(`table.snapshot_${b.snapshotStatus}` as "table.snapshot_ready")
+        )}
       </td>
       <td className="px-2 py-2 text-xs text-slate-500">
         {relativeTime(b.createdAt)}
       </td>
       <td className="px-2 py-2">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <a
             href={b.url}
             target="_blank"

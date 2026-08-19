@@ -1161,6 +1161,10 @@ const es = {
     info: "Info",
     added: "Añadido",
     tags: "Tags",
+    snapshot_pending: "En cola",
+    snapshot_running: "Capturando",
+    snapshot_ready: "Guardada",
+    snapshot_error: "Error",
     dragHandle: "Arrastrar para reordenar",
   },
   iconLib: {

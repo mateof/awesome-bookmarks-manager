@@ -1163,6 +1163,10 @@ const gl = {
     info: "Info",
     added: "Engadido",
     tags: "Etiquetas",
+    snapshot_pending: "Na cola",
+    snapshot_running: "Capturando",
+    snapshot_ready: "Gardada",
+    snapshot_error: "Erro",
     dragHandle: "Arrastrar para reordenar",
   },
   iconLib: {
