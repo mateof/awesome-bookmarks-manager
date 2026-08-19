@@ -4,6 +4,7 @@ const gl = {
     showLess: "Ver menos",
     conflict:
       "Outro usuario cambiou isto mentres o editabas. Recarga e téntao de novo.",
+    done: "Feito",
     cancel: "Cancelar",
     save: "Gardar",
     delete: "Eliminar",
@@ -462,6 +463,8 @@ const gl = {
     imported: "Importados {{folders}} cartafoles e {{bookmarks}} bookmarks.",
   },
   tags: {
+    noneYet: "Sen tags",
+    addHere: "Engadir tag",
     pageTitle: "Etiquetas",
     newTag: "Nova etiqueta",
     empty: "Aínda non tes etiquetas. Crea unha co botón de arriba ou engade etiquetas ao editar un cartafol ou marcador.",
@@ -987,6 +990,8 @@ const gl = {
     tooLarge: "A imaxe supera 4MB",
   },
   richText: {
+    maximise: "Maximizar o editor",
+    restore: "Restaurar o tamaño",
     editText: "Editar o texto",
     editTitle: "Editar o texto de {{name}}",
     copyable: "Texto copiable (clic para copiar)",

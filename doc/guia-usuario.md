@@ -476,6 +476,23 @@ un párrafo vacío que mantendría el bloque en pantalla sin nada dentro.
 Para **añadir** texto donde no lo hay todavía, sigue siendo el botón de editar
 de siempre: el lápiz vive en el texto, y si no hay texto no hay dónde ponerlo.
 
+**El editor se maximiza.** El último botón de la barra lo lleva a pantalla
+completa, con su barra arriba y los botones de guardar y cancelar abajo, para
+escribir a gusto. `Esc` devuelve el tamaño normal (no cierra el diálogo, que
+sería perder lo escrito).
+
+---
+
+## 18c. Tags desde el propio detalle
+
+En una carpeta y en la ficha de un bookmark se ven sus tags, y con **+ Añadir
+tag** se editan ahí mismo: el mismo buscador de siempre, que completa los que
+ya tienes y crea uno nuevo al pulsar Enter si el nombre no existe.
+
+Se guarda solo, sin botón de confirmar, igual que la estrella de favorito que
+tiene al lado. Y guarda **solo la lista de tags**, así que no toca nada más de
+la carpeta o del bookmark.
+
 ---
 
 ## 19. Almacenamiento y cuotas

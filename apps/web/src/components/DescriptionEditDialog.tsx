@@ -39,6 +39,7 @@ export function DescriptionEditDialog({
   const { t } = useTranslation();
   const [value, setValue] = useState(html);
   const [err, setErr] = useState<string | null>(null);
+  const [maximised, setMaximised] = useState(false);
 
   const save = useMutation({
     // Returns void: the two calls give back different shapes (a Folder and a
@@ -70,6 +71,26 @@ export function DescriptionEditDialog({
       ),
   });
 
+  const buttons = (
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        onClick={onClose}
+        className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"
+      >
+        {t("common.cancel")}
+      </button>
+      <button
+        type="button"
+        disabled={save.isPending}
+        onClick={() => save.mutate()}
+        className="rounded bg-slate-900 px-4 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+      >
+        {save.isPending ? t("common.saving") : t("common.save")}
+      </button>
+    </div>
+  );
+
   return (
     <Modal
       title={t("richText.editTitle", { name: title })}
@@ -78,28 +99,21 @@ export function DescriptionEditDialog({
       fill
     >
       {/* Fixed height, and the text is the only part that scrolls: the toolbar
-          and the buttons stay put however long the note gets. */}
-      <RichTextEditor value={value} onChange={setValue} fill />
-      <div className="shrink-0 space-y-2">
-        {err && <div className="text-sm text-red-600">{err}</div>}
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={save.isPending}
-            onClick={() => save.mutate()}
-            className="rounded bg-slate-900 px-4 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
-          >
-            {save.isPending ? t("common.saving") : t("common.save")}
-          </button>
+          and the buttons stay put however long the note gets. The same buttons
+          go to the editor so they are still there when it is maximised. */}
+      <RichTextEditor
+        value={value}
+        onChange={setValue}
+        fill
+        actions={buttons}
+        onMaximisedChange={setMaximised}
+      />
+      {!maximised && (
+        <div className="shrink-0 space-y-2">
+          {err && <div className="text-sm text-red-600">{err}</div>}
+          {buttons}
         </div>
-      </div>
+      )}
     </Modal>
   );
 }

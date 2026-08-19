@@ -54,6 +54,7 @@ import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
+import { InlineTags } from "../components/InlineTags.js";
 import { ImportArchiveDialog } from "../components/ImportArchiveDialog.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
@@ -731,6 +732,15 @@ export function FolderPage() {
             {headerControls}
           </div>
         </div>
+      )}
+
+      {folder && (
+        <InlineTags
+          entity="folder"
+          id={folder.id}
+          tagIds={folder.tagIds ?? []}
+          onSaved={() => qc.invalidateQueries({ queryKey: ["folders"] })}
+        />
       )}
 
       {folder?.description && (

@@ -4,6 +4,7 @@ const en = {
     showLess: "Show less",
     conflict:
       "Someone else changed this while you were editing. Reload and try again.",
+    done: "Done",
     cancel: "Cancel",
     save: "Save",
     delete: "Delete",
@@ -462,6 +463,8 @@ const en = {
     imported: "Imported {{folders}} folders and {{bookmarks}} bookmarks.",
   },
   tags: {
+    noneYet: "No tags",
+    addHere: "Add tag",
     pageTitle: "Tags",
     newTag: "New tag",
     empty: "You don't have any tags yet. Create one with the button above or add tags when editing a folder or bookmark.",
@@ -984,6 +987,8 @@ const en = {
     tooLarge: "The image exceeds 4MB",
   },
   richText: {
+    maximise: "Maximise the editor",
+    restore: "Restore the size",
     editText: "Edit the text",
     editTitle: "Edit the text of {{name}}",
     copyable: "Copyable text (click to copy)",

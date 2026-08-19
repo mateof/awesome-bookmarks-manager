@@ -4,6 +4,7 @@ const es = {
     showLess: "Ver menos",
     conflict:
       "Otro usuario ha cambiado esto mientras lo editabas. Recarga y vuelve a intentarlo.",
+    done: "Listo",
     cancel: "Cancelar",
     save: "Guardar",
     delete: "Eliminar",
@@ -462,6 +463,8 @@ const es = {
     imported: "Importadas {{folders}} carpetas y {{bookmarks}} bookmarks.",
   },
   tags: {
+    noneYet: "Sin tags",
+    addHere: "Añadir tag",
     pageTitle: "Tags",
     newTag: "Nuevo tag",
     empty: "Aún no tienes tags. Crea uno con el botón de arriba o añade tags al editar una carpeta o bookmark.",
@@ -985,6 +988,8 @@ const es = {
     tooLarge: "La imagen excede 4MB",
   },
   richText: {
+    maximise: "Maximizar el editor",
+    restore: "Restaurar el tamaño",
     editText: "Editar el texto",
     editTitle: "Editar el texto de {{name}}",
     copyable: "Texto copiable (clic para copiar)",

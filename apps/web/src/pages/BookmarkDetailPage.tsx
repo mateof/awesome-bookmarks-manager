@@ -31,7 +31,7 @@ import { KebabMenu } from "../components/KebabMenu.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
-import { TagChipList } from "../components/TagChip.js";
+import { InlineTags } from "../components/InlineTags.js";
 
 export function BookmarkDetailPage() {
   const { t } = useTranslation();
@@ -68,7 +68,6 @@ export function BookmarkDetailPage() {
   const [showShare, setShowShare] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [editDescription, setEditDescription] = useState(false);
-  const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
 
   if (!q.data) return <div className="text-slate-400">{t("common.loading")}</div>;
   const b = q.data;
@@ -233,13 +232,15 @@ export function BookmarkDetailPage() {
         />
       </div>
 
-      {(b.tagIds?.length ?? 0) > 0 && (
-        <TagChipList
-          tagIds={b.tagIds ?? []}
-          allTags={tagsQ.data ?? []}
-          asLink
-        />
-      )}
+      <InlineTags
+        entity="bookmark"
+        id={b.id}
+        tagIds={b.tagIds ?? []}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
+          qc.invalidateQueries({ queryKey: ["bookmarks"] });
+        }}
+      />
 
       {b.description && (
         <CollapsibleRichText

@@ -11,6 +11,8 @@ import {
   Italic,
   Link as LinkIcon,
   List,
+  Maximize2,
+  Minimize2,
   ListOrdered,
   Quote,
   Strikethrough,
@@ -30,6 +32,20 @@ interface Props {
    * own scroll, which is the moment you most want them.
    */
   fill?: boolean;
+  /**
+   * Rendered at the bottom while maximised. The full-screen editor covers the
+   * dialog it was opened from, buttons included, so without this you would
+   * have to shrink it back just to save — which is exactly the friction the
+   * maximise button was meant to remove.
+   */
+  actions?: React.ReactNode;
+  /**
+   * Told whenever the editor goes full screen, so the dialog around it can
+   * stop rendering its own copy of `actions`: two identical save buttons in
+   * the accessibility tree, one of them covered but still reachable by Tab, is
+   * worse than the duplication looks.
+   */
+  onMaximisedChange?: (maximised: boolean) => void;
 }
 
 /**
@@ -38,9 +54,38 @@ interface Props {
  * passwords, usernames, etc. — content is server-side encrypted at rest.
  * Use the eye toggle to redact sensitive fields when shoulder-surfing.
  */
-export function RichTextEditor({ value, onChange, placeholder, fill = false }: Props) {
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder,
+  fill = false,
+  actions,
+  onMaximisedChange,
+}: Props) {
   const { t } = useTranslation();
   const [redactSensitive, setRedactSensitive] = useState(false);
+  const [maximised, setMaximised] = useState(false);
+  const toggleMaximised = (next: boolean) => {
+    setMaximised(next);
+    onMaximisedChange?.(next);
+  };
+
+  // While maximised, Escape shrinks the editor rather than closing whatever
+  // dialog it sits in — losing the text you were writing because you wanted
+  // the small view back would be a nasty surprise. Captured so it runs before
+  // the dialog's own handler.
+  useEffect(() => {
+    if (!maximised) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMaximised(false);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [maximised]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -73,20 +118,30 @@ export function RichTextEditor({ value, onChange, placeholder, fill = false }: P
 
   return (
     <div
-      className={`rounded border border-slate-300 dark:border-slate-700 ${
+      className={`border border-slate-300 dark:border-slate-700 ${
         redactSensitive ? "[&_.tiptap_*]:blur-sm" : ""
-      } ${fill ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}`}
+      } ${
+        maximised
+          ? // Fixed to the viewport, so it covers the dialog it was opened
+            // from as well as the page behind it.
+            "fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900"
+          : `rounded ${fill ? "flex min-h-0 flex-1 flex-col overflow-hidden" : ""}`
+      }`}
     >
       <Toolbar
         editor={editor}
         redactSensitive={redactSensitive}
         onToggleRedact={() => setRedactSensitive((r) => !r)}
+        maximised={maximised}
+        onToggleMaximise={() => toggleMaximised(!maximised)}
       />
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
       <div
         data-testid="editor-scroll"
-        className={fill ? "min-h-0 flex-1 overflow-y-auto p-2" : "p-2"}
+        className={
+          fill || maximised ? "min-h-0 flex-1 overflow-y-auto p-2" : "p-2"
+        }
       >
         <EditorContent
           editor={editor}
@@ -94,6 +149,11 @@ export function RichTextEditor({ value, onChange, placeholder, fill = false }: P
           aria-label={placeholder ?? t("richText.descriptionAria")}
         />
       </div>
+      {maximised && actions && (
+        <div className="shrink-0 border-t border-slate-200 p-2 dark:border-slate-700">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
@@ -102,10 +162,14 @@ function Toolbar({
   editor,
   redactSensitive,
   onToggleRedact,
+  maximised,
+  onToggleMaximise,
 }: {
   editor: Editor;
   redactSensitive: boolean;
   onToggleRedact: () => void;
+  maximised: boolean;
+  onToggleMaximise: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -207,6 +271,21 @@ function Toolbar({
       >
         {redactSensitive ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
       </Btn>
+      {/* Pushed to the far end: it is about the window, not about the text. */}
+      <button
+        type="button"
+        onClick={onToggleMaximise}
+        title={maximised ? t("richText.restore") : t("richText.maximise")}
+        aria-label={maximised ? t("richText.restore") : t("richText.maximise")}
+        aria-pressed={maximised}
+        className="ml-auto rounded p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700"
+      >
+        {maximised ? (
+          <Minimize2 className="h-3 w-3" />
+        ) : (
+          <Maximize2 className="h-3 w-3" />
+        )}
+      </button>
     </div>
   );
 }
