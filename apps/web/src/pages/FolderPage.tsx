@@ -1346,10 +1346,10 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         selected={selected}
         onToggle={() => p.toggle(key)}
         label={selectFolderLabel(t, sf.name)}
-        className="absolute left-1 top-1"
+        className="absolute left-1 top-1 z-10"
       />
       <div
-        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
+        className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 transition-opacity ${
           selected || sf.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
@@ -1503,10 +1503,10 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         selected={selected}
         onToggle={() => p.toggle(key)}
         label={selectFolderLabel(t, sf.name)}
-        className="absolute left-1 top-1"
+        className="absolute left-1 top-1 z-10"
       />
       <div
-        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
+        className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 transition-opacity ${
           selected || sf.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
@@ -1544,7 +1544,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
         selected={selected}
         onToggle={() => p.toggle(key)}
         label={selectBookmarkLabel(t, b.title)}
-        className="absolute left-2 top-3"
+        className="absolute left-2 top-3 z-10"
       />
       <BookmarkIcon b={b} size="h-8 w-8" />
       <div className="flex-1 overflow-hidden">
@@ -1750,10 +1750,10 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
         selected={selected}
         onToggle={() => p.toggle(key)}
         label={selectBookmarkLabel(t, b.title)}
-        className="absolute left-1 top-1"
+        className="absolute left-1 top-1 z-10"
       />
       <div
-        className={`absolute right-1 top-1 flex items-center gap-0.5 transition-opacity ${
+        className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 transition-opacity ${
           selected || b.favorite
             ? "opacity-100"
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
