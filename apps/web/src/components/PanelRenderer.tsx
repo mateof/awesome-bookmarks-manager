@@ -1,5 +1,6 @@
 import {
   PANEL_LAYOUT_DEFAULTS,
+  TREE_LAYOUTS,
   type PanelBgKind,
   type PanelBookmark,
   type PanelFolder,
@@ -25,6 +26,12 @@ import { fuzzyScoreAny } from "../fuzzy.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
 import { downloadPanelBookmarks } from "../lib/panelExport.js";
 import { PanelBackground } from "./PanelBackground.js";
+import { Favicon } from "./PanelFavicon.js";
+import {
+  MindmapLayout,
+  OrbitLayout,
+  TreeLayout,
+} from "./PanelTreeLayouts.js";
 
 /**
  * Renders a panel (a folder subtree) in the shape defined by the template.
@@ -135,6 +142,7 @@ export function PanelRenderer({
   }, []);
 
   const rootTitle = displayTitle?.trim() || root.name;
+  const isTreeLayout = (TREE_LAYOUTS as readonly string[]).includes(template.layout);
 
   // Built up front so the template can swap their order.
   const foldersSection =
@@ -255,7 +263,7 @@ export function PanelRenderer({
           </button>
         )}
 
-        {template.showBreadcrumb !== false && (
+        {template.showBreadcrumb !== false && !isTreeLayout && (
           <Breadcrumb
             root={root}
             path={path}
@@ -280,6 +288,17 @@ export function PanelRenderer({
           <Section title={`${filtered.length} enlace(s)`} template={template}>
             <BookmarksView bookmarks={filtered} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDescBookmark} />
           </Section>
+        ) : isTreeLayout ? (
+          // These draw the hierarchy themselves, from the root rather than
+          // from `current`: their whole point is that you never leave the page
+          // to see what is inside a folder.
+          template.layout === "tree" ? (
+            <TreeLayout root={root} template={template} onDesc={setDescBookmark} />
+          ) : template.layout === "mindmap" ? (
+            <MindmapLayout root={root} template={template} onDesc={setDescBookmark} />
+          ) : (
+            <OrbitLayout root={root} template={template} onDesc={setDescBookmark} />
+          )
         ) : (
           <>
             {(template.sectionOrder ?? PANEL_LAYOUT_DEFAULTS.sectionOrder) === "links"
@@ -868,40 +887,6 @@ function FolderPreviewCard({
       )}
     </div>
   );
-}
-
-function Favicon({
-  url,
-  title,
-  accent,
-  size = 22,
-}: {
-  url: string;
-  /** Used for the fallback letter, so it matches what the card shows. */
-  title?: string;
-  accent: string;
-  size?: number;
-}) {
-  const [failed, setFailed] = useState(false);
-  let host = "";
-  let origin = "";
-  try {
-    const u = new URL(url);
-    host = u.hostname;
-    origin = u.origin;
-  } catch {
-    // ignore
-  }
-  // Prefer the bookmark's name: "Hacker News" reads as H, not as the N of
-  // news.ycombinator.com. The host is only a fallback for untitled entries.
-  const source = title?.trim() || host || url || "?";
-  const letter = [...source.replace(/^https?:\/\//, "").replace(/^www\./, "")][0] ?? "?";
-  if (failed || !origin) {
-    return (
-      <span style={{ width: size, height: size, borderRadius: 6, background: accent, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, fontWeight: 700, flexShrink: 0 }}>{letter.toUpperCase()}</span>
-    );
-  }
-  return <img src={`${origin}/favicon.ico`} alt="" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />;
 }
 
 function Tags({

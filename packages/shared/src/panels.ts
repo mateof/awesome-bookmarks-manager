@@ -12,7 +12,20 @@ export const PanelLayoutSchema = z.enum([
   "bento",
   "terminal",
   "dashboard",
+  // Layouts that show the whole subtree at once and open it as you go, rather
+  // than browsing one folder at a time. See PanelTreeLayouts.tsx.
+  "tree",
+  "mindmap",
+  "orbit",
 ]);
+
+/** Every layout, in the order the template editor offers them. Derived from
+ * the schema so a new one cannot be added and then forgotten in the picker. */
+export const PANEL_LAYOUTS = PanelLayoutSchema.options;
+
+/** The layouts that render the subtree themselves: no folder cards, no
+ * section headings, and the breadcrumb has nothing to say. */
+export const TREE_LAYOUTS = ["tree", "mindmap", "orbit"] as const;
 export type PanelLayout = z.infer<typeof PanelLayoutSchema>;
 
 export const TemplateThemeSchema = z.object({

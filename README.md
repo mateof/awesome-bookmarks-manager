@@ -145,9 +145,16 @@ one port.
   chips and a live tag filter. Each panel can be public, password-protected,
   or shared with specific users, and **rebuilds itself in the background**
   when its content changes (symlinked content included).
-  - **Themes**: eleven built-in templates (Grid, Bento, Terminal, Minimal,
-    Dashboard, Galaxy, Ocean, Beach, Aquarium, Dragon Ball, Doraemon) plus a
-    template editor with JSON import/export.
+  - **Templates**: seventeen built-in ones plus an editor with JSON
+    import/export. Eleven browse a folder at a time (Grid, Bento, Terminal,
+    Minimal, Dashboard, Galaxy, Ocean, Beach, Aquarium, Dragon Ball,
+    Doraemon), and six draw the **whole hierarchy and open it in place**, with
+    no navigation at all: `tree` unfolds down the page (Árbol, Plano),
+    `mindmap` branches across it column by column (Mapa mental, Sinapsis), and
+    `orbit` lays a level out as a ring around its parent (Órbita, Reactor).
+    They open on hover on a desktop and on tap where there is no hover; a
+    closed branch stays mounted for the height animation but is `inert`, so it
+    is out of the tab order, the accessibility tree and find-in-page.
   - **Animated backgrounds**: pick a built-in scene (galaxy, aurora, ocean,
     beach, fish tank, clouds, sakura, dragon balls) rendered in pure CSS, or
     upload your own image, GIF or short video per panel.

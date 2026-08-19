@@ -256,9 +256,30 @@ Detalles a tener en cuenta:
 ## 11. Personalizar el aspecto de un panel
 
 Los paneles se dibujan con una **plantilla**. En *Paneles → Plantillas* tienes
-las integradas (Cuadrícula, Bento, Terminal, Lista minimal, Dashboard, Galaxia,
-Océano, Playa, Pecera, Dragon Ball y Doraemon) y puedes duplicar cualquiera
-para partir de ella.
+las integradas y puedes duplicar cualquiera para partir de ella.
+
+Hay dos familias, y la diferencia no es de color sino de cómo se recorren.
+
+**Las que navegan carpeta a carpeta**, como el resto de la aplicación:
+Cuadrícula, Bento, Terminal, Lista minimal, Dashboard, Galaxia, Océano, Playa,
+Pecera, Dragon Ball y Doraemon.
+
+**Las que dibujan la jerarquía entera y la van abriendo sin cambiar de
+página.** Son las nuevas y hay tres formas:
+
+| Forma | Plantillas | Cómo se lee |
+| --- | --- | --- |
+| **Árbol** | Árbol, Plano | En vertical: cada carpeta se despliega hacia abajo con su rama, como un explorador de archivos. |
+| **Mapa mental** | Mapa mental, Sinapsis | En horizontal: cada nivel es una columna que crece a la derecha, unida a la anterior. Arranca con la primera rama abierta. |
+| **Órbita** | Órbita, Reactor | En círculo: las carpetas de un nivel giran alrededor de su padre. Doble clic entra en una y el centro te devuelve. |
+
+Se abren **pasando el ratón** en escritorio y **tocando** en móvil (una segunda
+pulsación cierra). Es automático: se mira si el dispositivo tiene puntero de
+verdad, así que una tablet con teclado se comporta como un escritorio.
+
+Una rama cerrada sigue en la página, porque es lo que permite animar su altura
+sin números mágicos, pero está marcada como inerte: no la alcanza el tabulador,
+no la leen los lectores de pantalla y no la encuentra el buscador del navegador.
 
 ![Lista de plantillas](images/29-templates-list.png)
 

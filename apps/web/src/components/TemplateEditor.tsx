@@ -1,4 +1,5 @@
 import {
+  PANEL_LAYOUTS,
   PANEL_LAYOUT_DEFAULTS,
   PANEL_SCENES,
   type PanelLayout,
@@ -89,7 +90,7 @@ export function TemplateEditor({
                   setConfig((c) => ({ ...c, layout: e.target.value as PanelLayout }))
                 }
               >
-                {["grid", "list", "bento", "terminal", "dashboard"].map((l) => (
+                {PANEL_LAYOUTS.map((l) => (
                   <option key={l} value={l}>
                     {l}
                   </option>

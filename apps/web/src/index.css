@@ -109,6 +109,48 @@ body,
     opacity: 1;
   }
 }
+/* Panel tree layouts (tree / mindmap / orbit). Kept here rather than inline so
+   `prefers-reduced-motion` can switch the whole set off in one place: these
+   layouts move a lot more than the rest of the app. */
+@keyframes panelBranchIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes panelOrbitIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes panelOrbitSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="panelBranchIn"],
+  [style*="panelOrbitIn"],
+  [style*="panelOrbitSpin"] {
+    animation: none !important;
+  }
+}
+
 @keyframes spotPop {
   from {
     opacity: 0;

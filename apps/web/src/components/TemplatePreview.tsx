@@ -1,4 +1,8 @@
-import { PANEL_LAYOUT_DEFAULTS, type TemplateConfig } from "@awesome-bookmarks/shared";
+import {
+  PANEL_LAYOUT_DEFAULTS,
+  TREE_LAYOUTS,
+  type TemplateConfig,
+} from "@awesome-bookmarks/shared";
 import { ChevronRight, Download, Filter, Folder as FolderIcon, Home, Search } from "lucide-react";
 import { PanelBackground } from "./PanelBackground.js";
 
@@ -113,6 +117,7 @@ export function TemplatePreviewFrame({
   const linksFirst =
     (config.sectionOrder ?? PANEL_LAYOUT_DEFAULTS.sectionOrder) === "links";
   const titles = config.showSectionTitles !== false;
+  const isTree = (TREE_LAYOUTS as readonly string[]).includes(config.layout);
 
   const foldersBlock = (
     <>
@@ -331,7 +336,7 @@ export function TemplatePreviewFrame({
         )}
 
         {/* breadcrumb */}
-        {config.showBreadcrumb !== false && (
+        {config.showBreadcrumb !== false && !isTree && (
           <div style={{ display: "flex", alignItems: "center", gap: 4, color: t.muted, marginBottom: 8 }}>
             <Home size={mobile ? 11 : 12} /> Inicio
           </div>
@@ -370,9 +375,138 @@ export function TemplatePreviewFrame({
           </div>
         )}
 
-        {linksFirst ? linksBlock : foldersBlock}
-        {linksFirst ? foldersBlock : linksBlock}
+        {isTree ? (
+          <TreeSketch config={config} mobile={mobile} />
+        ) : (
+          <>
+            {linksFirst ? linksBlock : foldersBlock}
+            {linksFirst ? foldersBlock : linksBlock}
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Miniature of a tree layout.
+ *
+ * A schematic rather than the real component: the real ones only make sense
+ * while you move a pointer through them, and a 200px-tall thumbnail with no
+ * interaction would show a collapsed root and read as "empty".
+ */
+function TreeSketch({
+  config,
+  mobile,
+}: {
+  config: TemplateConfig;
+  mobile?: boolean;
+}) {
+  const t = config.theme;
+  const pill = (w: number, filled = false) => ({
+    height: mobile ? 12 : 15,
+    width: w,
+    borderRadius: config.card.radius,
+    background: filled ? `${t.accent}26` : t.surface,
+    border: `1px solid ${filled ? t.accent : t.border}`,
+  });
+
+  if (config.layout === "orbit") {
+    const r = mobile ? 42 : 58;
+    const box = r * 2 + (mobile ? 26 : 34);
+    return (
+      <div style={{ display: "flex", justifyContent: "center", paddingTop: 6 }}>
+        <div style={{ position: "relative", width: box, height: box }}>
+          <span
+            style={{
+              position: "absolute",
+              inset: (box - r * 2) / 2,
+              borderRadius: "50%",
+              border: `1px dashed ${t.border}`,
+            }}
+          />
+          <span
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%)",
+              width: mobile ? 34 : 44,
+              height: mobile ? 34 : 44,
+              borderRadius: "50%",
+              background: t.surface,
+              border: `2px solid ${t.accent}`,
+            }}
+          />
+          {[0, 1, 2, 3, 4].map((i) => {
+            const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+            return (
+              <span
+                key={i}
+                style={{
+                  position: "absolute",
+                  left: box / 2 + Math.cos(a) * r,
+                  top: box / 2 + Math.sin(a) * r,
+                  transform: "translate(-50%,-50%)",
+                  width: mobile ? 20 : 26,
+                  height: mobile ? 20 : 26,
+                  borderRadius: "50%",
+                  background: i === 0 ? `${t.accent}26` : t.surface,
+                  border: `1px solid ${i === 0 ? t.accent : t.border}`,
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (config.layout === "mindmap") {
+    return (
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        {[0, 1, 2].map((col) => (
+          <div key={col} style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+            {Array.from({ length: 4 - col }).map((_, i) => (
+              <div key={i} style={pill(0, col > 0 && i === 0)} />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // tree
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+      <div style={pill(0, true)} />
+      <div
+        style={{
+          marginLeft: 10,
+          paddingLeft: 8,
+          borderLeft: `1px solid ${t.border}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 5,
+        }}
+      >
+        <div style={pill(0, true)} />
+        <div
+          style={{
+            marginLeft: 10,
+            paddingLeft: 8,
+            borderLeft: `1px solid ${t.border}`,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+          }}
+        >
+          <div style={pill(mobile ? 42 : 56)} />
+          <div style={pill(mobile ? 34 : 44)} />
+        </div>
+        <div style={pill(0)} />
+      </div>
+      <div style={pill(0)} />
     </div>
   );
 }
