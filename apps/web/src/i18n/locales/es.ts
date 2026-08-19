@@ -589,6 +589,7 @@ const es = {
     by: "por",
     star: "Dale una estrella",
     viewRepo: "Ver en GitHub",
+    versionTitle: "Versión de la aplicación",
     report: "Reportar incidencia o sugerencia",
   },
   twofa: {
@@ -778,6 +779,7 @@ const es = {
       securityLog: "Seguridad",
     storage: "Almacenamiento",
       profile: "Perfil",
+      appearance: "Apariencia",
       security: "Seguridad",
       cloud: "Cloud",
       importExport: "Import/Export",
@@ -1141,6 +1143,19 @@ const es = {
       trouble4:
         "el firewall del NAS o del router está bloqueando el puerto. Comprueba que está abierto desde donde corre la API.",
     },
+  },
+  themes: {
+    title: "Tema de la aplicación",
+    subtitle: "Cada tema trae su versión clara y su versión oscura; el interruptor de sol/luna sigue eligiendo cuál de las dos ves.",
+    lightShort: "Claro",
+    darkShort: "Oscuro",
+    import: "Importar tema…",
+    export: "Exportar el tema actual",
+    remove: "Quitar este tema",
+    confirmRemove: "¿Quitar este tema importado? Volverás al tema por defecto si es el que tienes puesto.",
+    errorNotJson: "El archivo no es JSON válido.",
+    errorInvalid: "El archivo no tiene el formato de un tema. Mira la documentación para ver la estructura.",
+    storageHint: "Los temas se guardan en este navegador, igual que la preferencia de claro/oscuro. Usa Exportar para llevártelos a otro dispositivo.",
   },
   theme: {
     system: "Tema: sistema",

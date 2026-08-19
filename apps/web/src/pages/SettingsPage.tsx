@@ -12,6 +12,7 @@ import {
   Plus,
   ScrollText,
   ShieldAlert,
+  Palette,
   ShieldCheck,
   Trash2,
   User,
@@ -32,6 +33,7 @@ import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
 import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
 import { SessionList } from "../components/SessionList.js";
 import { SecurityLog } from "../components/SecurityLog.js";
+import { ThemePicker } from "../components/ThemePicker.js";
 import { CloudVault } from "../components/CloudVault.js";
 import {
   CertificateTrust,
@@ -154,6 +156,9 @@ export function SettingsPage() {
           <Tab to="/settings/security" icon={<ShieldCheck className="h-4 w-4" />}>
             {t("settings.tabs.security")}
           </Tab>
+          <Tab to="/settings/appearance" icon={<Palette className="h-4 w-4" />}>
+            {t("settings.tabs.appearance")}
+          </Tab>
           <Tab to="/settings/cloud" icon={<CloudIcon className="h-4 w-4" />}>
             {t("settings.tabs.cloud")}
           </Tab>
@@ -189,6 +194,7 @@ export function SettingsPage() {
           <Routes>
             <Route index element={<Profile />} />
             <Route path="security" element={<Security />} />
+            <Route path="appearance" element={<Appearance />} />
             <Route path="cloud" element={<Cloud />} />
             <Route path="import-export" element={<ImportExport />} />
             <Route path="storage" element={<Storage />} />
@@ -246,6 +252,24 @@ function SecurityLogTab() {
         subtitle={t("securityLog.subtitle")}
       />
       <SecurityLog />
+    </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Appearance                                                         */
+/* ------------------------------------------------------------------ */
+
+function Appearance() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <SectionHeader
+        icon={<Palette className="h-5 w-5" />}
+        title={t("themes.title")}
+        subtitle={t("themes.subtitle")}
+      />
+      <ThemePicker />
     </Card>
   );
 }

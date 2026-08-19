@@ -589,6 +589,7 @@ const en = {
     by: "by",
     star: "Give it a star",
     viewRepo: "View on GitHub",
+    versionTitle: "Application version",
     report: "Report an issue or suggestion",
   },
   twofa: {
@@ -778,6 +779,7 @@ const en = {
       securityLog: "Security",
     storage: "Storage",
       profile: "Profile",
+      appearance: "Appearance",
       security: "Security",
       cloud: "Cloud",
       importExport: "Import/Export",
@@ -1140,6 +1142,19 @@ const en = {
       trouble4:
         "the NAS or router firewall is blocking the port. Check that it's open from where the API runs.",
     },
+  },
+  themes: {
+    title: "Application theme",
+    subtitle: "Every theme ships a light and a dark side; the sun/moon toggle still picks which one you see.",
+    lightShort: "Light",
+    darkShort: "Dark",
+    import: "Import theme…",
+    export: "Export the current theme",
+    remove: "Remove this theme",
+    confirmRemove: "Remove this imported theme? You will fall back to the default one if it is the one in use.",
+    errorNotJson: "The file is not valid JSON.",
+    errorInvalid: "The file is not shaped like a theme. See the documentation for the structure.",
+    storageHint: "Themes are stored in this browser, like the light/dark preference. Use Export to carry them to another device.",
   },
   theme: {
     system: "Theme: system",

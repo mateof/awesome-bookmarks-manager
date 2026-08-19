@@ -5,6 +5,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.js";
 import "./i18n/index.js";
 import "./index.css";
+import { initTheme } from "./themes.js";
+
+// The boot script in index.html paints a cached copy; this is the authoritative
+// pass, so a built-in palette changed by an update reaches an old cache.
+initTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {

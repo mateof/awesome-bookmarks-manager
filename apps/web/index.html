@@ -19,6 +19,15 @@
             (mode === "system" &&
               window.matchMedia("(prefers-color-scheme: dark)").matches);
           document.documentElement.classList.toggle("dark", dark);
+          // The chosen palette, cached as plain CSS by src/themes.ts, so the
+          // first paint is already themed instead of flashing the default.
+          var css = localStorage.getItem("palette.css");
+          if (css) {
+            var el = document.createElement("style");
+            el.id = "app-palette";
+            el.textContent = css;
+            document.head.appendChild(el);
+          }
         } catch (e) {
           /* ignore */
         }

@@ -26,6 +26,8 @@ one port.
   screenshots. In Spanish.
 - [Browser extension](doc/extension.md) — install on Chrome, Opera and Firefox,
   configure it, pick a save folder and create folders from the popup. In Spanish.
+- [Themes](doc/temas.md) — the ten built-in themes and how to write your own.
+  In Spanish.
 - [HTTP API & MCP](doc/README.md) — programmatic access for apps, scripts and AI.
 - [End-to-end tests](e2e/README.md) — the isolated Playwright suite that also
   generates the guide's screenshots.
@@ -106,7 +108,16 @@ one port.
   between accounts and instances.
 - **Browser bookmarks bar** in the header (Chrome-style dropdowns); click a
   folder to open all its bookmarks in tabs at once.
-- **Light / dark / system theme** with persisted preference.
+- **Ten themes**, each with a light and a dark side, picked in Settings →
+  Appearance, plus import of your own from a JSON file. A theme is a set of CSS
+  variables rather than a restyle: the interface is written against Tailwind's
+  `slate`, `white` and `blue` (87% of every colour utility in the app), those
+  three resolve to variables, and a theme supplies the values. The semantic
+  colours (danger red, warning amber, success green) stay fixed on purpose.
+  Ramps are generated in OKLCH from the default's own lightness curve, so every
+  theme keeps the contrast relationships the UI was designed with. See
+  [doc/temas.md](doc/temas.md) for the format.
+- **Light / dark / system** switch, with persisted preference.
 - **Multilingual UI**: Spanish, English, Galician (Galician in RAG
   normative). Detection via browser language + manual toggle.
 - **Server-side encryption at rest** with two-tier key wrapping (master key

@@ -1095,6 +1095,14 @@ function BookmarksBlock(p: BodyProps) {
   );
 }
 
+/** The snapshot state as interface text. "none" is the common case and says
+ * nothing worth a word, so it reads as a dash. */
+function SnapshotStatus({ status }: { status: string }) {
+  const { t } = useTranslation();
+  if (status === "none") return <span className="text-slate-400">—</span>;
+  return <>{t(`table.snapshot_${status}` as "table.snapshot_ready")}</>;
+}
+
 function stopBubble(e: React.MouseEvent | React.KeyboardEvent) {
   e.stopPropagation();
 }
@@ -1538,7 +1546,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
         </div>
         <div className="mt-1 flex items-center gap-2">
           <span className="text-[10px] uppercase tracking-wide text-slate-400">
-            {b.snapshotStatus}
+            <SnapshotStatus status={b.snapshotStatus} />
           </span>
           <TagChipList
             tagIds={b.tagIds ?? []}
@@ -1609,7 +1617,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
         max={3}
       />
       <span className="hidden text-[10px] uppercase tracking-wide text-slate-400 lg:inline">
-        {b.snapshotStatus}
+        <SnapshotStatus status={b.snapshotStatus} />
       </span>
       <a
         href={b.url}
@@ -1946,11 +1954,7 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
         />
       </td>
       <td className="px-2 py-2 text-[10px] uppercase tracking-wide text-slate-400">
-        {b.snapshotStatus === "none" ? (
-          <span className="text-slate-400">—</span>
-        ) : (
-          t(`table.snapshot_${b.snapshotStatus}` as "table.snapshot_ready")
-        )}
+        <SnapshotStatus status={b.snapshotStatus} />
       </td>
       <td className="px-2 py-2 text-xs text-slate-500">
         {relativeTime(b.createdAt)}

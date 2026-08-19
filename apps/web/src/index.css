@@ -4,6 +4,35 @@
 
 :root {
   color-scheme: light dark;
+
+  /* Default palette ("Pizarra": Tailwind's own slate / blue / white).
+     Every themed utility resolves through these, so they have to exist before
+     any JavaScript runs — a missing variable is not a fallback, it is a colour
+     that does not render at all. src/themes.ts overwrites them for any other
+     theme; see doc/temas.md for the format. */
+  --c-white: 255 255 255;
+  --c-n-50: 248 250 252;
+  --c-n-100: 241 245 249;
+  --c-n-200: 226 232 240;
+  --c-n-300: 203 213 225;
+  --c-n-400: 148 163 184;
+  --c-n-500: 100 116 139;
+  --c-n-600: 71 85 105;
+  --c-n-700: 51 65 85;
+  --c-n-800: 30 41 59;
+  --c-n-900: 15 23 42;
+  --c-n-950: 2 6 23;
+  --c-a-50: 239 246 255;
+  --c-a-100: 219 234 254;
+  --c-a-200: 191 219 254;
+  --c-a-300: 147 197 253;
+  --c-a-400: 96 165 250;
+  --c-a-500: 59 130 246;
+  --c-a-600: 37 99 235;
+  --c-a-700: 29 78 216;
+  --c-a-800: 30 64 175;
+  --c-a-900: 30 58 138;
+  --c-a-950: 23 37 89;
 }
 
 html,
