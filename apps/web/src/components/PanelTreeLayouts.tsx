@@ -1,7 +1,8 @@
 import type { PanelBookmark, PanelFolder, TemplateConfig } from "@awesome-bookmarks/shared";
 import { InfoButton, type PanelDesc } from "./PanelDescription.js";
 import { ChevronRight, Folder as FolderIcon, Info } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Favicon } from "./PanelFavicon.js";
 
 /**
@@ -42,6 +43,24 @@ function useOpenPath(initial: string[] = []) {
   const hover = useHoverCapable();
   const [open, setOpen] = useState<string[]>(initial);
 
+  // `?p=` is the panel's "open this folder" channel: the search box writes it,
+  // and so does anyone who shares the link. These layouts do not navigate, so
+  // rather than changing what is on screen it unfolds the branch that leads to
+  // that folder.
+  //
+  // Seeded, not bound: hovering opens and closes constantly, and pushing every
+  // hover through the URL would flood the history and make the whole thing
+  // lurch. The state stays local; the URL only ever pushes into it.
+  const [sp] = useSearchParams();
+  const fromUrl = sp.get("p") ?? "";
+  const seeded = useRef<string | null>(null);
+  useEffect(() => {
+    if (seeded.current === fromUrl) return;
+    seeded.current = fromUrl;
+    const trail = fromUrl.split("/").filter(Boolean);
+    if (trail.length > 0) setOpen(trail);
+  }, [fromUrl]);
+
   const openTo = (trail: string[]) => setOpen(trail);
   const toggle = (trail: string[]) =>
     setOpen((prev) =>
@@ -55,6 +74,11 @@ function useOpenPath(initial: string[] = []) {
   return {
     hover,
     isOpen,
+    /** The trail currently open, deepest last. */
+    open,
+    /** Changes only when the URL seeds a trail, never on hover. A node that
+     * ends up deepest scrolls itself into view on that, and only that. */
+    urlToken: fromUrl,
     /** Props for a node that opens a level. */
     nodeProps: (trail: string[]) =>
       hover
@@ -231,8 +255,18 @@ function TreeNode({
   const t = template.theme;
   const open = nav.isOpen(trail);
   const depth = trail.length - 1;
+  const deepest = open && nav.open.length === trail.length;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (deepest && nav.urlToken) {
+      ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    // Only on a URL-driven open: doing it on hover would drag the page around
+    // under the pointer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nav.urlToken]);
   return (
-    <div style={{ position: "relative" }}>
+    <div ref={ref} style={{ position: "relative" }}>
       <button
         type="button"
         {...nav.nodeProps(trail)}
@@ -374,8 +408,16 @@ export function MindmapLayout({ root, template, onDesc }: LayoutProps) {
     return out;
   }, [root, nav]);
 
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!nav.urlToken) return;
+    const el = scroller.current;
+    if (el) el.scrollTo({ left: el.scrollWidth, behavior: "smooth" });
+  }, [nav.urlToken, columns.length]);
+
   return (
     <div
+      ref={scroller}
       style={{
         display: "flex",
         gap: 18,
@@ -485,6 +527,23 @@ export function OrbitLayout({ root, template, onDesc }: LayoutProps) {
   const [focused, setFocused] = useState<PanelFolder | null>(null);
   const level = focused ?? root;
   const nodes = level.subfolders;
+
+  // A ring shows one level, so "open this folder" means standing on its
+  // parent: walk the trail the URL asked for and focus the level that
+  // contains the target, which then sits on the ring highlighted.
+  useEffect(() => {
+    if (!nav.urlToken) return;
+    const trail = nav.urlToken.split("/").filter(Boolean);
+    if (trail.length === 0) return;
+    let cur = root;
+    // Everything but the last id: the last one is the node on the ring.
+    for (const id of trail.slice(0, -1)) {
+      const next = cur.subfolders.find((f) => f.id === id);
+      if (!next) return;
+      cur = next;
+    }
+    setFocused(cur === root ? null : cur);
+  }, [nav.urlToken, root]);
 
   const size = 460;
   const radius = 168;

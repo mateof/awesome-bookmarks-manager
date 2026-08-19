@@ -192,3 +192,88 @@ test("panel órbita: cada carpeta es un nodo del anillo y muestra su contenido",
   await page.getByRole("button", { name: /Frontend/ }).hover();
   await expect(page.getByRole("button", { name: /Entrar \(1\)/ })).toBeVisible();
 });
+
+test("panel en árbol: buscar una carpeta la abre en su rama, sin salir de la página", async ({
+  browser,
+}) => {
+  // The search box writes the folder's path to `?p=`, which is how the
+  // browsing layouts navigate. These do not navigate, so they read it as
+  // "unfold to this folder" instead; before that they ignored it and clicking
+  // a search result did nothing at all.
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "panel.tree.search.e2e@example.com",
+    nickname: "paneltreesearch",
+    password: "SearchUnfolds26xxx",
+  });
+  const folderId = await seedTree(page.request);
+  await page.request.post("/api/panels", {
+    data: {
+      title: "Árbol buscado",
+      slug: "arbol-buscar-e2e",
+      folderId,
+      accessMode: "public",
+      templateId: "builtin:tree",
+    },
+  });
+
+  await page.goto("/panel/arbol-buscar-e2e");
+  // "React" is two levels down and its branch is closed.
+  await expect(page.getByRole("button", { name: /Frontend/ })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+
+  await page.getByRole("button", { name: /Buscar en el panel/ }).click();
+  await page.getByPlaceholder("Buscar en el panel…").fill("React");
+  await page.getByRole("button", { name: /React/ }).first().click();
+
+  // The whole trail is open and the page never changed: the layout unfolded.
+  await expect(page.getByRole("button", { name: /Frontend/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: /React/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(page.getByText("Hooks al detalle")).toBeVisible();
+});
+
+test("panel órbita: buscar una carpeta centra el anillo que la contiene", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "panel.orbit.search.e2e@example.com",
+    nickname: "panelorbitsearch",
+    password: "RingFollowsSearch26",
+  });
+  const folderId = await seedTree(page.request);
+  await page.request.post("/api/panels", {
+    data: {
+      title: "Órbita buscada",
+      slug: "orbita-buscar-e2e",
+      folderId,
+      accessMode: "public",
+      templateId: "builtin:orbit",
+    },
+  });
+
+  await page.goto("/panel/orbita-buscar-e2e");
+  // At the root ring, "React" is not on it: it lives one level in.
+  await expect(page.getByRole("button", { name: /^React/ })).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Buscar en el panel/ }).click();
+  await page.getByPlaceholder("Buscar en el panel…").fill("React");
+  await page.getByRole("button", { name: /React/ }).first().click();
+
+  // A ring shows one level, so the answer is to stand on the parent: React is
+  // now a node on the ring, with Frontend at the centre.
+  await expect(page.getByRole("button", { name: /^React/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Frontend/ })).toBeVisible();
+});

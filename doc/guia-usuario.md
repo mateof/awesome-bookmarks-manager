@@ -281,6 +281,13 @@ Una rama cerrada sigue en la página, porque es lo que permite animar su altura
 sin números mágicos, pero está marcada como inerte: no la alcanza el tabulador,
 no la leen los lectores de pantalla y no la encuentra el buscador del navegador.
 
+**El buscador del panel abre la rama.** Como estas plantillas no navegan, al
+elegir una carpeta en el buscador no se cambia de página: se despliega la rama
+que lleva hasta ella y se trae a la vista. En Órbita, donde el anillo enseña un
+nivel cada vez, se coloca en el nivel que la contiene y la carpeta queda en el
+anillo. El enlace resultante sirve para compartir esa rama concreta o para
+volver a ella al recargar.
+
 **El texto se puede leer sin salir del panel.** Si una carpeta o un bookmark
 tienen descripción, aparece un icono de información que la abre en una ventana,
 en cualquiera de las plantillas. Dentro funcionan igual que en la aplicación las
