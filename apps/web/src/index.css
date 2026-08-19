@@ -582,6 +582,26 @@ body,
   background: rgb(51 65 85);
 }
 
+/* Inside a panel the marks cannot use the app's palette: a template can be
+   dark while the app is light, and vice versa. The modal hands its own theme
+   over in these two variables. Declared after the rules above so it wins the
+   tie at equal specificity. */
+.ab-marks-themed .ab-copyable,
+.ab-marks-themed .ab-spoiler[data-revealed="true"],
+.dark .ab-marks-themed .ab-copyable,
+.dark .ab-marks-themed .ab-spoiler[data-revealed="true"] {
+  background: var(--ab-mark-bg);
+  border-bottom-color: var(--ab-mark-line);
+  color: inherit;
+}
+.ab-marks-themed .ab-spoiler,
+.dark .ab-marks-themed .ab-spoiler {
+  background: var(--ab-mark-line);
+}
+.ab-marks-themed .ab-spoiler[data-revealed="true"] {
+  filter: none;
+}
+
 /* Both marks flash green on a successful copy. */
 .ab-copied {
   background: rgb(187 247 208) !important;

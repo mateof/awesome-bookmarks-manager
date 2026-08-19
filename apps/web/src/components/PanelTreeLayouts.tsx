@@ -1,5 +1,6 @@
 import type { PanelBookmark, PanelFolder, TemplateConfig } from "@awesome-bookmarks/shared";
-import { ChevronRight, Folder as FolderIcon } from "lucide-react";
+import { InfoButton, type PanelDesc } from "./PanelDescription.js";
+import { ChevronRight, Folder as FolderIcon, Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Favicon } from "./PanelFavicon.js";
 
@@ -65,7 +66,7 @@ function useOpenPath(initial: string[] = []) {
 interface LayoutProps {
   root: PanelFolder;
   template: TemplateConfig;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -80,48 +81,104 @@ function Leaf({
 }: {
   b: PanelBookmark;
   template: TemplateConfig;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
   compact?: boolean;
 }) {
   const t = template.theme;
   return (
-    <a
-      href={b.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => {
-        // A description is worth reading before leaving; the panel shows it in
-        // a modal, so an alt-click keeps you here.
-        if (e.altKey && b.description) {
-          e.preventDefault();
-          onDesc(b);
-        }
-      }}
-      title={b.description ? `${b.title} — alt+clic para la descripción` : b.title}
+    <span
       style={{
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
-        gap: 8,
+        gap: 4,
         padding: compact ? "0.3rem 0.55rem" : "0.45rem 0.7rem",
         borderRadius: template.card.radius,
         border: `1px solid ${t.border}`,
         background: t.surface,
-        color: t.text,
-        textDecoration: "none",
-        fontSize: compact ? 12 : 13,
-        whiteSpace: "nowrap",
-        maxWidth: 260,
+        maxWidth: 280,
       }}
     >
-      {template.card.showIcon !== false && (
-        <Favicon url={b.url} title={b.title} accent={t.accent} size={compact ? 14 : 16} />
-      )}
-      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{b.title}</span>
-    </a>
+      <a
+        href={b.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={b.title}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          minWidth: 0,
+          color: t.text,
+          textDecoration: "none",
+          fontSize: compact ? 12 : 13,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {template.card.showIcon !== false && (
+          <Favicon url={b.url} title={b.title} accent={t.accent} size={compact ? 14 : 16} />
+        )}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{b.title}</span>
+      </a>
+      <InfoButton
+        title={b.title}
+        html={b.description}
+        url={b.url}
+        template={template}
+        onDesc={onDesc}
+      />
+    </span>
+  );
+}
+
+/**
+ * The same "see the text" affordance as `InfoButton`, but as a <span> with a
+ * button role: these nodes are themselves buttons, and nesting one inside
+ * another is invalid markup that browsers resolve however they feel like.
+ */
+function InfoBadge({
+  title,
+  html,
+  template,
+  onDesc,
+}: {
+  title: string;
+  html: string | null;
+  template: TemplateConfig;
+  onDesc: (d: PanelDesc) => void;
+}) {
+  if (!html || html.replace(/<[^>]*>/g, "").trim().length === 0) return null;
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      title="Ver el texto"
+      aria-label={`Ver el texto de ${title}`}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDesc({ title, html });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          onDesc({ title, html });
+        }
+      }}
+      style={{
+        display: "inline-flex",
+        flexShrink: 0,
+        color: template.theme.muted,
+        cursor: "pointer",
+      }}
+    >
+      <Info size={14} />
+    </span>
   );
 }
 
 function countOf(f: PanelFolder): number {
+
   return f.subfolders.length + f.bookmarks.length;
 }
 
@@ -169,7 +226,7 @@ function TreeNode({
   trail: string[];
   nav: ReturnType<typeof useOpenPath>;
   template: TemplateConfig;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
 }) {
   const t = template.theme;
   const open = nav.isOpen(trail);
@@ -214,6 +271,14 @@ function TreeNode({
         <span style={{ color: t.muted, fontSize: 12, fontWeight: 400 }}>
           {countOf(folder)}
         </span>
+        {/* Rendered inside the node's own button, so it is a <span> acting as
+            one: a real <button> nested in a <button> is invalid markup. */}
+        <InfoBadge
+          title={folder.name}
+          html={folder.description}
+          template={template}
+          onDesc={onDesc}
+        />
       </button>
 
       {/* Grid-rows 0fr → 1fr animates a height the browser does not know in
@@ -391,6 +456,12 @@ export function MindmapLayout({ root, template, onDesc }: LayoutProps) {
                 <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
                   {f.name}
                 </span>
+                <InfoBadge
+                  title={f.name}
+                  html={f.description}
+                  template={template}
+                  onDesc={onDesc}
+                />
                 <ChevronRight size={13} style={{ color: open ? t.accent : t.muted, flexShrink: 0 }} />
               </button>
             );
@@ -591,7 +662,7 @@ function OrbitDetail({
 }: {
   folder: PanelFolder;
   template: TemplateConfig;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
   onEnter: (f: PanelFolder) => void;
   hideEnter?: boolean;
 }) {

@@ -13,8 +13,10 @@ interface Props {
  * Renders rich-text HTML coming from the API. The server already sanitizes,
  * but defense-in-depth: also sanitize on the client. Cheap and safe.
  *
- * The copyable/spoiler markers are data attributes on spans, so DOMPurify has
- * to be told to keep them — its default allow-list drops unknown `data-*`.
+ * The copyable/spoiler markers are data attributes on spans. DOMPurify keeps
+ * `data-*` by default, so naming them here is not what makes them survive; it
+ * records that they are load-bearing, so a future `USE_PROFILES` (which turns
+ * that default off) does not quietly strip the marks.
  */
 export function RichTextView({ html, className }: Props) {
   const { t } = useTranslation();

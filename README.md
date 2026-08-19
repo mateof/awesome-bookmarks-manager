@@ -155,6 +155,11 @@ one port.
     They open on hover on a desktop and on tap where there is no hover; a
     closed branch stays mounted for the height animation but is `inert`, so it
     is out of the tab order, the accessibility tree and find-in-page.
+  - **Descriptions in place**: a folder or bookmark with text gets an icon that
+    opens it in a modal, in every template, and the editor's click-to-copy and
+    hidden-until-clicked marks work there too (same implementation as the app,
+    so the two cannot drift), re-coloured from the template's own palette
+    because a panel can be dark while the app is light.
   - **Animated backgrounds**: pick a built-in scene (galaxy, aurora, ocean,
     beach, fish tank, clouds, sakura, dragon balls) rendered in pure CSS, or
     upload your own image, GIF or short video per panel.

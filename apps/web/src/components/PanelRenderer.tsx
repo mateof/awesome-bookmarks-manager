@@ -21,11 +21,19 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { fuzzyScoreAny } from "../fuzzy.js";
+import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
+import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
 import { downloadPanelBookmarks } from "../lib/panelExport.js";
 import { PanelBackground } from "./PanelBackground.js";
+import {
+  InfoButton,
+  stripHtml,
+  type PanelDesc,
+} from "./PanelDescription.js";
 import { Favicon } from "./PanelFavicon.js";
 import {
   MindmapLayout,
@@ -55,7 +63,7 @@ export function PanelRenderer({
   bgAssetKind?: PanelBgKind | null;
 }) {
   const [sp, setSp] = useSearchParams();
-  const [descBookmark, setDescBookmark] = useState<PanelBookmark | null>(null);
+  const [desc, setDesc] = useState<PanelDesc | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
 
   const path = useMemo(
@@ -155,11 +163,12 @@ export function PanelRenderer({
                 key={f.id}
                 folder={f}
                 template={template}
+                onDesc={setDesc}
                 onOpen={() => setPath([...path, f.id])}
                 onOpenChild={(childId) => setPath([...path, f.id, childId])}
               />
             ) : (
-              <FolderCard key={f.id} folder={f} template={template} onOpen={() => setPath([...path, f.id])} />
+              <FolderCard key={f.id} folder={f} template={template} onDesc={setDesc} onOpen={() => setPath([...path, f.id])} />
             ),
           )}
         </div>
@@ -168,7 +177,7 @@ export function PanelRenderer({
   const linksSection =
     current.bookmarks.length > 0 ? (
       <Section key="links" title="Enlaces" template={template}>
-        <BookmarksView bookmarks={current.bookmarks} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDescBookmark} />
+        <BookmarksView bookmarks={current.bookmarks} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDesc} />
       </Section>
     ) : null;
 
@@ -286,18 +295,18 @@ export function PanelRenderer({
 
         {filtering ? (
           <Section title={`${filtered.length} enlace(s)`} template={template}>
-            <BookmarksView bookmarks={filtered} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDescBookmark} />
+            <BookmarksView bookmarks={filtered} template={template} selected={selected} onTagClick={toggleTag} onDesc={setDesc} />
           </Section>
         ) : isTreeLayout ? (
           // These draw the hierarchy themselves, from the root rather than
           // from `current`: their whole point is that you never leave the page
           // to see what is inside a folder.
           template.layout === "tree" ? (
-            <TreeLayout root={root} template={template} onDesc={setDescBookmark} />
+            <TreeLayout root={root} template={template} onDesc={setDesc} />
           ) : template.layout === "mindmap" ? (
-            <MindmapLayout root={root} template={template} onDesc={setDescBookmark} />
+            <MindmapLayout root={root} template={template} onDesc={setDesc} />
           ) : (
-            <OrbitLayout root={root} template={template} onDesc={setDescBookmark} />
+            <OrbitLayout root={root} template={template} onDesc={setDesc} />
           )
         ) : (
           <>
@@ -311,8 +320,8 @@ export function PanelRenderer({
         )}
       </div>
 
-      {descBookmark && (
-        <DescriptionModal b={descBookmark} template={template} onClose={() => setDescBookmark(null)} />
+      {desc && (
+        <DescriptionModal desc={desc} template={template} onClose={() => setDesc(null)} />
       )}
       {searchOpen && (
         <PanelSearch
@@ -538,16 +547,6 @@ function matches(b: PanelBookmark, selected: Set<string>, matchAll: boolean): bo
   return matchAll ? [...selected].every((s) => names.has(s)) : [...selected].some((s) => names.has(s));
 }
 
-function stripHtml(html: string): string {
-  const el = document.createElement("div");
-  el.innerHTML = html;
-  return (el.textContent || "").replace(/\s+/g, " ").trim();
-}
-
-/* ---------------------------------------------------------------- */
-/* Layout helpers                                                   */
-/* ---------------------------------------------------------------- */
-
 function gridStyle(template: TemplateConfig, kind: "folders" | "bookmarks"): React.CSSProperties {
   if (template.layout === "bento") {
     // `min(100%, …)` collapses to a single full-width column on narrow
@@ -580,7 +579,7 @@ function BookmarksView({
   template: TemplateConfig;
   selected: Set<string>;
   onTagClick: (name: string) => void;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
 }) {
   const rows = template.layout === "list" || template.layout === "terminal";
   if (rows) {
@@ -769,21 +768,37 @@ function Section({ title, template, children }: { title: string; template: Templ
   );
 }
 
-function FolderCard({ folder, template, onOpen }: { folder: PanelFolder; template: TemplateConfig; onOpen: () => void }) {
+function FolderCard({ folder, template, onDesc, onOpen }: { folder: PanelFolder; template: TemplateConfig; onDesc: (d: PanelDesc) => void; onOpen: () => void }) {
   const t = template.theme;
   const count = folder.bookmarks.length + folder.subfolders.length;
+  // A div rather than a button: the card is clickable *and* carries the "see
+  // the text" button, and a button inside a button is not valid HTML (nor does
+  // it get its own click in every browser).
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       style={{ display: "flex", alignItems: "center", gap: 10, textAlign: "left", cursor: "pointer", padding: "0.85rem 1rem", borderRadius: template.card.radius, background: t.surface, border: `1px solid ${t.border}`, color: t.text, boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none", fontFamily: "inherit", minHeight: template.cardMinHeight || undefined }}
     >
       <FolderIcon size={20} style={{ color: t.accent, flexShrink: 0 }} />
-      <span style={{ minWidth: 0 }}>
+      <span style={{ minWidth: 0, flex: 1 }}>
         <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{folder.name}</span>
         <span style={{ fontSize: 12, color: t.muted }}>{count} elementos</span>
       </span>
-    </button>
+      <InfoButton
+        title={folder.name}
+        html={folder.description}
+        template={template}
+        onDesc={onDesc}
+      />
+    </div>
   );
 }
 
@@ -812,11 +827,13 @@ function AssetBackground({ url, kind }: { url: string; kind?: PanelBgKind | null
 function FolderPreviewCard({
   folder,
   template,
+  onDesc,
   onOpen,
   onOpenChild,
 }: {
   folder: PanelFolder;
   template: TemplateConfig;
+  onDesc: (d: PanelDesc) => void;
   onOpen: () => void;
   onOpenChild: (childId: string) => void;
 }) {
@@ -833,6 +850,7 @@ function FolderPreviewCard({
         color: t.text,
         boxShadow: template.card.shadow ? "0 6px 20px rgba(0,0,0,0.12)" : "none",
         overflow: "hidden",
+        position: "relative",
       }}
     >
       <button
@@ -857,6 +875,14 @@ function FolderPreviewCard({
           <span style={{ fontSize: 12, color: t.muted }}>{count} elementos</span>
         </span>
       </button>
+      <span style={{ position: "absolute", right: 10, top: 12 }}>
+        <InfoButton
+          title={folder.name}
+          html={folder.description}
+          template={template}
+          onDesc={onDesc}
+        />
+      </span>
       {folder.subfolders.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", borderTop: `1px solid ${t.border}` }}>
           {folder.subfolders.map((child) => (
@@ -934,24 +960,6 @@ function Tags({
   );
 }
 
-function InfoButton({ b, template, onDesc }: { b: PanelBookmark; template: TemplateConfig; onDesc: (b: PanelBookmark) => void }) {
-  if (!b.description || stripHtml(b.description).length === 0) return null;
-  return (
-    <button
-      type="button"
-      title="Ver detalles"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onDesc(b);
-      }}
-      style={{ flexShrink: 0, display: "inline-flex", background: "transparent", border: "none", cursor: "pointer", color: template.theme.muted, padding: 2, fontFamily: "inherit" }}
-    >
-      <Info size={16} />
-    </button>
-  );
-}
-
 function BookmarkCard({
   b,
   template,
@@ -965,7 +973,7 @@ function BookmarkCard({
   index: number;
   selected: Set<string>;
   onTagClick: (name: string) => void;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
 }) {
   const t = template.theme;
   const desc = b.description ? stripHtml(b.description) : "";
@@ -979,7 +987,7 @@ function BookmarkCard({
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {template.card.showIcon && <Favicon url={b.url} title={b.title} accent={t.accent} />}
         <span style={{ fontWeight: 600, minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</span>
-        <InfoButton b={b} template={template} onDesc={onDesc} />
+        <InfoButton title={b.title} html={b.description} url={b.url} template={template} onDesc={onDesc} />
       </div>
       {template.card.showUrl && (
         <span style={{ fontSize: 12, color: t.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.url}</span>
@@ -1003,7 +1011,7 @@ function BookmarkRow({
   template: TemplateConfig;
   selected: Set<string>;
   onTagClick: (name: string) => void;
-  onDesc: (b: PanelBookmark) => void;
+  onDesc: (d: PanelDesc) => void;
 }) {
   const t = template.theme;
   const terminal = template.layout === "terminal";
@@ -1027,18 +1035,39 @@ function BookmarkRow({
         )}
         <Tags b={b} template={template} selected={selected} onTagClick={onTagClick} scroll />
       </span>
-      <InfoButton b={b} template={template} onDesc={onDesc} />
+      <InfoButton title={b.title} html={b.description} url={b.url} template={template} onDesc={onDesc} />
     </a>
   );
 }
 
-function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template: TemplateConfig; onClose: () => void }) {
+function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; template: TemplateConfig; onClose: () => void }) {
   const t = template.theme;
+  const { t: tr } = useTranslation();
   const backdrop = useBackdropDismiss(onClose);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // The copyable/spoiler markers are data attributes. DOMPurify keeps `data-*`
+  // by default, so listing them is belt and braces rather than a fix: it says
+  // they are load-bearing, so a future `USE_PROFILES` here (which flips that
+  // default off) does not silently strip the marks.
   const safe = useMemo(
-    () => DOMPurify.sanitize(b.description ?? "", { ADD_ATTR: ["target", "rel"] }),
-    [b.description],
+    () =>
+      DOMPurify.sanitize(desc.html, {
+        ADD_ATTR: ["target", "rel", COPYABLE_ATTR, SPOILER_ATTR],
+      }),
+    [desc.html],
   );
+
+  // Same behaviour as the app: click to copy, click to reveal and click again
+  // to copy. Shared implementation, so the two cannot drift.
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    return bindInteractiveMarks(el, {
+      copy: tr("richText.clickToCopy"),
+      reveal: tr("richText.clickToReveal"),
+      copied: tr("richText.copied"),
+    });
+  }, [tr, safe]);
   // Lock the page behind the modal so a drag on mobile doesn't scroll it.
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -1113,17 +1142,40 @@ function DescriptionModal({ b, template, onClose }: { b: PanelBookmark; template
       >
         <div className="mx-auto mb-3 h-1.5 w-10 shrink-0 rounded-full sm:hidden" style={{ background: t.border }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, flex: 1, minWidth: 0 }}>{b.title}</h3>
-          <a href={b.url} target="_blank" rel="noopener noreferrer" style={{ color: t.accent, display: "inline-flex" }} title="Abrir">
-            <ExternalLink size={18} />
-          </a>
-          <button type="button" onClick={onClose} style={{ background: "transparent", border: "none", cursor: "pointer", color: t.muted, display: "inline-flex" }}>
+          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, flex: 1, minWidth: 0 }}>{desc.title}</h3>
+          {desc.url && (
+            <a href={desc.url} target="_blank" rel="noopener noreferrer" style={{ color: t.accent, display: "inline-flex" }} title="Abrir">
+              <ExternalLink size={18} />
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            title="Cerrar"
+            aria-label="Cerrar"
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: t.muted, display: "inline-flex" }}
+          >
             <X size={18} />
           </button>
         </div>
-        <div style={{ fontSize: 12, color: t.muted, marginBottom: 12, wordBreak: "break-all" }}>{b.url}</div>
+        {desc.url && (
+          <div style={{ fontSize: 12, color: t.muted, marginBottom: 12, wordBreak: "break-all" }}>{desc.url}</div>
+        )}
         <div
-          style={{ fontSize: 14, lineHeight: 1.6 }}
+          ref={bodyRef}
+          className="ab-marks-themed"
+          // The mark styles are written against the app's own light/dark
+          // palette, which says nothing about a panel: a template can be dark
+          // while the app is light. These two hand the panel's own colours to
+          // the stylesheet so a copyable chip stays readable either way.
+          style={
+            {
+              fontSize: 14,
+              lineHeight: 1.6,
+              "--ab-mark-bg": `${t.accent}2b`,
+              "--ab-mark-line": t.muted,
+            } as React.CSSProperties
+          }
           dangerouslySetInnerHTML={{ __html: safe }}
         />
       </div>

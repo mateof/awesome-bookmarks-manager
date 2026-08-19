@@ -281,6 +281,12 @@ Una rama cerrada sigue en la página, porque es lo que permite animar su altura
 sin números mágicos, pero está marcada como inerte: no la alcanza el tabulador,
 no la leen los lectores de pantalla y no la encuentra el buscador del navegador.
 
+**El texto se puede leer sin salir del panel.** Si una carpeta o un bookmark
+tienen descripción, aparece un icono de información que la abre en una ventana,
+en cualquiera de las plantillas. Dentro funcionan igual que en la aplicación las
+dos marcas del editor: el texto marcado como copiable se copia al hacer clic, y
+el texto oculto se descubre al primer clic y se copia al segundo.
+
 ![Lista de plantillas](images/29-templates-list.png)
 
 El editor muestra una **previsualización en vivo** con datos de ejemplo, a la
