@@ -1,6 +1,6 @@
 import { ArrowUp, ChevronRight, FolderClosed, PencilLine } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { lookStyle, useLookClass } from "../lib/entityLook.js";
 import { CollapsibleRichText } from "./CollapsibleRichText.js";
@@ -40,16 +40,37 @@ function resolvePath(
   return { node, trail };
 }
 
+/**
+ * Where you are inside a share, kept in the URL rather than in component
+ * state: a refresh (or a shared link, or the browser's back button) used to
+ * drop you back at the root of the share, which is not what any other folder
+ * view does.
+ *
+ * Every move is derived from `trail`, not from the raw ids, so a path that no
+ * longer resolves (a subfolder the owner moved or deleted since) collapses to
+ * the deepest folder that still exists instead of leaving dead ids behind.
+ */
 export function useSharedPath(root: SharedFolderPayload) {
-  const [path, setPath] = useState<string[]>([]);
+  const [params, setParams] = useSearchParams();
+  const path = (params.get("p") ?? "").split(".").filter(Boolean);
   const { node, trail } = resolvePath(root, path);
+
+  const set = (ids: string[]) => {
+    const next = new URLSearchParams(params);
+    if (ids.length > 0) next.set("p", ids.join("."));
+    else next.delete("p");
+    setParams(next);
+  };
+  const here = () => trail.map((f) => f.id);
+
   return {
     path,
     node,
     trail,
-    open: (id: string) => setPath([...path, id]),
-    goTo: (depth: number) => setPath(path.slice(0, depth)),
-    up: () => setPath(path.slice(0, -1)),
+    inSubfolder: trail.length > 0,
+    open: (id: string) => set([...here(), id]),
+    goTo: (depth: number) => set(here().slice(0, depth)),
+    up: () => set(here().slice(0, -1)),
   };
 }
 

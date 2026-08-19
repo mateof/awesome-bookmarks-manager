@@ -58,7 +58,7 @@ export function LinkedSharePage() {
     return <div className="text-slate-400">{t("linked.unavailable")}</div>;
 
   const canEdit = data.access === "editor";
-  const inSubfolder = nav.path.length > 0;
+  const inSubfolder = nav.inSubfolder;
 
   return (
     <div className="space-y-4">

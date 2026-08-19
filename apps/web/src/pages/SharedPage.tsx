@@ -363,7 +363,7 @@ function FolderShareView({
   onEdit: (node: SharedPayload) => void;
 }) {
   const nav = useSharedPath(root);
-  const inSubfolder = nav.path.length > 0;
+  const inSubfolder = nav.inSubfolder;
   return (
     <>
       <ShareHeader canEdit={canEdit} />

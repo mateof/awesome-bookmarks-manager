@@ -161,6 +161,13 @@ test("la carpeta compartida conserva el diseño del dueño y sube de nivel", asy
   await m.page.getByText("Bocetos", { exact: true }).click();
   await expect(m.page.getByText("Boceto uno", { exact: true })).toBeVisible();
 
+  // Where you are lives in the URL, so a refresh keeps you in the subfolder
+  // instead of dumping you back at the root of the share.
+  expect(new URL(m.page.url()).searchParams.get("p")).toBe(sub.id);
+  await m.page.reload();
+  await expect(m.page.getByText("Boceto uno", { exact: true })).toBeVisible();
+  await expect(m.page.getByRole("heading", { name: "Bocetos" })).toBeVisible();
+
   // Up one level: back to the share's root.
   await m.page.getByRole("button", { name: "Subir de nivel" }).click();
   await expect(m.page.getByRole("heading", { name: "Estudio" })).toBeVisible();
