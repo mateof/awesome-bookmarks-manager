@@ -120,10 +120,18 @@ recorre carpeta a carpeta con el mismo botón de *Subir de nivel* que usas en la
 tuya. Si cambias cualquiera de esas cosas después de compartir, el grupo lo ve
 en cuanto se vuelve a sellar la copia, que ocurre solo con guardar el cambio.
 
-**Con permiso de edición se puede trabajar dentro.** Si compartes en modo
-*editor*, quien reciba la carpeta puede crear subcarpetas y bookmarks dentro,
-renombrarlos, cambiarles el texto y borrarlos, desde la carpeta enlazada en su
-inicio o desde *Compartidos*.
+**Con permiso de edición se puede trabajar dentro, y se ve igual que lo tuyo.**
+La carpeta compartida se dibuja con la **misma rejilla** que las tuyas: los
+mismos cinco modos de vista, las mismas tarjetas con su fondo, su icono y sus
+tags, y el mismo menú de tres puntos. Desde ahí se puede **crear** subcarpetas y
+bookmarks, **editar** el nombre y el texto, **mover** dentro del compartido,
+poner **tags**, cambiar el **color** y **eliminar**.
+
+Dos cosas no están, y por un motivo concreto en cada caso:
+
+- **Marcar como favorito**, porque es un gesto personal y la carpeta no es tuya.
+- **Reordenar arrastrando**, porque el orden no viaja en la copia compartida:
+  no habría dónde guardarlo.
 
 Eso ocurre en dos tiempos, y conviene saberlo:
 

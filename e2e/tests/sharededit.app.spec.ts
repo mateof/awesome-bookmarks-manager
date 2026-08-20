@@ -250,3 +250,117 @@ test("los botones de crear solo salen con permiso de edición", async ({
   await o.ctx.close();
   await m.ctx.close();
 });
+
+test("mover, etiquetar y colorear dentro del compartido, y llega al dueño", async ({
+  browser,
+}) => {
+  const o = await mkUser(browser, {
+    email: "shared.ops.owner.e2e@example.com",
+    nickname: "sharedopsowner",
+    password: "AllOpsOwner26xxxx",
+  });
+  const m = await mkUser(browser, {
+    email: "shared.ops.member.e2e@example.com",
+    nickname: "sharedopsmember",
+    password: "AllOpsMember26xxx",
+  });
+
+  const root = await (
+    await o.req.post("/api/folders", { data: { name: "Proyecto" } })
+  ).json();
+  const dest = await (
+    await o.req.post("/api/folders", {
+      data: { name: "Destino", parentId: root.id },
+    })
+  ).json();
+  const bm = await (
+    await o.req.post("/api/bookmarks", {
+      data: {
+        url: "https://mover.example/",
+        title: "Muevete",
+        folderId: root.id,
+        fetchSnapshot: false,
+      },
+    })
+  ).json();
+
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Ops" } })
+  ).json();
+  const inv = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.ops.member.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${inv.token}/accept`);
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+  });
+
+  let shareId = "";
+  let rev = 0;
+  await expect(async () => {
+    const list = await (await m.req.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    const got = await (await m.req.get(`/api/shared/${shareId}`)).json();
+    expect(got.content.bookmarks?.length).toBe(1);
+    rev = got.rev;
+  }).toPass({ timeout: 15_000 });
+
+  // Move the bookmark into the subfolder.
+  const moved = await m.req.post(
+    `/api/shared/${shareId}/node/${bm.id}/move`,
+    { data: { folderId: dest.id, baseRev: rev } },
+  );
+  expect(moved.ok(), await moved.text()).toBeTruthy();
+  rev = (await moved.json()).rev;
+
+  // Tag it (by name: the owner's tag ids mean nothing here).
+  const tagged = await m.req.put(`/api/shared/${shareId}/node/${bm.id}/tags`, {
+    data: { tags: ["urgente"], baseRev: rev },
+  });
+  expect(tagged.ok(), await tagged.text()).toBeTruthy();
+  rev = (await tagged.json()).rev;
+
+  // And colour it.
+  const coloured = await m.req.put(
+    `/api/shared/${shareId}/node/${bm.id}/appearance`,
+    { data: { bgColor: "#123456", baseRev: rev } },
+  );
+  expect(coloured.ok(), await coloured.text()).toBeTruthy();
+
+  // The group sees all three at once.
+  const seen = await (await m.req.get(`/api/shared/${shareId}`)).json();
+  const destNode = seen.content.subfolders.find(
+    (f: { name: string }) => f.name === "Destino",
+  );
+  expect(destNode.bookmarks[0].title).toBe("Muevete");
+  expect(destNode.bookmarks[0].tags.map((t: { name: string }) => t.name)).toContain(
+    "urgente",
+  );
+  expect(destNode.bookmarks[0].bgColor).toBe("#123456");
+
+  // And the owner's own bookmark ends up moved, tagged and coloured. The tag
+  // is matched by name in *their* account, creating it if they lacked it.
+  await expect(async () => {
+    const bms: Array<{
+      id: string;
+      folderId: string | null;
+      bgColor: string | null;
+      tagIds: string[];
+    }> = await (await o.req.get("/api/bookmarks")).json();
+    const real = bms.find((b) => b.id === bm.id)!;
+    expect(real.folderId).toBe(dest.id);
+    expect(real.bgColor).toBe("#123456");
+    const tags: Array<{ id: string; name: string }> = await (
+      await o.req.get("/api/tags")
+    ).json();
+    const urgente = tags.find((t) => t.name === "urgente");
+    expect(urgente).toBeTruthy();
+    expect(real.tagIds).toContain(urgente!.id);
+  }).toPass({ timeout: 40_000 });
+
+  await o.ctx.close();
+  await m.ctx.close();
+});

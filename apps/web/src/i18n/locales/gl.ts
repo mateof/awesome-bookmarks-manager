@@ -768,6 +768,7 @@ const gl = {
     itemCount: "{{count}} elementos",
   },
   sharedEdit: {
+    noBackground: "Sen fondo",
     newFolder: "Novo cartafol",
     newBookmark: "Novo bookmark",
     newFolderTitle: "Novo cartafol no cartafol compartido",

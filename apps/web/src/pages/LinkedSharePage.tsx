@@ -5,8 +5,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { SharedFolderActions } from "../components/SharedFolderActions.js";
+import { SharedGrid } from "../components/SharedGrid.js";
 import {
-  SharedFolderBody,
   SharedTrail,
   UpLevelButton,
   useSharedPath,
@@ -113,13 +113,18 @@ export function LinkedSharePage() {
         />
       )}
 
-      <SharedFolderBody
+      {/* The same grid as your own folders: five view modes, the same cards,
+          the same kebab. Only the data source and what each entry calls are
+          different, and both are arguments. */}
+      <SharedGrid
         shareId={shareId}
         node={nav.node}
+        root={root}
         canEdit={canEdit}
-        {...(canEdit ? { edit: { baseRev: data.rev, onDone: refresh } } : {})}
+        baseRev={data.rev}
         onOpen={nav.open}
         onEdit={setEditing}
+        onDone={refresh}
       />
 
       {editing && (

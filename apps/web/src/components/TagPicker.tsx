@@ -25,9 +25,19 @@ function pickRandomColor(): string {
 interface Props {
   value: string[];
   onChange: (next: string[]) => void;
+  /**
+   * Work in tag *names* rather than ids, and never create a tag row.
+   *
+   * Used inside a group share, where the owner's tag ids mean nothing in the
+   * member's account: the tags travel by name and are matched (or created) in
+   * the owner's account when the change is written back. Creating a tag here
+   * would leave a stray row in the member's own library for a folder that is
+   * not theirs.
+   */
+  byName?: boolean;
 }
 
-export function TagPicker({ value, onChange }: Props) {
+export function TagPicker({ value, onChange, byName = false }: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
@@ -37,12 +47,33 @@ export function TagPicker({ value, onChange }: Props) {
 
   const allTags = tagsQ.data ?? [];
   const byId = useMemo(() => new Map(allTags.map((t) => [t.id, t])), [allTags]);
-  const selected = value.map((id) => byId.get(id)).filter(Boolean) as Tag[];
+  const byNameMap = useMemo(
+    () => new Map(allTags.map((t) => [t.name.toLowerCase(), t])),
+    [allTags],
+  );
+  // In name mode a value that matches nothing in your library is still a real
+  // selection: it is a tag on someone else's folder.
+  const selected: Tag[] = byName
+    ? value.map(
+        (name) =>
+          byNameMap.get(name.toLowerCase()) ?? {
+            id: name,
+            name,
+            color: "#64748b",
+            createdAt: "",
+          },
+      )
+    : (value.map((id) => byId.get(id)).filter(Boolean) as Tag[]);
+
+  const has = (tg: Tag) =>
+    byName
+      ? value.some((v) => v.toLowerCase() === tg.name.toLowerCase())
+      : value.includes(tg.id);
 
   const matching = useMemo(() => {
     const q = input.trim().toLowerCase();
     return allTags
-      .filter((tg) => !value.includes(tg.id))
+      .filter((tg) => !has(tg))
       .filter((tg) => (q ? tg.name.toLowerCase().includes(q) : true))
       .slice(0, 8);
   }, [allTags, input, value]);
@@ -66,15 +97,30 @@ export function TagPicker({ value, onChange }: Props) {
     },
   });
 
-  const addExisting = (id: string) => {
-    if (value.includes(id)) return;
-    onChange([...value, id]);
+  /** In name mode a "new" tag is just a name: no row is created here. */
+  const addNew = (name: string) => {
+    if (byName) {
+      if (!value.some((v) => v.toLowerCase() === name.toLowerCase())) {
+        onChange([...value, name]);
+      }
+      setInput("");
+      inputRef.current?.focus();
+      return;
+    }
+    create.mutate(name);
+  };
+
+  const addExisting = (tag: Tag) => {
+    const key = byName ? tag.name : tag.id;
+    if (value.some((v) => (byName ? v.toLowerCase() === key.toLowerCase() : v === key)))
+      return;
+    onChange([...value, key]);
     setInput("");
     inputRef.current?.focus();
   };
 
-  const remove = (id: string) => {
-    onChange(value.filter((x) => x !== id));
+  const remove = (key: string) => {
+    onChange(value.filter((x) => x !== key));
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -85,14 +131,14 @@ export function TagPicker({ value, onChange }: Props) {
       const existing = allTags.find(
         (tg) => tg.name.toLowerCase() === q.toLowerCase(),
       );
-      if (existing) addExisting(existing.id);
-      else create.mutate(q);
+      if (existing) addExisting(existing);
+      else addNew(q);
     } else if (
       e.key === "Backspace" &&
       input.length === 0 &&
       selected.length > 0
     ) {
-      remove(selected[selected.length - 1]!.id);
+      remove(byName ? selected[selected.length - 1]!.name : selected[selected.length - 1]!.id);
     }
   };
 
@@ -100,7 +146,11 @@ export function TagPicker({ value, onChange }: Props) {
     <div className="relative space-y-1">
       <div className="flex flex-wrap items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800">
         {selected.map((tg) => (
-          <ChipInPicker key={tg.id} tag={tg} onRemove={() => remove(tg.id)} />
+          <ChipInPicker
+            key={tg.id}
+            tag={tg}
+            onRemove={() => remove(byName ? tg.name : tg.id)}
+          />
         ))}
         <input
           ref={inputRef}
@@ -125,7 +175,7 @@ export function TagPicker({ value, onChange }: Props) {
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                addExisting(tg.id);
+                addExisting(tg);
               }}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700"
             >
@@ -141,7 +191,7 @@ export function TagPicker({ value, onChange }: Props) {
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
-                create.mutate(input.trim());
+                addNew(input.trim());
               }}
               disabled={create.isPending}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-700"

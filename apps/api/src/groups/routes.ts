@@ -4,6 +4,9 @@ import {
   CreateSharedFolderBodySchema,
   DeleteSharedNodeBodySchema,
   EditSharedNodeBodySchema,
+  MoveSharedNodeBodySchema,
+  SetSharedAppearanceBodySchema,
+  SetSharedTagsBodySchema,
   InviteMemberBodySchema,
   ShareToGroupBodySchema,
   UpdateGroupBodySchema,
@@ -22,7 +25,10 @@ import {
   createSharedBookmark,
   createSharedFolder,
   deleteSharedNode,
+  moveSharedNode,
   queueFieldEdit,
+  setSharedAppearance,
+  setSharedTags,
 } from "./ops.js";
 import {
   acceptInvitation,
@@ -293,6 +299,36 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     }
     reply.code(201);
     return createSharedBookmark(ctx, shareId, body);
+  });
+
+  app.post("/shared/:shareId/node/:nodeId/move", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = MoveSharedNodeBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return moveSharedNode(ctx, shareId, nodeId, body.folderId, body.baseRev);
+  });
+
+  app.put("/shared/:shareId/node/:nodeId/tags", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = SetSharedTagsBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return setSharedTags(ctx, shareId, nodeId, body.tags, body.baseRev);
+  });
+
+  app.put("/shared/:shareId/node/:nodeId/appearance", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = SetSharedAppearanceBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return setSharedAppearance(ctx, shareId, nodeId, body);
   });
 
   app.delete("/shared/:shareId/node/:nodeId", async (req, reply) => {

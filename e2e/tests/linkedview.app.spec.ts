@@ -99,11 +99,15 @@ test("vista enlazada nativa: navegar subcarpetas y editar (editor)", async ({
   await mpage.getByRole("button", { name: "Portafolio" }).click();
   await expect(mpage.getByText("Guía", { exact: true })).toBeVisible();
 
-  // Edit the "Guía" bookmark in place (editor share).
-  const guiaCard = mpage.locator("div.rounded-xl", {
-    has: mpage.getByText("Guía", { exact: true }),
-  });
-  await guiaCard.getByTitle("Editar").click();
+  // Edit the "Guía" bookmark in place (editor share). The shared folder now
+  // renders with the same grid as your own, so the editor lives in the card's
+  // kebab exactly like everywhere else.
+  const guiaCard = mpage
+    .locator("div.group.relative")
+    .filter({ has: mpage.getByText("Guía", { exact: true }) })
+    .first();
+  await guiaCard.getByRole("button", { name: "Más acciones" }).click();
+  await mpage.getByRole("button", { name: "Editar", exact: true }).click();
   await expect(
     mpage.getByRole("heading", { name: "Editar elemento compartido" }),
   ).toBeVisible();

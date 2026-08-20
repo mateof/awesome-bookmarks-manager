@@ -749,6 +749,35 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  moveSharedNode: (
+    shareId: string,
+    nodeId: string,
+    folderId: string | null,
+    baseRev?: number,
+  ) =>
+    request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}/move`, {
+      method: "POST",
+      body: JSON.stringify({ folderId, baseRev }),
+    }),
+  setSharedTags: (
+    shareId: string,
+    nodeId: string,
+    tags: string[],
+    baseRev?: number,
+  ) =>
+    request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}/tags`, {
+      method: "PUT",
+      body: JSON.stringify({ tags, baseRev }),
+    }),
+  setSharedAppearance: (
+    shareId: string,
+    nodeId: string,
+    body: { bgColor?: string | null; textTone?: string | null; baseRev?: number },
+  ) =>
+    request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}/appearance`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   deleteSharedNode: (shareId: string, nodeId: string, baseRev?: number) =>
     request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}`, {
       method: "DELETE",

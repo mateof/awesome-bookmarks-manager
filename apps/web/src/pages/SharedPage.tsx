@@ -23,9 +23,8 @@ import {
   type SharedPayload,
 } from "../components/SharedNodeEditor.js";
 import { SharedFolderActions } from "../components/SharedFolderActions.js";
+import { SharedGrid } from "../components/SharedGrid.js";
 import {
-  SharedFolderBody,
-  type ShareEditContext,
   SharedTrail,
   UpLevelButton,
   useSharedPath,
@@ -374,7 +373,8 @@ function FolderShareView({
   shareId: string;
   root: SharedFolderPayload;
   canEdit: boolean;
-  edit?: ShareEditContext;
+  /** Present when the viewer may change the share. */
+  edit?: { baseRev: number; onDone: () => void };
   onEdit: (node: SharedPayload) => void;
 }) {
   const nav = useSharedPath(root);
@@ -412,13 +412,15 @@ function FolderShareView({
         />
       )}
 
-      <SharedFolderBody
+      <SharedGrid
         shareId={shareId}
         node={nav.node}
+        root={root}
         canEdit={canEdit}
-        {...(edit ? { edit } : {})}
+        baseRev={edit?.baseRev ?? 0}
         onOpen={nav.open}
         onEdit={onEdit}
+        onDone={edit?.onDone ?? (() => undefined)}
       />
     </>
   );

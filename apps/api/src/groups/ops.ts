@@ -40,7 +40,10 @@ export type ShareOpKind =
   | "create_folder"
   | "create_bookmark"
   | "edit_node"
-  | "delete_node";
+  | "delete_node"
+  | "move_node"
+  | "set_tags"
+  | "set_appearance";
 
 export interface ShareOp {
   kind: ShareOpKind;
@@ -52,6 +55,11 @@ export interface ShareOp {
   url?: string;
   description?: string | null;
   nodeKind?: "folder" | "bookmark";
+  /** Tag names, not ids: the owner's tag rows are theirs, and a member's
+   * account has different ones for the same word. */
+  tags?: string[];
+  bgColor?: string | null;
+  textTone?: string | null;
 }
 
 interface ShareRow {
@@ -384,4 +392,116 @@ export function pendingNodeIds(shareId: string, groupId: string, groupDek: Buffe
     }
   }
   return out;
+}
+
+
+/** Move a node to another folder inside the same share. */
+export function moveSharedNode(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  targetFolderId: string | null,
+  baseRev?: number,
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  if (tree.type !== "folder") throw Forbidden("Nothing to move here");
+  if (nodeId === tree.id) throw Forbidden("The shared folder cannot be moved");
+
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  const target = folderAt(tree, targetFolderId);
+  // A folder cannot be moved inside itself, which the tree walk would happily
+  // let you do and which would detach the whole branch from the share.
+  if (node.type === "folder" && containsNode(node, target.id)) {
+    throw Forbidden("A folder cannot be moved into itself");
+  }
+  detach(tree, nodeId);
+  if (node.type === "folder") target.subfolders.push(node);
+  else target.bookmarks.push(node);
+
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    {
+      kind: "move_node",
+      id: nodeId,
+      parentId: target.id === tree.id ? null : target.id,
+      nodeKind: node.type,
+    },
+    baseRev,
+  );
+  return { rev };
+}
+
+export function setSharedTags(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  names: string[],
+  baseRev?: number,
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  // Colour is whatever the node already had for that name, or a neutral one:
+  // the member's own palette does not travel.
+  const existing = new Map((node.tags ?? []).map((t) => [t.name, t.color]));
+  node.tags = names.map((name) => ({
+    name,
+    color: existing.get(name) ?? "#64748b",
+  }));
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    { kind: "set_tags", id: nodeId, tags: names },
+    baseRev,
+  );
+  return { rev };
+}
+
+export function setSharedAppearance(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  input: { bgColor?: string | null; textTone?: string | null; baseRev?: number },
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  if (input.bgColor !== undefined) node.bgColor = input.bgColor;
+  if (input.textTone !== undefined) node.textTone = input.textTone;
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    {
+      kind: "set_appearance",
+      id: nodeId,
+      ...(input.bgColor !== undefined ? { bgColor: input.bgColor } : {}),
+      ...(input.textTone !== undefined ? { textTone: input.textTone } : {}),
+    },
+    input.baseRev,
+  );
+  return { rev };
+}
+
+function findNodeIn(tree: SharedContent, nodeId: string): SharedContent | null {
+  if (tree.id === nodeId) return tree;
+  if (tree.type !== "folder") return null;
+  for (const b of tree.bookmarks) if (b.id === nodeId) return b;
+  for (const f of tree.subfolders) {
+    const hit = findNodeIn(f, nodeId);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function containsNode(folder: SharedFolderContent, nodeId: string): boolean {
+  if (folder.id === nodeId) return true;
+  return folder.subfolders.some((f) => containsNode(f, nodeId));
 }

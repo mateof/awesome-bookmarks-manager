@@ -138,7 +138,14 @@ one port.
   the owner's rows are encrypted with the owner's key, which nobody else has —
   so the change lands in the shared copy at once (the whole group sees it) and
   is replayed into the owner's real folders the next time they sign in, keeping
-  the same ids so nothing turns into a duplicate of itself. A share travels
+  the same ids so nothing turns into a duplicate of itself. A shared folder is
+  drawn with the **same grid as your own** — five view modes, the same cards,
+  the same kebab — because the card layer takes an `EntitySource` for the four
+  things that used to be wired straight to the personal API (icon URL,
+  background URL, the favourite star, drag and drop) instead of being a second
+  implementation that drifts. Members can create, rename, move, tag, recolour
+  and delete inside it; starring and drag-reordering are the two deliberate
+  exceptions. A share travels
   with the look its owner gave it: background colour or image, custom icon,
   forced text tone and tags, all browsed one folder at a time with the same
   up-one-level button as your own view. Because icons and backgrounds are

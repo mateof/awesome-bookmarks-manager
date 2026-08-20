@@ -149,10 +149,12 @@ test("la carpeta compartida conserva el diseño del dueño y sube de nivel", asy
 
   await m.page.goto(`/linked/${portalId}`);
   await expect(m.page.getByRole("heading", { name: "Estudio" })).toBeVisible();
-  // The subfolder card shows the owner's icon and tag, not a generic folder.
-  const subCard = m.page.locator("div.rounded-xl", {
-    has: m.page.getByText("Bocetos", { exact: true }),
-  });
+  // The subfolder card shows the owner's icon, not a generic folder. Same
+  // card component as your own folders now, so the same markup.
+  const subCard = m.page
+    .locator("div.group.relative")
+    .filter({ has: m.page.getByText("Bocetos", { exact: true }) })
+    .first();
   await expect(subCard.locator("img")).toBeVisible();
 
   // At the root there is nothing to go up to.

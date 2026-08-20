@@ -2,8 +2,17 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AuthedContext } from "../../auth/session.js";
 import { getDb } from "../../db/client.js";
 import { bookmarks, folders, groupShares, groups } from "../../db/schema.js";
-import { createBookmark, updateBookmark } from "../../bookmarks/service.js";
-import { createFolder, updateFolder } from "../../folders/service.js";
+import {
+  createBookmark,
+  moveBookmark,
+  updateBookmark,
+} from "../../bookmarks/service.js";
+import {
+  createFolder,
+  moveFolder,
+  updateFolder,
+} from "../../folders/service.js";
+import { createTag, listTags } from "../../tags/service.js";
 import { unwrapGroupDek } from "../../groups/encryption.js";
 import { clearOps, pendingOps, type ShareOp } from "../../groups/ops.js";
 import { deleteBookmark } from "../../bookmarks/service.js";
@@ -84,6 +93,21 @@ function resolveParent(
   return parentId;
 }
 
+/** Whether this id is one of the owner's folders; if not, it is a bookmark. */
+function isOwnFolder(ctx: AuthedContext, id: string): boolean {
+  return !!getDb()
+    .select({ id: folders.id })
+    .from(folders)
+    .where(
+      and(
+        eq(folders.id, id),
+        eq(folders.userId, ctx.userId),
+        isNull(folders.deletedAt),
+      ),
+    )
+    .get();
+}
+
 function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
   switch (op.kind) {
     case "create_folder": {
@@ -108,12 +132,7 @@ function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
       return;
     }
     case "edit_node": {
-      const isFolder = !!getDb()
-        .select({ id: folders.id })
-        .from(folders)
-        .where(and(eq(folders.id, op.id), eq(folders.userId, ctx.userId), isNull(folders.deletedAt)))
-        .get();
-      if (isFolder) {
+      if (isOwnFolder(ctx, op.id)) {
         updateFolder(ctx, op.id, {
           ...(op.name !== undefined ? { name: op.name } : {}),
           ...(op.description !== undefined ? { description: op.description } : {}),
@@ -130,6 +149,41 @@ function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
     case "delete_node": {
       if (op.nodeKind === "folder") deleteFolder(ctx, op.id);
       else deleteBookmark(ctx, op.id);
+      return;
+    }
+    case "move_node": {
+      const target = resolveParent(op.parentId, shareRootId);
+      if (op.nodeKind === "folder") moveFolder(ctx, op.id, target, 0);
+      else moveBookmark(ctx, op.id, target, 0);
+      return;
+    }
+    case "set_tags": {
+      // Tags arrive by name because the owner's tag rows are theirs alone.
+      // Match by name in the owner's account and create what is missing, the
+      // same rule the archive import uses.
+      const existing = new Map(
+        listTags(ctx).map((t) => [t.name.toLowerCase(), t.id]),
+      );
+      const ids = (op.tags ?? []).map((name) => {
+        const hit = existing.get(name.toLowerCase());
+        if (hit) return hit;
+        const made = createTag(ctx, { name, color: "#64748b" });
+        existing.set(name.toLowerCase(), made.id);
+        return made.id;
+      });
+      if (isOwnFolder(ctx, op.id)) updateFolder(ctx, op.id, { tagIds: ids });
+      else updateBookmark(ctx, op.id, { tagIds: ids });
+      return;
+    }
+    case "set_appearance": {
+      const patch = {
+        ...(op.bgColor !== undefined ? { bgColor: op.bgColor } : {}),
+        ...(op.textTone !== undefined
+          ? { textTone: op.textTone as "auto" | "light" | "dark" | null }
+          : {}),
+      };
+      if (isOwnFolder(ctx, op.id)) updateFolder(ctx, op.id, patch);
+      else updateBookmark(ctx, op.id, patch);
       return;
     }
   }

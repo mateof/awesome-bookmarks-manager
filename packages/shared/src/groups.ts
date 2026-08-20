@@ -153,3 +153,26 @@ export const DeleteSharedNodeBodySchema = z.object({
   baseRev: z.number().int().optional(),
 });
 export type DeleteSharedNodeBody = z.infer<typeof DeleteSharedNodeBodySchema>;
+
+export const MoveSharedNodeBodySchema = z.object({
+  /** Target folder inside the share; null = the share's own root. */
+  folderId: z.string().uuid().nullable(),
+  baseRev: z.number().int().optional(),
+});
+export type MoveSharedNodeBody = z.infer<typeof MoveSharedNodeBodySchema>;
+
+export const SetSharedTagsBodySchema = z.object({
+  /** By name: the owner's tag ids mean nothing in a member's account. */
+  tags: z.array(z.string().trim().min(1).max(64)).max(50),
+  baseRev: z.number().int().optional(),
+});
+export type SetSharedTagsBody = z.infer<typeof SetSharedTagsBodySchema>;
+
+export const SetSharedAppearanceBodySchema = z.object({
+  bgColor: z.string().max(400).nullable().optional(),
+  textTone: z.enum(["auto", "light", "dark"]).nullable().optional(),
+  baseRev: z.number().int().optional(),
+});
+export type SetSharedAppearanceBody = z.infer<
+  typeof SetSharedAppearanceBodySchema
+>;

@@ -767,6 +767,7 @@ const es = {
     itemCount: "{{count}} elementos",
   },
   sharedEdit: {
+    noBackground: "Sin fondo",
     newFolder: "Nueva carpeta",
     newBookmark: "Nuevo bookmark",
     newFolderTitle: "Nueva carpeta en la carpeta compartida",
