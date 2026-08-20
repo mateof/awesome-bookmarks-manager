@@ -169,6 +169,18 @@ export async function writeShareAsset(
   );
 }
 
+/** Remove one member-visible image from the share's store (a cleared
+ * background). The payload and the owner's row are handled by the caller. */
+export async function deleteShareAssetFile(
+  ownerUserId: string,
+  shareId: string,
+  nodeId: string,
+  kind: ShareAssetKind,
+): Promise<void> {
+  await rm(assetPath(ownerUserId, shareId, nodeId, kind), { force: true });
+  invalidateUsage(ownerUserId);
+}
+
 /** Everything a revoked share leaves behind. */
 export async function deleteShareAssets(
   ownerUserId: string,

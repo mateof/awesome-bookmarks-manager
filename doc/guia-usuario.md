@@ -127,10 +127,13 @@ tags, y el mismo menú de tres puntos. Desde ahí se puede **crear** subcarpetas
 bookmarks, **editar** el nombre y el texto, **mover** dentro del compartido,
 poner **tags**, cambiar el **color** y **eliminar**.
 
-La carpeta en la que estás tiene además su propia barra: **Editar esta carpeta**,
-**Cambiar icono** y **Cambiar fondo**. Y cada tarjeta de dentro lleva en su menú
-lo mismo, así que el icono y el fondo se pueden cambiar tanto de la carpeta
-compartida como de cualquiera de sus hijos.
+Editar dentro del compartido usa **los mismos diálogos que tus carpetas**, no
+versiones recortadas. *Editar* abre el formulario completo: nombre, el selector
+de iconos con su **biblioteca, emojis, subida y descarga del favicon**, la
+descripción con texto enriquecido, los tags y el selector de fondo con sus
+modos de color e imagen. *Apariencia* abre el mismo diálogo de apariencia que
+en las tuyas, con el tono del texto y su medida de contraste. La carpeta en la
+que estás tiene su propia barra con ambos.
 
 Las imágenes van al almacén del compartido cifradas con la clave del grupo, así
 que el grupo las ve al momento, y se recifran con la clave del dueño cuando la

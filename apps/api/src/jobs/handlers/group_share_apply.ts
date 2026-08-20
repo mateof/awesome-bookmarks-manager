@@ -215,6 +215,13 @@ function applyOne(
       return;
     }
     case "set_asset": {
+      // No version = the member cleared the image (only backgrounds can be
+      // cleared, same as the personal flow).
+      if (!op.version) {
+        if (isOwnFolder(ctx, op.id)) setFolderBgImagePath(ctx, op.id, null);
+        else setBookmarkBgImagePath(ctx, op.id, null);
+        return;
+      }
       // The bytes are in the share's asset store under the group key; put them
       // in the owner's blob store under theirs, which is what makes the icon
       // theirs from then on.

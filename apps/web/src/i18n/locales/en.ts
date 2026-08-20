@@ -767,10 +767,6 @@ const en = {
     itemCount: "{{count}} items",
   },
   sharedEdit: {
-    noBackground: "No background",
-    icon: "Change icon",
-    background: "Change background",
-    folderTools: "This folder",
     editThisFolder: "Edit this folder",
     newFolder: "New folder",
     newBookmark: "New bookmark",

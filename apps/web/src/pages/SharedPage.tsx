@@ -316,6 +316,9 @@ function SharedItemView({ shareId }: { shareId: string }) {
             qc.invalidateQueries({ queryKey: ["shared-content", shareId] });
             setEditing(null);
           }}
+          onChanged={() =>
+            qc.invalidateQueries({ queryKey: ["shared-content", shareId] })
+          }
         />
       )}
     </div>
@@ -406,7 +409,7 @@ function FolderShareView({
       {canEdit && edit && (
         <SharedFolderActions
           shareId={shareId}
-          folderId={nav.node.id}
+          node={nav.node}
           baseRev={edit.baseRev}
           onDone={edit.onDone}
         />

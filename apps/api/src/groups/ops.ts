@@ -599,7 +599,7 @@ export function pendingAssetKeys(
 ): Set<string> {
   const out = new Set<string>();
   for (const { op } of pendingOps(shareId, groupId, groupDek)) {
-    if (op.kind === "set_asset" && op.assetKind) {
+    if (op.kind === "set_asset" && op.assetKind && op.version) {
       out.add(`${op.id}:${op.assetKind}`);
     }
   }
@@ -665,4 +665,31 @@ export function pendingFieldsByNode(
     }
   }
   return out;
+}
+
+
+/**
+ * Clear a node's background image. Mirrors the personal flow, where a
+ * background can be removed but an icon cannot (there is no "no icon" control
+ * anywhere in the app), so this only ever runs for `image`.
+ */
+export function clearSharedAsset(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  baseRev?: number,
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  node.image = null;
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    { kind: "set_asset", id: nodeId, assetKind: "image" },
+    baseRev,
+  );
+  return { rev };
 }

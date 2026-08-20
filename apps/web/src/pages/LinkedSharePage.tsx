@@ -107,7 +107,7 @@ export function LinkedSharePage() {
       {canEdit && (
         <SharedFolderActions
           shareId={shareId}
-          folderId={nav.node.id}
+          node={nav.node}
           baseRev={data.rev}
           onDone={refresh}
           onEditSelf={() => setEditing(nav.node)}
@@ -138,6 +138,9 @@ export function LinkedSharePage() {
             qc.invalidateQueries({ queryKey: ["shared-content", shareId] });
             setEditing(null);
           }}
+          onChanged={() =>
+            qc.invalidateQueries({ queryKey: ["shared-content", shareId] })
+          }
         />
       )}
     </div>

@@ -776,6 +776,11 @@ export const api = {
     if (!res.ok) throw await iconError(res);
     return (await res.json()) as { rev: number };
   },
+  clearSharedAsset: (shareId: string, nodeId: string) =>
+    request<{ rev: number }>(
+      `/shared/${shareId}/node/${nodeId}/asset/image`,
+      { method: "DELETE" },
+    ),
   setSharedFavorite: (
     shareId: string,
     nodeId: string,

@@ -15,6 +15,20 @@ interface Props {
   target: Target;
   onClose: () => void;
   onSaved: () => void;
+  /**
+   * Where the changes go when the row is not this user's own — a group share.
+   * Same dialog, same controls; only the destination differs, which is the
+   * whole reason a shared folder can be styled without a second UI.
+   */
+  io?: {
+    imageUrl: string | null;
+    uploadImage: (file: File) => Promise<unknown>;
+    clearImage: () => Promise<unknown>;
+    save: (v: {
+      bgColor: string | null;
+      textTone: "auto" | "light" | "dark";
+    }) => Promise<unknown>;
+  };
 }
 
 /**
@@ -23,7 +37,7 @@ interface Props {
  * "Apariencia" section of the full edit dialog, but in a tiny modal so the
  * user doesn't have to scroll past every field to change just the look.
  */
-export function AppearanceDialog({ target, onClose, onSaved }: Props) {
+export function AppearanceDialog({ target, onClose, onSaved, io }: Props) {
   const { t } = useTranslation();
   const initial =
     target.kind === "folder" ? target.folder.bgColor : target.bookmark.bgColor;
@@ -34,8 +48,9 @@ export function AppearanceDialog({ target, onClose, onSaved }: Props) {
   );
   const [err, setErr] = useState<string | null>(null);
 
-  const imageUrl =
-    target.kind === "folder"
+  const imageUrl = io
+    ? io.imageUrl
+    : target.kind === "folder"
       ? target.folder.imageBlobPath
         ? api.folderBgImageUrl(target.folder.id, target.folder.updatedAt)
         : null
@@ -44,17 +59,25 @@ export function AppearanceDialog({ target, onClose, onSaved }: Props) {
         : null;
 
   const uploadImage = (file: File) =>
-    target.kind === "folder"
+    io
+      ? io.uploadImage(file)
+      : target.kind === "folder"
       ? api.uploadFolderBgImage(target.folder.id, file)
       : api.uploadBookmarkBgImage(target.bookmark.id, file);
 
   const clearImage = () =>
-    target.kind === "folder"
+    io
+      ? io.clearImage()
+      : target.kind === "folder"
       ? api.clearFolderBgImage(target.folder.id)
       : api.clearBookmarkBgImage(target.bookmark.id);
 
   const saveColor = useMutation({
     mutationFn: async () => {
+      if (io) {
+        await io.save({ bgColor, textTone });
+        return;
+      }
       if (target.kind === "folder") {
         await api.updateFolder(target.folder.id, {
           bgColor,

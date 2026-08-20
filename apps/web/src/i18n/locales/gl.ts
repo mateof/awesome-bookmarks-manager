@@ -768,10 +768,6 @@ const gl = {
     itemCount: "{{count}} elementos",
   },
   sharedEdit: {
-    noBackground: "Sen fondo",
-    icon: "Cambiar icona",
-    background: "Cambiar fondo",
-    folderTools: "Este cartafol",
     editThisFolder: "Editar este cartafol",
     newFolder: "Novo cartafol",
     newBookmark: "Novo bookmark",

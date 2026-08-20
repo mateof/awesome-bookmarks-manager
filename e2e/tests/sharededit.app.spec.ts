@@ -566,3 +566,107 @@ test("icono, fondo y árbol lateral de una carpeta compartida", async ({
   await o.ctx.close();
   await m.ctx.close();
 });
+
+test("editar en el compartido usa los mismos diálogos que mis carpetas", async ({
+  browser,
+}) => {
+  // The complaint this pins down: the shared flows used to be bare uploads,
+  // while personal folders get the icon library, emoji, and the background
+  // picker with its modes. The fix is reuse, so the assertions look for the
+  // personal dialogs' own controls inside a share.
+  const o = await mkUser(browser, {
+    email: "shared.parity.owner.e2e@example.com",
+    nickname: "sharedparityown",
+    password: "SameDialogsOwn26xx",
+  });
+  const m = await mkUser(browser, {
+    email: "shared.parity.member.e2e@example.com",
+    nickname: "sharedparitymem",
+    password: "SameDialogsMem26xx",
+  });
+
+  const root = await (
+    await o.req.post("/api/folders", { data: { name: "Paridad" } })
+  ).json();
+  await o.req.post("/api/folders", {
+    data: { name: "Hija", parentId: root.id },
+  });
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Mismo" } })
+  ).json();
+  const inv = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.parity.member.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${inv.token}/accept`);
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+  });
+
+  let shareId = "";
+  let portalId = "";
+  await expect(async () => {
+    const list = await (await m.req.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    const r = await m.req.post(`/api/shared/${shareId}/import`, {
+      data: { mode: "link" },
+    });
+    expect(r.ok()).toBeTruthy();
+    portalId = (await r.json()).id;
+  }).toPass({ timeout: 30_000 });
+
+  await m.page.goto(`/linked/${portalId}`);
+  const card = m.page
+    .locator("div.group.relative")
+    .filter({ hasText: "Hija" })
+    .first();
+
+  // The kebab's Apariencia opens the personal appearance dialog: its text-tone
+  // control only exists there.
+  await card.getByRole("button", { name: "Más acciones" }).click();
+  // The toolbar has its own Apariencia for the current folder; the kebab's
+  // entry renders after it.
+  await m.page.getByRole("button", { name: "Apariencia" }).last().click();
+  await expect(
+    m.page.getByRole("heading", { name: "Apariencia" }),
+  ).toBeVisible();
+  await expect(m.page.getByText("Color del texto")).toBeVisible();
+  await expect(m.page.getByRole("button", { name: "Imagen" })).toBeVisible();
+  await m.page.keyboard.press("Escape");
+
+  // Editar opens the full form with the icon library — the exact thing the
+  // bare upload was missing — plus tags and the background picker.
+  await card.getByRole("button", { name: "Más acciones" }).click();
+  await m.page.getByRole("button", { name: "Editar", exact: true }).click();
+  await expect(
+    m.page.getByRole("heading", { name: "Editar elemento compartido" }),
+  ).toBeVisible();
+  await expect(m.page.getByRole("button", { name: "Biblioteca" })).toBeVisible();
+  await expect(m.page.getByPlaceholder(/tag/i).first()).toBeVisible();
+
+  // Pick a predefined emoji from the library — the same path the sidebar
+  // test walks on a personal folder — then rename, and save.
+  await m.page.getByRole("button", { name: "Biblioteca" }).click();
+  await m.page.getByRole("button", { name: "Emojis" }).click();
+  await m.page.getByRole("button", { name: "🚀" }).first().click();
+  await m.page.getByPlaceholder("Nombre").first().fill("Hija renombrada");
+  await m.page.getByRole("button", { name: "Guardar", exact: true }).click();
+
+  // Saved into the share: new name, and the icon is a real asset the group
+  // can fetch.
+  await expect(async () => {
+    const got = await (await m.req.get(`/api/shared/${shareId}`)).json();
+    const child = got.content.subfolders[0];
+    expect(child.name).toBe("Hija renombrada");
+    expect(child.icon).toBeTruthy();
+    const served = await m.req.get(
+      `/api/shared/${shareId}/asset/${child.id}/icon`,
+    );
+    expect(served.ok()).toBeTruthy();
+  }).toPass({ timeout: 10_000 });
+
+  await o.ctx.close();
+  await m.ctx.close();
+});

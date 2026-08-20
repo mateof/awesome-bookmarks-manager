@@ -17,7 +17,7 @@ import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { readImageUpload } from "../storage/icons.js";
 import { BadRequest } from "../util/errors.js";
-import { writeShareAsset } from "./assets.js";
+import { deleteShareAssetFile, writeShareAsset } from "./assets.js";
 import { detectImageContentType, imageNotModified } from "../util/image.js";
 import {
   editSharedNode,
@@ -32,6 +32,7 @@ import {
   moveSharedNode,
   queueFieldEdit,
   setSharedAppearance,
+  clearSharedAsset,
   setSharedAsset,
   setSharedFavorite,
   setSharedTags,
@@ -387,6 +388,19 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
       kind,
       new Date().toISOString(),
     );
+  });
+
+  // Clear a node's background image (parity with the personal flow, where a
+  // background can be removed but an icon cannot).
+  app.delete("/shared/:shareId/node/:nodeId/asset/image", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    const target = shareAssetTarget(shareId);
+    await deleteShareAssetFile(target.ownerUserId, shareId, nodeId, "image");
+    return clearSharedAsset(ctx, shareId, nodeId);
   });
 
   app.delete("/shared/:shareId/node/:nodeId", async (req, reply) => {
