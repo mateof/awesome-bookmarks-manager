@@ -14,6 +14,7 @@ import { PanelsPage } from "./pages/PanelsPage.js";
 import { PublicPanelPage } from "./pages/PublicPanelPage.js";
 import { SearchPage } from "./pages/SearchPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
+import { SharedBookmarkPage } from "./pages/SharedBookmarkPage.js";
 import { SharedPage } from "./pages/SharedPage.js";
 import { SharePage } from "./pages/SharePage.js";
 import { ShareTargetPage } from "./pages/ShareTargetPage.js";
@@ -52,6 +53,10 @@ export default function App() {
                   <Route path="/groups/:id" element={<GroupsPage />} />
                   <Route path="/shared" element={<SharedPage />} />
                   <Route path="/shared/:shareId" element={<SharedPage />} />
+              <Route
+                path="/shared/:shareId/bookmark/:nodeId"
+                element={<SharedBookmarkPage />}
+              />
                   <Route path="/panels" element={<PanelsPage />} />
                   <Route path="/tags" element={<TagsPage />} />
                   <Route path="/filter" element={<TagFilterPage />} />

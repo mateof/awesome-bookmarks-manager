@@ -29,33 +29,60 @@ export function InlineTags({
   id,
   tagIds,
   onSaved,
+  share,
 }: {
   entity: "folder" | "bookmark";
   id: string;
   tagIds: string[];
   onSaved: () => void;
+  /**
+   * Inside a group share the row is not this user's: tags travel by name and
+   * are saved through the share, so the picker works in names and the chips
+   * take their colours from the payload instead of the user's tag table.
+   */
+  share?: {
+    tags: { name: string; color: string }[];
+    save: (names: string[]) => Promise<unknown>;
+  };
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
+  const tagsQ = useQuery({
+    queryKey: ["tags"],
+    queryFn: api.listTags,
+    enabled: !share,
+  });
 
   const save = useMutation({
     mutationFn: async (next: string[]): Promise<void> => {
+      if (share) {
+        await share.save(next);
+        return;
+      }
       if (entity === "folder") await api.updateFolder(id, { tagIds: next });
       else await api.updateBookmark(id, { tagIds: next });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tags"] });
+      if (!share) qc.invalidateQueries({ queryKey: ["tags"] });
       onSaved();
     },
   });
+
+  const EPOCH = "1970-01-01T00:00:00.000Z";
+  const allTags = share
+    ? share.tags.map((tg) => ({ id: tg.name, ...tg, createdAt: EPOCH }))
+    : (tagsQ.data ?? []);
 
   if (editing) {
     return (
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <TagPicker value={tagIds} onChange={(next) => save.mutate(next)} />
+          <TagPicker
+            value={tagIds}
+            onChange={(next) => save.mutate(next)}
+            byName={!!share}
+          />
         </div>
         <button
           type="button"
@@ -71,7 +98,7 @@ export function InlineTags({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {tagIds.length > 0 ? (
-        <TagChipList tagIds={tagIds} allTags={tagsQ.data ?? []} asLink />
+        <TagChipList tagIds={tagIds} allTags={allTags} asLink={!share} />
       ) : (
         <span className="flex items-center gap-1 text-xs text-slate-400">
           <TagIcon className="h-3.5 w-3.5" /> {t("tags.noneYet")}

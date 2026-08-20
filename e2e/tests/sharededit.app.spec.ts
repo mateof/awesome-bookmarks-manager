@@ -670,3 +670,146 @@ test("editar en el compartido usa los mismos diálogos que mis carpetas", async 
   await o.ctx.close();
   await m.ctx.close();
 });
+
+test("la ficha de un bookmark compartido: misma página, datos del compartido", async ({
+  browser,
+}) => {
+  const o = await mkUser(browser, {
+    email: "shared.detail.owner.e2e@example.com",
+    nickname: "shareddetailown",
+    password: "DetailPageOwner26x",
+  });
+  const m = await mkUser(browser, {
+    email: "shared.detail.member.e2e@example.com",
+    nickname: "shareddetailmem",
+    password: "DetailPageMember26",
+  });
+
+  const root = await (
+    await o.req.post("/api/folders", { data: { name: "Fichas" } })
+  ).json();
+  const bm = await (
+    await o.req.post("/api/bookmarks", {
+      data: {
+        url: "https://detalle.example/",
+        title: "Con detalle",
+        description: "<p>Notas del detalle</p>",
+        folderId: root.id,
+        fetchSnapshot: false,
+      },
+    })
+  ).json();
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Detalle" } })
+  ).json();
+  const inv = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.detail.member.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${inv.token}/accept`);
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+  });
+
+  let shareId = "";
+  let portalId = "";
+  await expect(async () => {
+    const list = await (await m.req.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    const r = await m.req.post(`/api/shared/${shareId}/import`, {
+      data: { mode: "link" },
+    });
+    expect(r.ok()).toBeTruthy();
+    portalId = (await r.json()).id;
+  }).toPass({ timeout: 30_000 });
+
+  // Clicking the title in the share opens the detail, not a 404.
+  await m.page.goto(`/linked/${portalId}`);
+  await m.page.getByRole("link", { name: "Con detalle" }).first().click();
+  await expect(m.page).toHaveURL(new RegExp(`/shared/${shareId}/bookmark/`));
+  await expect(
+    m.page.getByRole("heading", { name: "Con detalle" }),
+  ).toBeVisible();
+  await expect(m.page.getByText("https://detalle.example/").first()).toBeVisible();
+  await expect(m.page.getByText("Notas del detalle")).toBeVisible();
+
+  // The description pencil is the same in-place editor as the personal page,
+  // pointed at the share.
+  await m.page.getByRole("button", { name: "Editar el texto" }).click();
+  const editor = m.page.locator(".tiptap.ProseMirror");
+  await editor.click();
+  await m.page.keyboard.press("ControlOrMeta+a");
+  await m.page.keyboard.type("Notas corregidas");
+  await m.page.getByRole("button", { name: "Guardar" }).click();
+  await expect(m.page.getByText("Notas corregidas")).toBeVisible();
+
+  // Tags are edited in place too, by name.
+  await m.page.getByRole("button", { name: "Añadir tag" }).click();
+  await m.page.getByPlaceholder(/tag/i).first().fill("lectura");
+  await m.page.keyboard.press("Enter");
+  await expect(async () => {
+    const got = await (await m.req.get(`/api/shared/${shareId}`)).json();
+    const child = got.content.bookmarks.find(
+      (x: { id: string }) => x.id === bm.id,
+    );
+    expect(child.description).toContain("Notas corregidas");
+    expect(child.tags.map((tg: { name: string }) => tg.name)).toContain("lectura");
+  }).toPass({ timeout: 10_000 });
+
+  // A viewer gets the page read-only: no pencil, no delete.
+  const viewer = await mkUser(browser, {
+    email: "shared.detail.viewer.e2e@example.com",
+    nickname: "shareddetailview",
+    password: "DetailViewerOnly26",
+  });
+  const inv2 = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.detail.viewer.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await viewer.req.post(`/api/invitations/${inv2.token}/accept`);
+  // Editor access is per share; this member sees the same editor share, so
+  // give the read-only check its own viewer share.
+  const roFolder = await (
+    await o.req.post("/api/folders", { data: { name: "SoloVer" } })
+  ).json();
+  const roBm = await (
+    await o.req.post("/api/bookmarks", {
+      data: {
+        url: "https://solover.example/",
+        title: "Solo ver",
+        folderId: roFolder.id,
+        fetchSnapshot: false,
+      },
+    })
+  ).json();
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: roFolder.id, access: "viewer" },
+  });
+  let roShareId = "";
+  await expect(async () => {
+    const list: Array<{ id: string }> = await (
+      await viewer.req.get("/api/shared")
+    ).json();
+    expect(list.length).toBe(2);
+    roShareId = list.find((x) => x.id !== shareId)!.id;
+    expect((await viewer.req.get(`/api/shared/${roShareId}`)).ok()).toBeTruthy();
+  }).toPass({ timeout: 15_000 });
+
+  await viewer.page.goto(`/shared/${roShareId}/bookmark/${roBm.id}`);
+  await expect(
+    viewer.page.getByRole("heading", { name: "Solo ver" }),
+  ).toBeVisible();
+  await expect(
+    viewer.page.getByRole("button", { name: "Editar el texto" }),
+  ).toHaveCount(0);
+  await expect(
+    viewer.page.getByRole("button", { name: "Añadir tag" }),
+  ).toHaveCount(0);
+
+  await o.ctx.close();
+  await m.ctx.close();
+  await viewer.ctx.close();
+});

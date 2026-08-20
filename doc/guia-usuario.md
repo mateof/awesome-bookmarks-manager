@@ -127,6 +127,12 @@ tags, y el mismo menú de tres puntos. Desde ahí se puede **crear** subcarpetas
 bookmarks, **editar** el nombre y el texto, **mover** dentro del compartido,
 poner **tags**, cambiar el **color** y **eliminar**.
 
+**Los bookmarks compartidos tienen su ficha**, como los tuyos: al pinchar el
+título se abre la misma página de detalle, con su banner, la estrella, el botón
+de abrir, la URL con su copiado, los tags editables ahí mismo y el texto con su
+lápiz. Lo único que no aparece es lo que un compartido no tiene: la copia
+archivada de la página, el historial y la exportación.
+
 Editar dentro del compartido usa **los mismos diálogos que tus carpetas**, no
 versiones recortadas. *Editar* abre el formulario completo: nombre, el selector
 de iconos con su **biblioteca, emojis, subida y descarga del favicon**, la

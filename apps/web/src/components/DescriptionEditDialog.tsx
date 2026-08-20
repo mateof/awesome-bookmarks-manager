@@ -26,6 +26,7 @@ export function DescriptionEditDialog({
   baseRev,
   onClose,
   onSaved,
+  save: saveOverride,
 }: {
   entity: "folder" | "bookmark";
   id: string;
@@ -35,6 +36,8 @@ export function DescriptionEditDialog({
   baseRev: number;
   onClose: () => void;
   onSaved: () => void;
+  /** Where the text goes when the row is not this user's own — a share. */
+  save?: (description: string | null) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState(html);
@@ -49,10 +52,12 @@ export function DescriptionEditDialog({
       // An empty editor means "no description", not an empty paragraph: the
       // <p></p> TipTap leaves behind would keep the text block (and its
       // pencil) on screen with nothing in it.
-      const body = {
-        description: value.replace(/<[^>]*>/g, "").trim() ? value : null,
-        baseRev,
-      };
+      const description = value.replace(/<[^>]*>/g, "").trim() ? value : null;
+      if (saveOverride) {
+        await saveOverride(description);
+        return;
+      }
+      const body = { description, baseRev };
       if (entity === "folder") await api.updateFolder(id, body);
       else await api.updateBookmark(id, body);
     },

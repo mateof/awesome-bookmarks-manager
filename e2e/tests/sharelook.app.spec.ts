@@ -168,11 +168,13 @@ test("la carpeta compartida conserva el diseño del dueño y sube de nivel", asy
     .click();
   await expect(m.page.getByText("Boceto uno", { exact: true })).toBeVisible();
 
-  // The bookmark's title opens the link itself: the personal detail page
-  // would 404 here, because the id belongs to the owner.
+  // The bookmark's title goes to the share's own detail page — the personal
+  // one would 404 here, because the id belongs to the owner.
   const titleLink = m.page.getByRole("link", { name: "Boceto uno" }).first();
-  await expect(titleLink).toHaveAttribute("href", "https://boceto.example/");
-  await expect(titleLink).toHaveAttribute("target", "_blank");
+  await expect(titleLink).toHaveAttribute(
+    "href",
+    new RegExp(`/shared/${shareId}/bookmark/`),
+  );
 
   // Where you are lives in the URL, so a refresh keeps you in the subfolder
   // instead of dumping you back at the root of the share.
