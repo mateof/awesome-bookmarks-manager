@@ -82,6 +82,7 @@ export function InlineTags({
             value={tagIds}
             onChange={(next) => save.mutate(next)}
             byName={!!share}
+            autoFocus
           />
         </div>
         <button

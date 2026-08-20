@@ -35,9 +35,21 @@ interface Props {
    * not theirs.
    */
   byName?: boolean;
+  /**
+   * Focus the input on mount. For the pickers that appear on demand (the
+   * "add tag" button on a detail page): the click's whole intent is to type,
+   * so the caret should already be in the box. The always-visible pickers in
+   * the edit dialogs leave it off — there the name field owns the focus.
+   */
+  autoFocus?: boolean;
 }
 
-export function TagPicker({ value, onChange, byName = false }: Props) {
+export function TagPicker({
+  value,
+  onChange,
+  byName = false,
+  autoFocus = false,
+}: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
@@ -154,6 +166,7 @@ export function TagPicker({ value, onChange, byName = false }: Props) {
         ))}
         <input
           ref={inputRef}
+          autoFocus={autoFocus}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setOpen(true)}

@@ -38,7 +38,10 @@ test("tags de una carpeta: se ven y se añaden desde el propio detalle", async (
   await expect(page.getByRole("link", { name: "referencia" })).toBeVisible();
 
   await page.getByRole("button", { name: "Añadir tag" }).click();
-  await page.getByPlaceholder(/tag/i).first().fill("urgente");
+  // The click's whole intent is to type, so the caret is already in the box:
+  // no second click before writing.
+  await expect(page.getByPlaceholder(/tag/i).first()).toBeFocused();
+  await page.keyboard.type("urgente");
   await page.keyboard.press("Enter");
 
   // Saved on the spot, and the rest of the folder is untouched: the control
