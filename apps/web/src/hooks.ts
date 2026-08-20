@@ -13,6 +13,11 @@ export function useActiveFolderId(): string | null {
   const loc = useLocation();
   const folderMatch = matchPath("/folder/:id", loc.pathname);
   const bookmarkMatch = matchPath("/bookmark/:id", loc.pathname);
+  // Inside a linked share the address is the portal plus a trail of node ids
+  // in `?p=`. The folder you are actually looking at is the last of those, and
+  // the sidebar needs it to expand and highlight the right branch.
+  const linkedMatch = matchPath("/linked/:id", loc.pathname);
+  const trail = new URLSearchParams(loc.search).get("p") ?? "";
 
   // Same query key as Layout — gets deduped from cache instantly.
   const bookmarks = useQuery({
@@ -22,13 +27,17 @@ export function useActiveFolderId(): string | null {
   });
 
   return useMemo(() => {
+    if (linkedMatch?.params.id) {
+      const parts = trail.split(".").filter(Boolean);
+      return parts[parts.length - 1] ?? linkedMatch.params.id;
+    }
     if (folderMatch?.params.id) return folderMatch.params.id;
     if (bookmarkMatch?.params.id) {
       const b = bookmarks.data?.find((x) => x.id === bookmarkMatch.params.id);
       return b?.folderId ?? null;
     }
     return null;
-  }, [folderMatch, bookmarkMatch, bookmarks.data]);
+  }, [folderMatch, bookmarkMatch, linkedMatch, trail, bookmarks.data]);
 }
 
 /**

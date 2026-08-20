@@ -2,16 +2,28 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AuthedContext } from "../../auth/session.js";
 import { getDb } from "../../db/client.js";
 import { bookmarks, folders, groupShares, groups } from "../../db/schema.js";
+import { aeadEncrypt } from "@awesome-bookmarks/crypto";
+import { join } from "node:path";
 import {
   createBookmark,
   moveBookmark,
+  setBookmarkBgImagePath,
+  setBookmarkIconPath,
   updateBookmark,
 } from "../../bookmarks/service.js";
 import {
   createFolder,
   moveFolder,
+  setFolderBgImagePath,
+  setFolderIconPath,
   updateFolder,
 } from "../../folders/service.js";
+import { readShareAsset } from "../../groups/assets.js";
+import {
+  bookmarkBlobDir,
+  folderBlobDir,
+  writeBlob,
+} from "../../storage/blobs.js";
 import { createTag, listTags } from "../../tags/service.js";
 import { unwrapGroupDek } from "../../groups/encryption.js";
 import { clearOps, pendingOps, type ShareOp } from "../../groups/ops.js";
@@ -71,7 +83,11 @@ export async function runGroupShareApplyJob(
   const done: string[] = [];
   for (const { id, op } of ops) {
     try {
-      applyOne(ctx, op, row.sourceType === "folder" ? row.sourceId : null);
+      applyOne(ctx, op, row.sourceType === "folder" ? row.sourceId : null, {
+        shareId: row.shareId,
+        groupId: row.groupId,
+        groupDek,
+      });
     } catch (err) {
       console.error(
         `[share-apply] ${row.shareId} ${op.kind} ${op.id}:`,
@@ -137,7 +153,12 @@ function isOwnFolder(ctx: AuthedContext, id: string): boolean {
     .get();
 }
 
-function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
+function applyOne(
+  ctx: AuthedContext,
+  op: ShareOp,
+  shareRootId: string | null,
+  share: { shareId: string; groupId: string; groupDek: Buffer },
+) {
   switch (op.kind) {
     case "create_folder": {
       // The id was minted when the member acted and is already in the payload;
@@ -193,6 +214,13 @@ function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
       if (op.order?.length) renumber(ctx, op.nodeKind ?? "bookmark", op.order);
       return;
     }
+    case "set_asset": {
+      // The bytes are in the share's asset store under the group key; put them
+      // in the owner's blob store under theirs, which is what makes the icon
+      // theirs from then on.
+      void applyAsset(ctx, op, share);
+      return;
+    }
     case "set_favorite": {
       const patch = { favorite: !!op.favorite };
       if (isOwnFolder(ctx, op.id)) updateFolder(ctx, op.id, patch);
@@ -228,5 +256,56 @@ function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
       else updateBookmark(ctx, op.id, patch);
       return;
     }
+  }
+}
+
+
+/**
+ * Move a member-uploaded image from the share's store into the owner's.
+ *
+ * Async, so it cannot sit in the switch above with the synchronous cases; the
+ * job does not wait for it because a failed copy should cost that one image,
+ * not the whole queue.
+ */
+async function applyAsset(
+  ctx: AuthedContext,
+  op: ShareOp,
+  share: { shareId: string; groupId: string; groupDek: Buffer },
+): Promise<void> {
+  if (!op.assetKind) return;
+  try {
+    const bytes = await readShareAsset(
+      ctx.userId,
+      share.shareId,
+      op.id,
+      op.assetKind,
+      share.groupId,
+      share.groupDek,
+    );
+    if (!bytes) return;
+    const folder = isOwnFolder(ctx, op.id);
+    const dir = folder
+      ? folderBlobDir(ctx.userId, op.id)
+      : bookmarkBlobDir(ctx.userId, op.id);
+    const aad = `${folder ? "folder" : "bookmark"}.${
+      op.assetKind === "icon" ? "icon" : "bg"
+    }`;
+    const path = await writeBlob(
+      ctx.userId,
+      join(dir, op.assetKind === "icon" ? "user-icon.bin" : "user-bg.bin"),
+      aeadEncrypt(ctx.dek, bytes, `${ctx.userId}|${aad}`),
+    );
+    if (folder) {
+      if (op.assetKind === "icon") setFolderIconPath(ctx, op.id, path);
+      else setFolderBgImagePath(ctx, op.id, path);
+    } else {
+      if (op.assetKind === "icon") setBookmarkIconPath(ctx, op.id, path);
+      else setBookmarkBgImagePath(ctx, op.id, path);
+    }
+  } catch (err) {
+    console.error(
+      `[share-apply] asset ${op.id}/${op.assetKind}:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 }

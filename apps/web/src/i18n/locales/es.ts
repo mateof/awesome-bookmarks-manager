@@ -768,6 +768,10 @@ const es = {
   },
   sharedEdit: {
     noBackground: "Sin fondo",
+    icon: "Cambiar icono",
+    background: "Cambiar fondo",
+    folderTools: "Esta carpeta",
+    editThisFolder: "Editar esta carpeta",
     newFolder: "Nueva carpeta",
     newBookmark: "Nuevo bookmark",
     newFolderTitle: "Nueva carpeta en la carpeta compartida",

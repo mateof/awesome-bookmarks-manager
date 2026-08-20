@@ -313,6 +313,12 @@ export function mergeEditorFieldEdits(
    * silently delete a bookmark a member had just added.
    */
   pendingIds: Set<string> = new Set(),
+  /**
+   * Per-node fields a member changed that the owner's rows do not carry yet.
+   * `fresh` is built from those rows, so anything listed here has to be taken
+   * from the old payload or the change is lost on the next re-seal.
+   */
+  pendingFields: Map<string, Set<string>> = new Map(),
 ): SharedContent {
   const oldById = new Map<string, SharedContent>();
   const index = (n: SharedContent): void => {
@@ -324,15 +330,31 @@ export function mergeEditorFieldEdits(
   };
   index(old);
 
+  /** Fields the owner has not received yet come back from the old payload. */
+  const keepPending = <T extends SharedContent>(fresh: T, prev: T): T => {
+    const fields = pendingFields.get(fresh.id);
+    if (!fields) return fresh;
+    const out = { ...fresh };
+    for (const f of fields) {
+      (out as unknown as Record<string, unknown>)[f] = (
+        prev as unknown as Record<string, unknown>
+      )[f];
+    }
+    return out;
+  };
+
   const applyBookmark = (n: SharedBookmarkContent): SharedBookmarkContent => {
     const prev = oldById.get(n.id);
     if (prev && prev.type === "bookmark") {
-      return {
-        ...n,
-        title: prev.title,
-        url: prev.url,
-        description: prev.description,
-      };
+      return keepPending(
+        {
+          ...n,
+          title: prev.title,
+          url: prev.url,
+          description: prev.description,
+        },
+        prev,
+      );
     }
     return n;
   };
@@ -347,13 +369,14 @@ export function mergeEditorFieldEdits(
     const keptFolders = (prevFolder?.subfolders ?? []).filter(
       (f) => pendingIds.has(f.id) && !n.subfolders.some((x) => x.id === f.id),
     );
-    return {
+    const merged: SharedFolderContent = {
       ...n,
       name: prevFolder ? prevFolder.name : n.name,
       description: prev ? prev.description : n.description,
       bookmarks: [...n.bookmarks.map(applyBookmark), ...keptBookmarks],
       subfolders: [...n.subfolders.map(applyFolder), ...keptFolders],
     };
+    return prevFolder ? keepPending(merged, prevFolder) : merged;
   };
 
   return fresh.type === "folder" ? applyFolder(fresh) : applyBookmark(fresh);

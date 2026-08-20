@@ -110,6 +110,7 @@ export function LinkedSharePage() {
           folderId={nav.node.id}
           baseRev={data.rev}
           onDone={refresh}
+          onEditSelf={() => setEditing(nav.node)}
         />
       )}
 

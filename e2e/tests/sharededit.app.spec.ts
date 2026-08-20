@@ -467,3 +467,102 @@ test("favorito y reordenar dentro del compartido llegan al dueño", async ({
   await o.ctx.close();
   await m.ctx.close();
 });
+
+test("icono, fondo y árbol lateral de una carpeta compartida", async ({
+  browser,
+}) => {
+  const PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  const o = await mkUser(browser, {
+    email: "shared.assets.owner.e2e@example.com",
+    nickname: "sharedassetsown",
+    password: "IconsInShare26xxx",
+  });
+  const m = await mkUser(browser, {
+    email: "shared.assets.member.e2e@example.com",
+    nickname: "sharedassetsmem",
+    password: "IconsInShareMem26x",
+  });
+
+  const root = await (
+    await o.req.post("/api/folders", { data: { name: "Raiz" } })
+  ).json();
+  const sub = await (
+    await o.req.post("/api/folders", { data: { name: "Rama", parentId: root.id } })
+  ).json();
+  await o.req.post("/api/folders", {
+    data: { name: "Hoja", parentId: sub.id },
+  });
+
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Assets" } })
+  ).json();
+  const inv = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.assets.member.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${inv.token}/accept`);
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+  });
+
+  let shareId = "";
+  await expect(async () => {
+    const list = await (await m.req.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    expect((await m.req.get(`/api/shared/${shareId}`)).ok()).toBeTruthy();
+  }).toPass({ timeout: 15_000 });
+
+  // The member gives the shared folder itself an icon.
+  const up = await m.req.post(
+    `/api/shared/${shareId}/node/${root.id}/asset/icon`,
+    { multipart: { file: { name: "i.png", mimeType: "image/png", buffer: PNG } } },
+  );
+  expect(up.ok(), await up.text()).toBeTruthy();
+
+  // The group sees it at once, served from the share's own store.
+  const seen = await (await m.req.get(`/api/shared/${shareId}`)).json();
+  expect(seen.content.icon).toBeTruthy();
+  const served = await m.req.get(
+    `/api/shared/${shareId}/asset/${root.id}/icon`,
+  );
+  expect(served.ok()).toBeTruthy();
+  expect((await served.body()).equals(PNG)).toBeTruthy();
+
+  // And it becomes the owner's own icon, sealed with their key.
+  await expect(async () => {
+    const folders: Array<{ id: string; iconBlobPath: string | null }> = await (
+      await o.req.get("/api/folders")
+    ).json();
+    expect(folders.find((f) => f.id === root.id)?.iconBlobPath).toBeTruthy();
+    const own = await o.req.get(`/api/folders/${root.id}/icon`);
+    expect(own.ok()).toBeTruthy();
+    expect((await own.body()).equals(PNG)).toBeTruthy();
+  }).toPass({ timeout: 40_000 });
+
+  // The sidebar shows the share as a tree, not as a leaf: a linked portal's
+  // children live in the payload, not in the member's own folders.
+  let portalId = "";
+  await expect(async () => {
+    const r = await m.req.post(`/api/shared/${shareId}/import`, {
+      data: { mode: "link" },
+    });
+    expect(r.ok()).toBeTruthy();
+    portalId = (await r.json()).id;
+  }).toPass({ timeout: 30_000 });
+
+  await m.page.goto(`/linked/${portalId}`);
+  const sidebar = m.page.locator("nav").first();
+  await expect(sidebar.getByText("Rama", { exact: true })).toBeVisible();
+  // And drilling in from the sidebar lands on that folder inside the share.
+  await sidebar.getByText("Rama", { exact: true }).click();
+  await expect(m.page.getByRole("heading", { name: "Rama" })).toBeVisible();
+  await expect(sidebar.getByText("Hoja", { exact: true })).toBeVisible();
+
+  await o.ctx.close();
+  await m.ctx.close();
+});

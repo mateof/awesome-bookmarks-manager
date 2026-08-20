@@ -127,6 +127,19 @@ tags, y el mismo menú de tres puntos. Desde ahí se puede **crear** subcarpetas
 bookmarks, **editar** el nombre y el texto, **mover** dentro del compartido,
 poner **tags**, cambiar el **color** y **eliminar**.
 
+La carpeta en la que estás tiene además su propia barra: **Editar esta carpeta**,
+**Cambiar icono** y **Cambiar fondo**. Y cada tarjeta de dentro lleva en su menú
+lo mismo, así que el icono y el fondo se pueden cambiar tanto de la carpeta
+compartida como de cualquiera de sus hijos.
+
+Las imágenes van al almacén del compartido cifradas con la clave del grupo, así
+que el grupo las ve al momento, y se recifran con la clave del dueño cuando la
+escritura llega a su carpeta.
+
+**El compartido se despliega en el menú lateral** como cualquier carpeta tuya:
+al pinchar una subcarpeta te lleva a ella dentro del compartido, y la rama en la
+que estás se abre y se resalta sola.
+
 También se puede **marcar como favorito** y **reordenar arrastrando**, igual que
 en las tuyas. Dos matices que conviene tener claros:
 

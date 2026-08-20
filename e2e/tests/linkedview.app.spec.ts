@@ -94,7 +94,12 @@ test("vista enlazada nativa: navegar subcarpetas y editar (editor)", async ({
   await expect(mpage.getByText("Guía", { exact: true })).toBeVisible();
 
   // Drill into the subfolder and back via breadcrumb.
-  await mpage.getByText("Sub", { exact: true }).click();
+  // The sidebar lists the share's folders too now, so aim at the card.
+  await mpage
+    .locator("div.group.relative")
+    .filter({ hasText: "Sub" })
+    .first()
+    .click();
   await expect(mpage.getByText("Interno", { exact: true })).toBeVisible();
   await mpage.getByRole("button", { name: "Portafolio" }).click();
   await expect(mpage.getByText("Guía", { exact: true })).toBeVisible();

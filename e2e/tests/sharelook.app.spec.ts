@@ -160,7 +160,12 @@ test("la carpeta compartida conserva el diseño del dueño y sube de nivel", asy
   // At the root there is nothing to go up to.
   await expect(m.page.getByRole("button", { name: "Subir de nivel" })).toHaveCount(0);
 
-  await m.page.getByText("Bocetos", { exact: true }).click();
+  // The sidebar lists the share's folders too now, so aim at the card.
+  await m.page
+    .locator("div.group.relative")
+    .filter({ hasText: "Bocetos" })
+    .first()
+    .click();
   await expect(m.page.getByText("Boceto uno", { exact: true })).toBeVisible();
 
   // Where you are lives in the URL, so a refresh keeps you in the subfolder

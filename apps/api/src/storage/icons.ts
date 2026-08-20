@@ -22,6 +22,18 @@ const OK_TYPES = new Set([
   "application/octet-stream", // browsers occasionally use this for .ico
 ]);
 
+/**
+ * The same validation and size cap the personal upload routes use, exposed so
+ * a group share can accept an image without a second set of rules about what
+ * counts as one.
+ */
+export async function readImageUpload(
+  file: MultipartFile,
+  background = false,
+): Promise<Buffer> {
+  return readMultipart(file, background ? MAX_BG_BYTES : MAX_BYTES);
+}
+
 async function readMultipart(
   file: MultipartFile,
   cap = MAX_BYTES,

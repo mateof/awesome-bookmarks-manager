@@ -768,6 +768,10 @@ const en = {
   },
   sharedEdit: {
     noBackground: "No background",
+    icon: "Change icon",
+    background: "Change background",
+    folderTools: "This folder",
+    editThisFolder: "Edit this folder",
     newFolder: "New folder",
     newBookmark: "New bookmark",
     newFolderTitle: "New folder in the shared folder",

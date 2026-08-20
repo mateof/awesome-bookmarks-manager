@@ -72,9 +72,20 @@ export async function materializeShareAssets(
   shareId: string,
   sources: ShareAssetSource[],
   previous: Map<string, string>,
+  /**
+   * Assets a member uploaded that have not reached the owner's rows yet. They
+   * have no source to copy from — the owner has no such icon — so without this
+   * the prune below would delete the file seconds after it was uploaded.
+   */
+  keepPending: Set<string> = new Set(),
 ): Promise<Set<string>> {
   const ok = new Set<string>();
   const wanted = new Set<string>();
+  for (const key of keepPending) {
+    const [nodeId, kind] = key.split(":") as [string, ShareAssetKind];
+    wanted.add(assetFile(nodeId, kind));
+    ok.add(key);
+  }
 
   for (const src of sources) {
     const key = `${src.nodeId}:${src.kind}`;
@@ -129,6 +140,33 @@ async function pruneShareAssets(
     if (keep.has(name)) continue;
     await rm(join(dir, name), { force: true });
   }
+}
+
+/**
+ * Store an image a member uploaded into a shared folder.
+ *
+ * It goes straight into the share's own asset store, sealed with the group
+ * key, so the group sees it immediately — the same place the seal job copies
+ * the owner's own icons to. The write-back later re-seals it under the owner's
+ * key and puts it in their blob store; until then this file *is* the icon.
+ *
+ * The bytes count against the owner's quota, like every other byte in this
+ * share: they are the one who gets to keep them.
+ */
+export async function writeShareAsset(
+  ownerUserId: string,
+  shareId: string,
+  nodeId: string,
+  kind: ShareAssetKind,
+  groupId: string,
+  groupDek: Buffer,
+  bytes: Buffer,
+): Promise<void> {
+  await writeBlob(
+    ownerUserId,
+    assetPath(ownerUserId, shareId, nodeId, kind),
+    aeadEncrypt(groupDek, bytes, `${groupId}|${ASSET_AAD}`),
+  );
 }
 
 /** Everything a revoked share leaves behind. */

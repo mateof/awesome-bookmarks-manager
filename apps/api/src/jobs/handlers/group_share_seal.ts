@@ -13,7 +13,11 @@ import {
   sealGroupField,
   unwrapGroupDek,
 } from "../../groups/encryption.js";
-import { pendingNodeIds } from "../../groups/ops.js";
+import {
+  pendingAssetKeys,
+  pendingFieldsByNode,
+  pendingNodeIds,
+} from "../../groups/ops.js";
 
 interface Payload {
   groupShareId: string;
@@ -101,6 +105,9 @@ export async function runGroupShareSealJob(
       // What a member added and the owner has not received yet: rebuilding
       // from the owner's rows alone would drop it.
       pendingNodeIds(row.share.id, row.group.id, groupDek),
+      // Tags, colours, stars and pictures a member set that have not reached
+      // the owner's rows yet. Rebuilding from those rows would drop them.
+      pendingFieldsByNode(row.share.id, row.group.id, groupDek),
     );
   }
 
@@ -115,6 +122,9 @@ export async function runGroupShareSealJob(
     row.share.id,
     assets,
     assetVersions(previousPayload),
+    // What a member uploaded and this rebuild knows nothing about, because the
+    // owner's rows do not have it yet.
+    pendingAssetKeys(row.share.id, row.group.id, groupDek),
   );
   dropMissingAssets(finalContent, available);
 

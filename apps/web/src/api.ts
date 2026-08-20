@@ -760,6 +760,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ folderId, position, baseRev }),
     }),
+  uploadSharedAsset: async (
+    shareId: string,
+    nodeId: string,
+    kind: "icon" | "image",
+    file: File,
+  ): Promise<{ rev: number }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(
+      `${BASE}/shared/${shareId}/node/${nodeId}/asset/${kind}`,
+      { method: "POST", credentials: "include", body: fd },
+    );
+    signalAuthInvalidated(res.status);
+    if (!res.ok) throw await iconError(res);
+    return (await res.json()) as { rev: number };
+  },
   setSharedFavorite: (
     shareId: string,
     nodeId: string,

@@ -1,6 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
-import { FolderPlus, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+  FolderPlus,
+  Image as ImageIcon,
+  Palette,
+  PencilLine,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError, api, isConflict } from "../api.js";
 import { dlg } from "./dialogs.js";
@@ -19,18 +26,77 @@ export function SharedFolderActions({
   folderId,
   baseRev,
   onDone,
+  onEditSelf,
 }: {
   shareId: string;
   /** The node new items go into: the folder currently open in the share. */
   folderId: string;
   baseRev: number;
   onDone: () => void;
+  /** Opens the text editor on the folder you are standing in. */
+  onEditSelf?: () => void;
 }) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState<"folder" | "bookmark" | null>(null);
+  // The folder you are *inside* is not one of the cards, so its own colour and
+  // pictures had nowhere to be changed from. These are its toolbar.
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pendingKind = useRef<"icon" | "image">("icon");
+  const pick = (kind: "icon" | "image") => {
+    pendingKind.current = kind;
+    fileRef.current?.click();
+  };
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
+        {onEditSelf && (
+          <button
+            type="button"
+            onClick={onEditSelf}
+            title={t("sharedEdit.editThisFolder")}
+            className="flex items-center gap-1 rounded border border-slate-300 px-2.5 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <PencilLine className="h-4 w-4" /> {t("sharedEdit.editThisFolder")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => pick("icon")}
+          className="flex items-center gap-1 rounded border border-slate-300 px-2.5 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <ImageIcon className="h-4 w-4" /> {t("sharedEdit.icon")}
+        </button>
+        <button
+          type="button"
+          onClick={() => pick("image")}
+          className="flex items-center gap-1 rounded border border-slate-300 px-2.5 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <Palette className="h-4 w-4" /> {t("sharedEdit.background")}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              await api.uploadSharedAsset(
+                shareId,
+                folderId,
+                pendingKind.current,
+                file,
+              );
+              onDone();
+            } catch (err) {
+              await dlg.alert(
+                err instanceof Error ? err.message : t("common.error"),
+              );
+            }
+          }}
+        />
         <button
           type="button"
           onClick={() => setAdding("folder")}

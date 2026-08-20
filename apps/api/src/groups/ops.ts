@@ -44,7 +44,8 @@ export type ShareOpKind =
   | "move_node"
   | "set_tags"
   | "set_appearance"
-  | "set_favorite";
+  | "set_favorite"
+  | "set_asset";
 
 export interface ShareOp {
   kind: ShareOpKind;
@@ -75,6 +76,11 @@ export interface ShareOp {
    * siblings and land exactly what the member sees.
    */
   order?: string[];
+  /** "icon" or "image" for a set_asset op; the bytes live in the share's own
+   * asset store, not in this row. */
+  assetKind?: "icon" | "image";
+  /** Cache-busting token, also what tells the payload the asset exists. */
+  version?: string;
 }
 
 interface ShareRow {
@@ -550,4 +556,113 @@ function findNodeIn(tree: SharedContent, nodeId: string): SharedContent | null {
 function containsNode(folder: SharedFolderContent, nodeId: string): boolean {
   if (folder.id === nodeId) return true;
   return folder.subfolders.some((f) => containsNode(f, nodeId));
+}
+
+
+/**
+ * Record that a member replaced a node's icon or background.
+ *
+ * The bytes are already in the share's asset store by the time this runs (see
+ * `writeShareAsset`), so the group can see them at once; this marks the payload
+ * and queues the re-seal under the owner's key.
+ */
+export function setSharedAsset(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  kind: "icon" | "image",
+  version: string,
+  baseRev?: number,
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  node[kind] = version;
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    { kind: "set_asset", id: nodeId, assetKind: kind, version },
+    baseRev,
+  );
+  return { rev };
+}
+
+/** What a member uploaded and the owner has not received yet, as
+ * `${nodeId}:${kind}`. The seal job needs it: rebuilding from the owner's rows
+ * would prune a file uploaded seconds ago. */
+export function pendingAssetKeys(
+  shareId: string,
+  groupId: string,
+  groupDek: Buffer,
+): Set<string> {
+  const out = new Set<string>();
+  for (const { op } of pendingOps(shareId, groupId, groupDek)) {
+    if (op.kind === "set_asset" && op.assetKind) {
+      out.add(`${op.id}:${op.assetKind}`);
+    }
+  }
+  return out;
+}
+
+/** The share row a member's upload needs: where to put the bytes and under
+ * which key. Membership is checked at the route. */
+export function shareAssetTarget(shareId: string): {
+  ownerUserId: string;
+  groupId: string;
+  groupDek: Buffer;
+  rev: number;
+} {
+  const row = loadEditableShare(shareId);
+  return {
+    ownerUserId: row.sharedBy,
+    groupId: row.groupId,
+    groupDek: row.groupDek,
+    rev: row.rev,
+  };
+}
+
+
+/**
+ * Which fields a member has changed on which node and the owner has not
+ * received yet.
+ *
+ * Without this, any re-seal triggered on the owner's side rebuilds the payload
+ * from their rows and quietly throws the member's change away: the rows do not
+ * carry it yet, and the merge only knew how to preserve the text fields. A tag
+ * or a colour set seconds earlier would simply vanish, and nothing would say
+ * so.
+ */
+export function pendingFieldsByNode(
+  shareId: string,
+  groupId: string,
+  groupDek: Buffer,
+): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  const add = (id: string, field: string) => {
+    const set = out.get(id) ?? new Set<string>();
+    set.add(field);
+    out.set(id, set);
+  };
+  for (const { op } of pendingOps(shareId, groupId, groupDek)) {
+    switch (op.kind) {
+      case "set_tags":
+        add(op.id, "tags");
+        break;
+      case "set_favorite":
+        add(op.id, "favorite");
+        break;
+      case "set_appearance":
+        if (op.bgColor !== undefined) add(op.id, "bgColor");
+        if (op.textTone !== undefined) add(op.id, "textTone");
+        break;
+      case "set_asset":
+        if (op.assetKind) add(op.id, op.assetKind);
+        break;
+      default:
+        break;
+    }
+  }
+  return out;
 }

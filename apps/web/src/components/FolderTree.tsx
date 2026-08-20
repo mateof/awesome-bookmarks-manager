@@ -13,10 +13,18 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useNestDrop } from "../dnd.js";
 import { buildFolderPath, useActiveFolderId } from "../hooks.js";
+import { useLinkedShareTree } from "../lib/linkedTree.js";
 import { FolderIconDialog } from "./FolderIconDialog.js";
 
 export function FolderTree({ folders }: { folders: Folder[] }) {
   const { t } = useTranslation();
+  // A linked share's contents are not rows in this account, so without this
+  // the portal draws as a leaf however much is inside it.
+  const linked = useLinkedShareTree(folders);
+  const all = useMemo(
+    () => [...folders, ...linked.folders],
+    [folders, linked.folders],
+  );
   const roots = folders.filter((f) => f.parentId === null);
   const activeId = useActiveFolderId();
   // "Home" is a drop target for the root (move a folder/bookmark to top level).
@@ -25,8 +33,8 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
   // Auto-expand the path from root to the active folder so the highlight
   // is always visible even if the user manually collapsed parents earlier.
   const pathIds = useMemo(
-    () => new Set(buildFolderPath(folders, activeId).map((f) => f.id)),
-    [folders, activeId],
+    () => new Set(buildFolderPath(all, activeId).map((f) => f.id)),
+    [all, activeId],
   );
   const [iconTarget, setIconTarget] = useState<Folder | null>(null);
 
@@ -48,10 +56,11 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
         <Node
           key={f.id}
           folder={f}
-          folders={folders}
+          folders={all}
           depth={0}
           activeId={activeId}
           pathIds={pathIds}
+          hrefs={linked.hrefs}
           onEditIcon={setIconTarget}
         />
       ))}
@@ -71,6 +80,7 @@ function Node({
   depth,
   activeId,
   pathIds,
+  hrefs,
   onEditIcon,
 }: {
   folder: Folder;
@@ -78,6 +88,8 @@ function Node({
   depth: number;
   activeId: string | null;
   pathIds: Set<string>;
+  /** Where a node links to when it is not one of this user's own folders. */
+  hrefs?: Map<string, string>;
   onEditIcon: (f: Folder) => void;
 }) {
   const { t } = useTranslation();
@@ -144,9 +156,10 @@ function Node({
         </button>
         <Link
           to={
-            folder.linkedShareId
+            hrefs?.get(folder.id) ??
+            (folder.linkedShareId
               ? `/linked/${folder.id}`
-              : `/folder/${folder.id}`
+              : `/folder/${folder.id}`)
           }
           className="flex min-w-0 flex-1 items-center gap-1 truncate"
         >
@@ -165,6 +178,7 @@ function Node({
             depth={depth + 1}
             activeId={activeId}
             pathIds={pathIds}
+            hrefs={hrefs}
             onEditIcon={onEditIcon}
           />
         ))}

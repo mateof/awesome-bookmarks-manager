@@ -3,12 +3,13 @@ import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
   ExternalLink,
   FolderInput,
+  Image as ImageIcon,
   Palette,
   PencilLine,
   Tag as TagIcon,
   Trash2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, isConflict } from "../api.js";
 import {
@@ -99,6 +100,17 @@ export function SharedGrid({
     onError: async (e) => dlg.alert(errorText(e, t("common.conflict"), t("common.error"))),
   });
 
+  /**
+   * Uploading an image is a file input, and a kebab entry cannot be one, so a
+   * single hidden input is driven from whichever entry was clicked.
+   */
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pending = useRef<{ id: string; kind: "icon" | "image" } | null>(null);
+  const pickImage = (id: string, kind: "icon" | "image") => {
+    pending.current = { id, kind };
+    fileRef.current?.click();
+  };
+
   const nodeById = (id: string): SharedPayload | null => {
     const f = node.subfolders.find((x) => x.id === id);
     if (f) return f;
@@ -128,6 +140,16 @@ export function SharedGrid({
       label: String(t("background.dialogTitle")),
       icon: <Palette className="h-4 w-4" />,
       onClick: () => setColouring({ id, bgColor }),
+    },
+    {
+      label: String(t("sharedEdit.icon")),
+      icon: <ImageIcon className="h-4 w-4" />,
+      onClick: () => pickImage(id, "icon"),
+    },
+    {
+      label: String(t("sharedEdit.background")),
+      icon: <ImageIcon className="h-4 w-4" />,
+      onClick: () => pickImage(id, "image"),
     },
     {
       label: String(t("common.delete")),
@@ -198,6 +220,28 @@ export function SharedGrid({
           onNavFolder={onOpen}
         />
       </EntitySourceProvider>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          const at = pending.current;
+          pending.current = null;
+          if (!file || !at) return;
+          try {
+            await api.uploadSharedAsset(shareId, at.id, at.kind, file);
+            onDone();
+          } catch (err) {
+            await dlg.alert(
+              errorText(err, t("common.conflict"), t("common.error")),
+            );
+          }
+        }}
+      />
 
       {moving && (
         <MoveToDialog

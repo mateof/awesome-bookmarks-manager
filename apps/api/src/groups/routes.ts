@@ -15,6 +15,9 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { readImageUpload } from "../storage/icons.js";
+import { BadRequest } from "../util/errors.js";
+import { writeShareAsset } from "./assets.js";
 import { detectImageContentType, imageNotModified } from "../util/image.js";
 import {
   editSharedNode,
@@ -29,8 +32,10 @@ import {
   moveSharedNode,
   queueFieldEdit,
   setSharedAppearance,
+  setSharedAsset,
   setSharedFavorite,
   setSharedTags,
+  shareAssetTarget,
 } from "./ops.js";
 import {
   acceptInvitation,
@@ -348,6 +353,40 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: "not_found" });
     }
     return setSharedFavorite(ctx, shareId, nodeId, body.favorite, body.baseRev);
+  });
+
+  // A member replacing a node's icon or background. The bytes go into the
+  // share's own asset store sealed with the group key, so the group sees them
+  // at once; the write-back re-seals them under the owner's key later.
+  app.post("/shared/:shareId/node/:nodeId/asset/:kind", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId, kind } = AssetParams.parse(req.params);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
+    const file = await req.file();
+    if (!file) throw BadRequest("file part missing");
+    const target = shareAssetTarget(shareId);
+    const bytes = await readImageUpload(file, kind === "image");
+    await writeShareAsset(
+      target.ownerUserId,
+      shareId,
+      nodeId,
+      kind,
+      target.groupId,
+      target.groupDek,
+      bytes,
+    );
+    // The version doubles as the cache-busting token, so a replacement is
+    // picked up instead of the browser showing the old one.
+    return setSharedAsset(
+      ctx,
+      shareId,
+      nodeId,
+      kind,
+      new Date().toISOString(),
+    );
   });
 
   app.delete("/shared/:shareId/node/:nodeId", async (req, reply) => {
