@@ -120,5 +120,8 @@ export function shareSource(
     shareId,
     shareRev: rev,
     canLinkTags: false,
+    // The id belongs to the owner: the personal detail page would 404, so the
+    // title opens the link itself, like a panel's cards do.
+    bookmarkHref: () => null,
   };
 }

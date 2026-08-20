@@ -73,6 +73,12 @@ export interface EntitySource {
   /** Tag chips link to your own tag filter. A share's tags travel by name and
    * are not rows in your account, so there is nowhere for them to lead. */
   canLinkTags: boolean;
+  /**
+   * Where a bookmark's title leads. Personal rows go to the detail page; a
+   * share has no detail page (the id belongs to the owner, so /bookmark/:id
+   * would 404), and null here means "the title opens the link itself".
+   */
+  bookmarkHref: (b: Bookmark) => string | null;
 }
 
 /** Your own library: everything is available and the assets are your own. */
@@ -90,6 +96,7 @@ export const PERSONAL_SOURCE: EntitySource = {
   canFavorite: true,
   canDrag: true,
   canLinkTags: true,
+  bookmarkHref: (b) => `/bookmark/${b.id}`,
 };
 
 /** The share coordinates a drag has to carry, or nothing for your own rows. */
@@ -387,6 +394,38 @@ function FolderNestZone({ sf, size }: { sf: Folder; size: string }) {
         </span>
       )}
     </span>
+  );
+}
+
+/**
+ * A bookmark's title. In your own library it navigates to the detail page;
+ * inside a share it opens the link, because there is no detail page whose id
+ * this user owns.
+ */
+function BookmarkTitleLink({
+  b,
+  className,
+}: {
+  b: Bookmark;
+  className: string;
+}) {
+  const href = useEntitySource().bookmarkHref(b);
+  if (href) {
+    return (
+      <Link to={href} className={className}>
+        {b.title}
+      </Link>
+    );
+  }
+  return (
+    <a
+      href={b.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+    >
+      {b.title}
+    </a>
   );
 }
 
@@ -739,12 +778,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       />
       <BookmarkIcon b={b} size="h-8 w-8" />
       <div className="flex-1 overflow-hidden">
-        <Link
-          to={`/bookmark/${b.id}`}
-          className="block truncate text-sm font-medium hover:underline"
-        >
-          {b.title}
-        </Link>
+        <BookmarkTitleLink b={b} className="block truncate text-sm font-medium hover:underline" />
         <div className="flex items-center gap-1">
           <a
             href={b.url}
@@ -808,12 +842,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
         label={selectBookmarkLabel(t, b.title)}
       />
       <BookmarkIcon b={b} size="h-5 w-5" />
-      <Link
-        to={`/bookmark/${b.id}`}
-        className="truncate text-sm font-medium hover:underline"
-      >
-        {b.title}
-      </Link>
+      <BookmarkTitleLink b={b} className="truncate text-sm font-medium hover:underline" />
       <a
         href={b.url}
         target="_blank"
@@ -880,12 +909,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
             className="shrink-0"
           />
           <BookmarkIcon b={b} size="h-5 w-5" />
-          <Link
-            to={`/bookmark/${b.id}`}
-            className="flex-1 truncate text-sm font-medium hover:underline"
-          >
-            {b.title}
-          </Link>
+          <BookmarkTitleLink b={b} className="flex-1 truncate text-sm font-medium hover:underline" />
           <a
             href={b.url}
             target="_blank"
@@ -985,12 +1009,7 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <BookmarkIcon b={b} size="h-10 w-10" />
       </a>
-      <Link
-        to={`/bookmark/${b.id}`}
-        className="w-full truncate text-center text-xs hover:underline"
-      >
-        {b.title}
-      </Link>
+      <BookmarkTitleLink b={b} className="w-full truncate text-center text-xs hover:underline" />
       {(b.tagIds?.length ?? 0) > 0 && (
         <TagChipList tagIds={b.tagIds ?? []} allTags={p.allTags} asDot />
       )}
@@ -1169,9 +1188,7 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
         <BookmarkIcon b={b} size="h-5 w-5" />
       </td>
       <td className="max-w-[20ch] truncate px-2 py-2 font-medium">
-        <Link to={`/bookmark/${b.id}`} className="hover:underline">
-          {b.title}
-        </Link>
+        <BookmarkTitleLink b={b} className="hover:underline" />
       </td>
       <td className="px-2 py-2 text-xs text-slate-500">
         <div className="flex max-w-[30ch] items-center gap-1">
