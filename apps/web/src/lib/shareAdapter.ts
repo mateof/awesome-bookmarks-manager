@@ -94,7 +94,11 @@ export function asBookmark(
  * Where a shared card's pictures come from, and what a member is not allowed
  * to do with someone else's rows.
  */
-export function shareSource(shareId: string): EntitySource {
+export function shareSource(
+  shareId: string,
+  rev: number,
+  onDone: () => void,
+): EntitySource {
   const url = (id: string, kind: "icon" | "image", token: string | null) =>
     token ? api.sharedAssetUrl(shareId, id, kind, token) : null;
   return {
@@ -102,11 +106,19 @@ export function shareSource(shareId: string): EntitySource {
     bookmarkIconUrl: (b) => url(b.id, "icon", b.iconBlobPath),
     folderBgUrl: (f) => url(f.id, "image", f.imageBlobPath),
     bookmarkBgUrl: (b) => url(b.id, "image", b.imageBlobPath ?? null),
-    // Starring is personal and a share is not yours to star.
-    canFavorite: false,
-    // Reordering has nowhere to be stored: the payload carries no position,
-    // and the owner's order is the owner's.
-    canDrag: false,
+    canFavorite: true,
+    // The star flips the flag in the shared copy for the whole group, and is
+    // written back to the owner's row like every other edit here. It is a
+    // shared favourite, not a private one: a share has no per-user state.
+    onToggleFavorite: async (_kind, id, next) => {
+      await api.setSharedFavorite(shareId, id, next, rev);
+      onDone();
+    },
+    canDrag: true,
+    // Order lives in the shared copy as the order of the children, so a drop
+    // is a move to an index (see Layout's share branch).
+    shareId,
+    shareRev: rev,
     canLinkTags: false,
   };
 }

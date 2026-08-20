@@ -127,11 +127,16 @@ tags, y el mismo menú de tres puntos. Desde ahí se puede **crear** subcarpetas
 bookmarks, **editar** el nombre y el texto, **mover** dentro del compartido,
 poner **tags**, cambiar el **color** y **eliminar**.
 
-Dos cosas no están, y por un motivo concreto en cada caso:
+También se puede **marcar como favorito** y **reordenar arrastrando**, igual que
+en las tuyas. Dos matices que conviene tener claros:
 
-- **Marcar como favorito**, porque es un gesto personal y la carpeta no es tuya.
-- **Reordenar arrastrando**, porque el orden no viaja en la copia compartida:
-  no habría dónde guardarlo.
+- La estrella es **compartida**, no privada: al marcar algo lo ve marcado todo
+  el grupo, y acaba marcado en la carpeta del dueño. No aparece en *tu* barra
+  de Favoritos, porque esa barra lista tus propias carpetas y bookmarks, y un
+  elemento compartido no es una fila de tu cuenta.
+- El **orden viaja en la copia compartida**: al soltar, el compartido guarda el
+  orden completo de esa carpeta, y cuando llega al dueño se renumeran sus
+  elementos para que quede exactamente como lo dejaste.
 
 Eso ocurre en dos tiempos, y conviene saberlo:
 

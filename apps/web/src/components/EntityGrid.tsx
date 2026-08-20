@@ -52,8 +52,22 @@ export interface EntitySource {
   bookmarkIconUrl: (b: Bookmark) => string | null;
   folderBgUrl: (f: Folder) => string | null;
   bookmarkBgUrl: (b: Bookmark) => string | null;
-  /** Starring is a personal act: a share has nobody to star it for. */
+  /** Whether the star is offered at all. */
   canFavorite: boolean;
+  /** Where a star goes when it is not this user's own row (a share). */
+  onToggleFavorite?: (
+    kind: "folder" | "bookmark",
+    id: string,
+    next: boolean,
+  ) => Promise<void>;
+  /**
+   * Set inside a group share. It rides along in the drag data so the drop
+   * handler in Layout knows to move the node inside the share instead of
+   * calling the personal endpoints with ids this user does not own.
+   */
+  shareId?: string;
+  /** The share's rev, for the concurrency check on a drop. */
+  shareRev?: number;
   /** Drag and drop reorders the owner's rows, which a member cannot do. */
   canDrag: boolean;
   /** Tag chips link to your own tag filter. A share's tags travel by name and
@@ -77,6 +91,13 @@ export const PERSONAL_SOURCE: EntitySource = {
   canDrag: true,
   canLinkTags: true,
 };
+
+/** The share coordinates a drag has to carry, or nothing for your own rows. */
+function shareDrag(src: EntitySource) {
+  return src.shareId !== undefined && src.shareRev !== undefined
+    ? { shareId: src.shareId, rev: src.shareRev }
+    : undefined;
+}
 
 const SourceContext = createContext<EntitySource>(PERSONAL_SOURCE);
 export const useEntitySource = () => useContext(SourceContext);
@@ -346,7 +367,8 @@ function AliasBadge({ children }: { children: React.ReactNode }) {
  */
 function FolderNestZone({ sf, size }: { sf: Folder; size: string }) {
   const { t } = useTranslation();
-  const nest = useNestDrop(sf.id, "card");
+  const src = useEntitySource();
+  const nest = useNestDrop(sf.id, "card", src.shareId);
   return (
     <span
       ref={nest.ref}
@@ -472,7 +494,7 @@ function CardDragHandle({ drag }: { drag: SortableResult }) {
 function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useFolderSortable(sf);
+  const drag = useFolderSortable(sf, shareDrag(src));
   const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
@@ -501,7 +523,12 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         }`}
       >
         {src.canDrag && <CardDragHandle drag={drag} />}
-        {src.canFavorite && <FavoriteToggle folder={sf} />}
+        {src.canFavorite && (
+          <FavoriteToggle
+            folder={sf}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-8 w-8" />
@@ -524,7 +551,7 @@ function FolderGridCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useFolderSortable(sf);
+  const drag = useFolderSortable(sf, shareDrag(src));
   const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
@@ -558,7 +585,12 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         {t("folder.itemsCount", { count })}
       </div>
       {src.canDrag && <CardDragHandle drag={drag} />}
-      {src.canFavorite && <FavoriteToggle folder={sf} />}
+      {src.canFavorite && (
+          <FavoriteToggle
+            folder={sf}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
       <KebabMenu items={p.folderKebab(sf)} />
     </div>
   );
@@ -567,7 +599,7 @@ function FolderListRow({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useFolderSortable(sf);
+  const drag = useFolderSortable(sf, shareDrag(src));
   const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
@@ -606,7 +638,12 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
           }`}
         >
           {src.canDrag && <CardDragHandle drag={drag} />}
-          {src.canFavorite && <FavoriteToggle folder={sf} />}
+          {src.canFavorite && (
+          <FavoriteToggle
+            folder={sf}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
           <KebabMenu items={p.folderKebab(sf)} />
         </div>
       </div>
@@ -632,7 +669,7 @@ function FolderLargeCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useFolderSortable(sf);
+  const drag = useFolderSortable(sf, shareDrag(src));
   const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
@@ -661,7 +698,12 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
         }`}
       >
         {src.canDrag && <CardDragHandle drag={drag} />}
-        {src.canFavorite && <FavoriteToggle folder={sf} />}
+        {src.canFavorite && (
+          <FavoriteToggle
+            folder={sf}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
         <KebabMenu items={p.folderKebab(sf)} />
       </div>
       <FolderNestZone sf={sf} size="h-10 w-10" />
@@ -680,7 +722,7 @@ function FolderMosaicCard({ sf, p }: { sf: Folder; p: BodyProps }) {
 function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useBookmarkSortable(b);
+  const drag = useBookmarkSortable(b, shareDrag(src));
   const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
@@ -736,7 +778,12 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
-      {src.canFavorite && <FavoriteToggle bookmark={b} />}
+      {src.canFavorite && (
+          <FavoriteToggle
+            bookmark={b}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
       {src.canDrag && <CardDragHandle drag={drag} />}
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
@@ -746,7 +793,7 @@ function BookmarkGridCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useBookmarkSortable(b);
+  const drag = useBookmarkSortable(b, shareDrag(src));
   const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
@@ -799,7 +846,12 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
       >
         <ExternalLink className="h-4 w-4" />
       </a>
-      {src.canFavorite && <FavoriteToggle bookmark={b} />}
+      {src.canFavorite && (
+          <FavoriteToggle
+            bookmark={b}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
       {src.canDrag && <CardDragHandle drag={drag} />}
       <KebabMenu items={p.bookmarkKebab(b)} />
     </div>
@@ -809,7 +861,7 @@ function BookmarkListRow({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useBookmarkSortable(b);
+  const drag = useBookmarkSortable(b, shareDrag(src));
   const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
@@ -850,7 +902,12 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
                 : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
             }`}
           >
-            {src.canFavorite && <FavoriteToggle bookmark={b} />}
+            {src.canFavorite && (
+          <FavoriteToggle
+            bookmark={b}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
             {src.canDrag && <CardDragHandle drag={drag} />}
             <KebabMenu items={p.bookmarkKebab(b)} />
           </div>
@@ -889,7 +946,7 @@ function BookmarkLargeCard({ b, p }: { b: Bookmark; p: BodyProps }) {
 function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
-  const drag = useBookmarkSortable(b);
+  const drag = useBookmarkSortable(b, shareDrag(src));
   const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
@@ -911,7 +968,12 @@ function BookmarkMosaicCard({ b, p }: { b: Bookmark; p: BodyProps }) {
             : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         }`}
       >
-        {src.canFavorite && <FavoriteToggle bookmark={b} />}
+        {src.canFavorite && (
+          <FavoriteToggle
+            bookmark={b}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
         {src.canDrag && <CardDragHandle drag={drag} />}
         <KebabMenu items={p.bookmarkKebab(b)} />
       </div>
@@ -1008,7 +1070,7 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
   const relativeTime = useRelativeTime();
-  const drag = useFolderSortable(sf);
+  const drag = useFolderSortable(sf, shareDrag(src));
   const contrast = useFolderContrast(sf);
   const key: SelectionKey = `folder:${sf.id}`;
   const selected = p.selection.has(key);
@@ -1064,7 +1126,12 @@ function TableFolderRow({ sf, p }: { sf: Folder; p: BodyProps }) {
         {/* Right-aligned, like the bookmark rows: the kebab lands in the same
             column on every row even though folders have one action fewer. */}
         <div className="flex items-center justify-end gap-1">
-          {src.canFavorite && <FavoriteToggle folder={sf} />}
+          {src.canFavorite && (
+          <FavoriteToggle
+            folder={sf}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
           <KebabMenu items={p.folderKebab(sf)} />
         </div>
       </td>
@@ -1076,7 +1143,7 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
   const src = useEntitySource();
   const { t } = useTranslation();
   const relativeTime = useRelativeTime();
-  const drag = useBookmarkSortable(b);
+  const drag = useBookmarkSortable(b, shareDrag(src));
   const contrast = useBookmarkContrast(b);
   const key: SelectionKey = `bookmark:${b.id}`;
   const selected = p.selection.has(key);
@@ -1145,7 +1212,12 @@ function TableBookmarkRow({ b, p }: { b: Bookmark; p: BodyProps }) {
           >
             <ExternalLink className="h-4 w-4" />
           </a>
-          {src.canFavorite && <FavoriteToggle bookmark={b} />}
+          {src.canFavorite && (
+          <FavoriteToggle
+            bookmark={b}
+            {...(src.onToggleFavorite ? { onToggle: src.onToggleFavorite } : {})}
+          />
+        )}
           <KebabMenu items={p.bookmarkKebab(b)} />
         </div>
       </td>

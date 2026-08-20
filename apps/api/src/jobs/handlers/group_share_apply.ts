@@ -93,6 +93,35 @@ function resolveParent(
   return parentId;
 }
 
+/**
+ * Write positions 0..n-1 straight to the rows.
+ *
+ * Deliberately not through moveFolder/moveBookmark: each of those re-seals
+ * every share the folder belongs to, and doing that once per sibling would
+ * turn a reorder of ten items into ten rebuilds of the same payload.
+ */
+function renumber(
+  ctx: AuthedContext,
+  kind: "folder" | "bookmark",
+  ids: string[],
+): void {
+  ids.forEach((id, position) => {
+    if (kind === "folder") {
+      getDb()
+        .update(folders)
+        .set({ position })
+        .where(and(eq(folders.id, id), eq(folders.userId, ctx.userId)))
+        .run();
+    } else {
+      getDb()
+        .update(bookmarks)
+        .set({ position })
+        .where(and(eq(bookmarks.id, id), eq(bookmarks.userId, ctx.userId)))
+        .run();
+    }
+  });
+}
+
 /** Whether this id is one of the owner's folders; if not, it is a bookmark. */
 function isOwnFolder(ctx: AuthedContext, id: string): boolean {
   return !!getDb()
@@ -153,8 +182,21 @@ function applyOne(ctx: AuthedContext, op: ShareOp, shareRootId: string | null) {
     }
     case "move_node": {
       const target = resolveParent(op.parentId, shareRootId);
-      if (op.nodeKind === "folder") moveFolder(ctx, op.id, target, 0);
-      else moveBookmark(ctx, op.id, target, 0);
+      // The index the member dropped it at, so a reorder inside the share
+      // becomes the same reorder in the owner's folder.
+      const at = op.position ?? 0;
+      if (op.nodeKind === "folder") moveFolder(ctx, op.id, target, at);
+      else moveBookmark(ctx, op.id, target, at);
+      // Then renumber the siblings to the order the share has. The move above
+      // writes one index and leaves the rest with the numbers they had, so
+      // without this the folder ends up with ties and an arbitrary order.
+      if (op.order?.length) renumber(ctx, op.nodeKind ?? "bookmark", op.order);
+      return;
+    }
+    case "set_favorite": {
+      const patch = { favorite: !!op.favorite };
+      if (isOwnFolder(ctx, op.id)) updateFolder(ctx, op.id, patch);
+      else updateBookmark(ctx, op.id, patch);
       return;
     }
     case "set_tags": {

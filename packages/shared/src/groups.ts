@@ -157,6 +157,8 @@ export type DeleteSharedNodeBody = z.infer<typeof DeleteSharedNodeBodySchema>;
 export const MoveSharedNodeBodySchema = z.object({
   /** Target folder inside the share; null = the share's own root. */
   folderId: z.string().uuid().nullable(),
+  /** Index inside that folder. Omitted means "at the end". */
+  position: z.number().int().min(0).optional(),
   baseRev: z.number().int().optional(),
 });
 export type MoveSharedNodeBody = z.infer<typeof MoveSharedNodeBodySchema>;
@@ -176,3 +178,9 @@ export const SetSharedAppearanceBodySchema = z.object({
 export type SetSharedAppearanceBody = z.infer<
   typeof SetSharedAppearanceBodySchema
 >;
+
+export const SetSharedFavoriteBodySchema = z.object({
+  favorite: z.boolean(),
+  baseRev: z.number().int().optional(),
+});
+export type SetSharedFavoriteBody = z.infer<typeof SetSharedFavoriteBodySchema>;

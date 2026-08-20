@@ -43,7 +43,8 @@ export type ShareOpKind =
   | "delete_node"
   | "move_node"
   | "set_tags"
-  | "set_appearance";
+  | "set_appearance"
+  | "set_favorite";
 
 export interface ShareOp {
   kind: ShareOpKind;
@@ -60,6 +61,20 @@ export interface ShareOp {
   tags?: string[];
   bgColor?: string | null;
   textTone?: string | null;
+  favorite?: boolean;
+  /** Index within the target folder, so a reorder is representable and not
+   * just "put it at the end". */
+  position?: number;
+  /**
+   * The ids of the target folder's children, in the order the share now has
+   * them.
+   *
+   * A position on its own is not enough: the owner's rows keep whatever
+   * numbers they had, so writing one index leaves ties and the order comes out
+   * arbitrary. Carrying the whole order lets the write-back renumber the
+   * siblings and land exactly what the member sees.
+   */
+  order?: string[];
 }
 
 interface ShareRow {
@@ -401,6 +416,7 @@ export function moveSharedNode(
   shareId: string,
   nodeId: string,
   targetFolderId: string | null,
+  position?: number,
   baseRev?: number,
 ): { rev: number } {
   const row = loadEditableShare(shareId);
@@ -417,8 +433,14 @@ export function moveSharedNode(
     throw Forbidden("A folder cannot be moved into itself");
   }
   detach(tree, nodeId);
-  if (node.type === "folder") target.subfolders.push(node);
-  else target.bookmarks.push(node);
+  // The array order *is* the order, so splicing at the index is what carries a
+  // reorder in the shared copy. Appending would only ever mean "last".
+  const list = node.type === "folder" ? target.subfolders : target.bookmarks;
+  const at =
+    position === undefined || position < 0 || position > list.length
+      ? list.length
+      : position;
+  (list as SharedContent[]).splice(at, 0, node);
 
   const { rev } = persist(
     ctx,
@@ -429,7 +451,31 @@ export function moveSharedNode(
       id: nodeId,
       parentId: target.id === tree.id ? null : target.id,
       nodeKind: node.type,
+      position: at,
+      order: list.map((n) => n.id),
     },
+    baseRev,
+  );
+  return { rev };
+}
+
+export function setSharedFavorite(
+  ctx: AuthedContext,
+  shareId: string,
+  nodeId: string,
+  favorite: boolean,
+  baseRev?: number,
+): { rev: number } {
+  const row = loadEditableShare(shareId);
+  const tree = readPayload(row);
+  const node = findNodeIn(tree, nodeId);
+  if (!node) throw NotFound("Node not found in share");
+  node.favorite = favorite;
+  const { rev } = persist(
+    ctx,
+    row,
+    tree,
+    { kind: "set_favorite", id: nodeId, favorite },
     baseRev,
   );
   return { rev };

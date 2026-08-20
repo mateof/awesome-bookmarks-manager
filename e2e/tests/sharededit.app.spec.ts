@@ -364,3 +364,106 @@ test("mover, etiquetar y colorear dentro del compartido, y llega al dueño", asy
   await o.ctx.close();
   await m.ctx.close();
 });
+
+test("favorito y reordenar dentro del compartido llegan al dueño", async ({
+  browser,
+}) => {
+  const o = await mkUser(browser, {
+    email: "shared.fav.owner.e2e@example.com",
+    nickname: "sharedfavowner",
+    password: "StarAndOrderOwn26x",
+  });
+  const m = await mkUser(browser, {
+    email: "shared.fav.member.e2e@example.com",
+    nickname: "sharedfavmember",
+    password: "StarAndOrderMem26x",
+  });
+
+  const root = await (
+    await o.req.post("/api/folders", { data: { name: "Lista" } })
+  ).json();
+  const ids: string[] = [];
+  for (const title of ["Uno", "Dos", "Tres"]) {
+    const b = await (
+      await o.req.post("/api/bookmarks", {
+        data: {
+          url: `https://${title.toLowerCase()}.example/`,
+          title,
+          folderId: root.id,
+          fetchSnapshot: false,
+        },
+      })
+    ).json();
+    ids.push(b.id);
+  }
+
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Orden" } })
+  ).json();
+  const inv = await (
+    await o.req.post(`/api/groups/${group.id}/invitations`, {
+      data: { email: "shared.fav.member.e2e@example.com", expiresInDays: 7 },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${inv.token}/accept`);
+  await o.req.post(`/api/groups/${group.id}/shares`, {
+    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+  });
+
+  let shareId = "";
+  let rev = 0;
+  await expect(async () => {
+    const list = await (await m.req.get("/api/shared")).json();
+    expect(list.length).toBe(1);
+    shareId = list[0].id;
+    const got = await (await m.req.get(`/api/shared/${shareId}`)).json();
+    expect(got.content.bookmarks.map((b: { title: string }) => b.title)).toEqual([
+      "Uno",
+      "Dos",
+      "Tres",
+    ]);
+    rev = got.rev;
+  }).toPass({ timeout: 15_000 });
+
+  // Star the last one.
+  const starred = await m.req.put(
+    `/api/shared/${shareId}/node/${ids[2]}/favorite`,
+    { data: { favorite: true, baseRev: rev } },
+  );
+  expect(starred.ok(), await starred.text()).toBeTruthy();
+  rev = (await starred.json()).rev;
+
+  // And drag it to the front: a move to index 0 inside the same folder.
+  const moved = await m.req.post(`/api/shared/${shareId}/node/${ids[2]}/move`, {
+    data: { folderId: root.id, position: 0, baseRev: rev },
+  });
+  expect(moved.ok(), await moved.text()).toBeTruthy();
+
+  // The order travels in the shared copy, which is the whole point.
+  const seen = await (await m.req.get(`/api/shared/${shareId}`)).json();
+  expect(seen.content.bookmarks.map((b: { title: string }) => b.title)).toEqual([
+    "Tres",
+    "Uno",
+    "Dos",
+  ]);
+  expect(
+    seen.content.bookmarks.find((b: { title: string }) => b.title === "Tres")
+      .favorite,
+  ).toBe(true);
+
+  // And both reach the owner's own rows.
+  await expect(async () => {
+    const bms: Array<{ id: string; favorite: boolean; position: number }> =
+      await (await o.req.get("/api/bookmarks")).json();
+    const tres = bms.find((b) => b.id === ids[2])!;
+    expect(tres.favorite).toBe(true);
+    const mine = bms
+      .filter((b) => ids.includes(b.id))
+      .sort((a, b) => a.position - b.position)
+      .map((b) => b.id);
+    expect(mine[0]).toBe(ids[2]);
+  }).toPass({ timeout: 40_000 });
+
+  await o.ctx.close();
+  await m.ctx.close();
+});

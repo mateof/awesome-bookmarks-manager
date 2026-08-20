@@ -25,11 +25,24 @@ export interface DragData {
   id: string;
   parentId?: string | null; // folders
   folderId?: string | null; // bookmarks
+  /**
+   * Set when the card being dragged belongs to a group share.
+   *
+   * The drop handler lives in Layout, above every page, so it cannot ask the
+   * page what it is looking at. Carrying the share in the drag data is how it
+   * knows to move the node inside the share instead of calling the personal
+   * endpoints with ids this user does not own.
+   */
+  shareId?: string;
+  /** The share's rev when the drag started, for the concurrency check. */
+  shareRev?: number;
 }
 
 export interface NestData {
   target: "folder";
   folderId: string | null; // null = root
+  /** See DragData.shareId. */
+  shareId?: string;
 }
 
 export interface SortableResult {
@@ -46,10 +59,18 @@ export interface SortableResult {
   isDragging: boolean;
 }
 
-export function useFolderSortable(sf: Folder): SortableResult {
+export function useFolderSortable(
+  sf: Folder,
+  share?: { shareId: string; rev: number },
+): SortableResult {
   const s = useSortable({
     id: `folder:${sf.id}`,
-    data: { kind: "folder", id: sf.id, parentId: sf.parentId } satisfies DragData,
+    data: {
+      kind: "folder",
+      id: sf.id,
+      parentId: sf.parentId,
+      ...(share ? { shareId: share.shareId, shareRev: share.rev } : {}),
+    } satisfies DragData,
   });
   return {
     ref: s.setNodeRef,
@@ -67,10 +88,18 @@ export function useFolderSortable(sf: Folder): SortableResult {
   };
 }
 
-export function useBookmarkSortable(b: Bookmark): SortableResult {
+export function useBookmarkSortable(
+  b: Bookmark,
+  share?: { shareId: string; rev: number },
+): SortableResult {
   const s = useSortable({
     id: `bookmark:${b.id}`,
-    data: { kind: "bookmark", id: b.id, folderId: b.folderId } satisfies DragData,
+    data: {
+      kind: "bookmark",
+      id: b.id,
+      folderId: b.folderId,
+      ...(share ? { shareId: share.shareId, shareRev: share.rev } : {}),
+    } satisfies DragData,
   });
   return {
     ref: s.setNodeRef,
@@ -102,6 +131,7 @@ export function useBookmarkSortable(b: Bookmark): SortableResult {
 export function useNestDrop(
   folderId: string | null,
   scope: "side" | "card" = "side",
+  shareId?: string,
 ): {
   ref: (node: HTMLElement | null) => void;
   isOver: boolean;
@@ -109,7 +139,11 @@ export function useNestDrop(
   const base = folderId === null ? "root" : folderId;
   const drop = useDroppable({
     id: `nest:${scope}:${base}`,
-    data: { target: "folder", folderId } satisfies NestData,
+    data: {
+      target: "folder",
+      folderId,
+      ...(shareId ? { shareId } : {}),
+    } satisfies NestData,
   });
   return { ref: drop.setNodeRef, isOver: drop.isOver };
 }

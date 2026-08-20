@@ -38,6 +38,47 @@ import { Footer } from "./Footer.js";
 import { Spotlight } from "./Spotlight.js";
 import { SwipeToClose } from "./SwipeToClose.js";
 
+/** The folder a dragged shared node currently lives in, as the share sees it. */
+function parentOf(a: DragData): string | null {
+  return (a.kind === "folder" ? a.parentId : a.folderId) ?? null;
+}
+
+interface ShareNode {
+  id: string;
+  type: "folder" | "bookmark";
+  subfolders?: ShareNode[];
+  bookmarks?: ShareNode[];
+}
+
+function findFolder(node: ShareNode | undefined, id: string): ShareNode | null {
+  if (!node || node.type !== "folder") return null;
+  if (node.id === id) return node;
+  for (const sub of node.subfolders ?? []) {
+    const hit = findFolder(sub, id);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
+ * Where the node it was dropped on sits among its siblings, so the dragged one
+ * can take that place. Walks the share payload, because that tree — not this
+ * user's own rows — is what the cards were built from.
+ */
+function indexOfSibling(
+  root: unknown,
+  overId: string,
+  a: DragData,
+): number | null {
+  const parentId = parentOf(a);
+  if (!parentId) return null;
+  const holder = findFolder(root as ShareNode | undefined, parentId);
+  if (!holder) return null;
+  const list = a.kind === "folder" ? holder.subfolders : holder.bookmarks;
+  const idx = (list ?? []).findIndex((x) => x.id === overId);
+  return idx < 0 ? null : idx;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
@@ -94,6 +135,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
       nestFolderId = o.id; // bookmark dropped onto a folder card
     }
 
+    // Inside a group share the ids belong to somebody else, so the personal
+    // endpoints would 404. Everything routes through the share instead, which
+    // also means the move reaches the owner's folder like every other edit
+    // there. The share travels in the drag data because this handler sits
+    // above every page and cannot ask what is on screen.
+    if (a.shareId) {
+      await dropInsideShare(a, o, over, nestFolderId);
+      return;
+    }
+
     if (nestFolderId !== undefined) {
       if (a.kind === "bookmark") {
         if ((a.folderId ?? null) === nestFolderId) return;
@@ -140,6 +191,46 @@ export function Layout({ children }: { children: React.ReactNode }) {
       qc.invalidateQueries({ queryKey: ["folders"] });
     }
   };
+  /**
+   * A drop that started on a shared card. Nesting lands it in the target
+   * folder; dropping on a sibling puts it at that sibling's index, which is
+   * what makes reordering inside a share mean something.
+   */
+  const dropInsideShare = async (
+    a: DragData,
+    o: (DragData | NestData) | undefined,
+    over: { id: string | number },
+    nestFolderId: string | null | undefined,
+  ) => {
+    if (!a.shareId) return;
+    const refresh = () =>
+      qc.invalidateQueries({ queryKey: ["shared-content", a.shareId] });
+    try {
+      if (nestFolderId !== undefined) {
+        await api.moveSharedNode(a.shareId, a.id, nestFolderId, undefined, a.shareRev);
+        refresh();
+        return;
+      }
+      // Reorder: only among siblings of the same kind, same as your own rows.
+      if (!o || !("kind" in o) || o.kind !== a.kind) return;
+      const content = qc.getQueryData(["shared-content", a.shareId]) as
+        | { content?: unknown }
+        | undefined;
+      const index = indexOfSibling(content?.content, String(over.id).split(":")[1] ?? "", a);
+      if (index === null) return;
+      await api.moveSharedNode(
+        a.shareId,
+        a.id,
+        parentOf(a),
+        index,
+        a.shareRev,
+      );
+      refresh();
+    } catch (e) {
+      console.warn("share drop rejected", e);
+    }
+  };
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
 

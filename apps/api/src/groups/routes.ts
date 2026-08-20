@@ -6,6 +6,7 @@ import {
   EditSharedNodeBodySchema,
   MoveSharedNodeBodySchema,
   SetSharedAppearanceBodySchema,
+  SetSharedFavoriteBodySchema,
   SetSharedTagsBodySchema,
   InviteMemberBodySchema,
   ShareToGroupBodySchema,
@@ -28,6 +29,7 @@ import {
   moveSharedNode,
   queueFieldEdit,
   setSharedAppearance,
+  setSharedFavorite,
   setSharedTags,
 } from "./ops.js";
 import {
@@ -308,7 +310,14 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
       return reply.code(404).send({ error: "not_found" });
     }
-    return moveSharedNode(ctx, shareId, nodeId, body.folderId, body.baseRev);
+    return moveSharedNode(
+      ctx,
+      shareId,
+      nodeId,
+      body.folderId,
+      body.position,
+      body.baseRev,
+    );
   });
 
   app.put("/shared/:shareId/node/:nodeId/tags", async (req, reply) => {
@@ -329,6 +338,16 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: "not_found" });
     }
     return setSharedAppearance(ctx, shareId, nodeId, body);
+  });
+
+  app.put("/shared/:shareId/node/:nodeId/favorite", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { shareId, nodeId } = NodeParams.parse(req.params);
+    const body = SetSharedFavoriteBodySchema.parse(req.body);
+    if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return setSharedFavorite(ctx, shareId, nodeId, body.favorite, body.baseRev);
   });
 
   app.delete("/shared/:shareId/node/:nodeId", async (req, reply) => {

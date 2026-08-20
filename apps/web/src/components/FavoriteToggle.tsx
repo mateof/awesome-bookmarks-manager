@@ -19,11 +19,19 @@ export function FavoriteToggle({
   folder,
   className = "",
   size = "h-4 w-4",
+  onToggle,
 }: {
   bookmark?: Bookmark;
   folder?: Folder;
   className?: string;
   size?: string;
+  /**
+   * Where to send the change, when it is not this user's own row. A shared
+   * folder's star flips the flag in the shared copy and is written back to the
+   * owner's row like every other edit there, so the button is the same button
+   * and only its destination differs.
+   */
+  onToggle?: (kind: "folder" | "bookmark", id: string, next: boolean) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -40,6 +48,10 @@ export function FavoriteToggle({
   const toggle = useMutation({
     mutationFn: async () => {
       if (!target) throw new Error("FavoriteToggle needs a bookmark or a folder");
+      if (onToggle) {
+        await onToggle(target.kind, target.item.id, !on);
+        return;
+      }
       if (target.kind === "bookmark") {
         await api.updateBookmark(target.item.id, { favorite: !on });
       } else {

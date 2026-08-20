@@ -753,11 +753,22 @@ export const api = {
     shareId: string,
     nodeId: string,
     folderId: string | null,
+    position?: number,
     baseRev?: number,
   ) =>
     request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}/move`, {
       method: "POST",
-      body: JSON.stringify({ folderId, baseRev }),
+      body: JSON.stringify({ folderId, position, baseRev }),
+    }),
+  setSharedFavorite: (
+    shareId: string,
+    nodeId: string,
+    favorite: boolean,
+    baseRev?: number,
+  ) =>
+    request<{ rev: number }>(`/shared/${shareId}/node/${nodeId}/favorite`, {
+      method: "PUT",
+      body: JSON.stringify({ favorite, baseRev }),
     }),
   setSharedTags: (
     shareId: string,

@@ -144,8 +144,12 @@ one port.
   things that used to be wired straight to the personal API (icon URL,
   background URL, the favourite star, drag and drop) instead of being a second
   implementation that drifts. Members can create, rename, move, tag, recolour
-  and delete inside it; starring and drag-reordering are the two deliberate
-  exceptions. A share travels
+  and delete inside it, star it and reorder it by dragging. The star is a
+  *shared* one (it reaches the owner's row like every other edit, and does not
+  land in the member's own favourites bar, which lists their own rows), and the
+  order travels in the shared copy: a drop records the target folder's whole
+  child order, so the write-back renumbers the owner's rows to match instead of
+  writing one index and leaving ties. A share travels
   with the look its owner gave it: background colour or image, custom icon,
   forced text tone and tags, all browsed one folder at a time with the same
   up-one-level button as your own view. Because icons and backgrounds are

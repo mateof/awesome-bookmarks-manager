@@ -76,7 +76,10 @@ export function SharedGrid({
     bgColor: string | null;
   } | null>(null);
 
-  const source = useMemo(() => shareSource(shareId), [shareId]);
+  const source = useMemo(
+    () => shareSource(shareId, baseRev, onDone),
+    [shareId, baseRev, onDone],
+  );
   const subfolders = node.subfolders.map((f, i) => asFolder(f, node.id, i));
   const items = node.bookmarks.map((b, i) => asBookmark(b, node.id, i));
   const allTags = useMemo(
