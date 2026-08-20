@@ -143,8 +143,12 @@ one port.
   the same kebab — because the card layer takes an `EntitySource` for the four
   things that used to be wired straight to the personal API (icon URL,
   background URL, the favourite star, drag and drop) instead of being a second
-  implementation that drifts. Members can create, rename, move, tag, recolour
-  and delete inside it, star it and reorder it by dragging. The star is a
+  implementation that drifts. Members edit through the *same dialogs* as their
+  own folders — the full edit form with the icon library, emoji and favicon
+  fetch, rich-text description, tags and the background picker, plus the
+  personal appearance dialog with its text-tone control — pointed at the
+  share's endpoints. They can create, rename, move, tag, restyle and delete
+  inside it, star it and reorder it by dragging. The star is a
   *shared* one (it reaches the owner's row like every other edit, and does not
   land in the member's own favourites bar, which lists their own rows), and the
   order travels in the shared copy: a drop records the target folder's whole
