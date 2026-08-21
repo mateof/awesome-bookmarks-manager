@@ -3,6 +3,13 @@ import type {
   ArchiveScope,
   Attachment,
   AttachmentEntity,
+  CreateColumnBody,
+  CreateViewBody,
+  DatabaseDetail,
+  DatabaseSummary,
+  DbColumn,
+  DbRow,
+  DbView,
   RefCandidate,
   ResolveRefsBody,
   ResolvedRef,
@@ -53,6 +60,9 @@ import type {
   UpdatePanelBody,
   UpdateTemplateBody,
   UpdateBookmarkBody,
+  UpdateColumnBody,
+  UpdateRowBody,
+  UpdateViewBody,
   UpdateFolderBody,
   UpdateGroupBody,
   UpdateTagBody,
@@ -688,6 +698,66 @@ export const api = {
   allAttachments: () => request<Attachment[]>("/attachments/all"),
   deleteAttachment: (id: string) =>
     request<void>(`/attachments/${id}`, { method: "DELETE" }),
+
+  // inline databases
+  listDatabases: () => request<DatabaseSummary[]>("/databases"),
+  createDatabase: (name: string) =>
+    request<DatabaseDetail>("/databases", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  getDatabase: (id: string) => request<DatabaseDetail>(`/databases/${id}`),
+  renameDatabase: (id: string, name: string) =>
+    request<DatabaseSummary>(`/databases/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }),
+  deleteDatabase: (id: string) =>
+    request<void>(`/databases/${id}`, { method: "DELETE" }),
+
+  addDbColumn: (id: string, body: CreateColumnBody) =>
+    request<DbColumn>(`/databases/${id}/columns`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateDbColumn: (id: string, columnId: string, body: UpdateColumnBody) =>
+    request<DbColumn>(`/databases/${id}/columns/${columnId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteDbColumn: (id: string, columnId: string) =>
+    request<void>(`/databases/${id}/columns/${columnId}`, { method: "DELETE" }),
+
+  addDbRow: (id: string, cells: DbRow["cells"] = {}) =>
+    request<DbRow>(`/databases/${id}/rows`, {
+      method: "POST",
+      body: JSON.stringify({ cells }),
+    }),
+  updateDbRow: (id: string, rowId: string, body: UpdateRowBody) =>
+    request<DbRow>(`/databases/${id}/rows/${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteDbRow: (id: string, rowId: string) =>
+    request<void>(`/databases/${id}/rows/${rowId}`, { method: "DELETE" }),
+  reorderDbRows: (id: string, order: string[]) =>
+    request<{ ok: true }>(`/databases/${id}/rows/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ order }),
+    }),
+
+  addDbView: (id: string, body: CreateViewBody) =>
+    request<DbView>(`/databases/${id}/views`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateDbView: (id: string, viewId: string, body: UpdateViewBody) =>
+    request<DbView>(`/databases/${id}/views/${viewId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteDbView: (id: string, viewId: string) =>
+    request<void>(`/databases/${id}/views/${viewId}`, { method: "DELETE" }),
 
   // references inside descriptions
   searchRefs: (q: string) =>

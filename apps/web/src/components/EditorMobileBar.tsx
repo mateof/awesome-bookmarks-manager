@@ -4,6 +4,7 @@ import {
   Bold,
   ClipboardCopy,
   Code,
+  Database,
   EyeOff,
   Heading1,
   Heading2,
@@ -82,10 +83,12 @@ export function EditorMobileBar({
   editor,
   onInsertImage,
   onPickRef,
+  onInsertDatabase,
 }: {
   editor: Editor;
   onInsertImage: (file: File) => Promise<void>;
   onPickRef: (mode: "entity" | "asset") => void;
+  onInsertDatabase: () => void;
 }) {
   const { t } = useTranslation();
   const narrow = useIsNarrow();
@@ -234,6 +237,14 @@ export function EditorMobileBar({
             onClick={() => {
               setExpanded(false);
               onPickRef("asset");
+            }}
+          />
+          <GridItem
+            icon={<Database className="h-4 w-4" />}
+            label={t("db.insert")}
+            onClick={() => {
+              setExpanded(false);
+              onInsertDatabase();
             }}
           />
           <GridItem

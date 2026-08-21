@@ -699,3 +699,31 @@ body,
   background: rgb(71 85 105);
   color: rgb(56 189 248);
 }
+
+/* An embedded database inside the editor. It is only a placeholder there: the
+   interactive grid renders where the note is read, so this just has to say
+   what it is and be selectable as one block. */
+.ab-db-block {
+  display: block;
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgb(203 213 225);
+  border-left: 3px solid rgb(100 116 139);
+  border-radius: 0.5rem;
+  background: rgb(248 250 252);
+  font-size: 0.9em;
+  color: rgb(71 85 105);
+}
+.dark .ab-db-block {
+  border-color: rgb(51 65 85);
+  border-left-color: rgb(100 116 139);
+  background: rgb(30 41 59);
+  color: rgb(203 213 225);
+}
+.ab-db-block::before {
+  content: "▦ ";
+  opacity: 0.6;
+}
+.ab-db-block.ProseMirror-selectednode {
+  outline: 2px solid rgb(56 189 248);
+}

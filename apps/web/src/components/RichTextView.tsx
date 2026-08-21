@@ -2,6 +2,8 @@ import DOMPurify from "dompurify";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  DB_BLOCK_ATTR,
+  DB_BLOCK_NAME_ATTR,
   REF_ID_ATTR,
   REF_SLUG_ATTR,
   REF_TYPE_ATTR,
@@ -9,6 +11,7 @@ import {
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
 import { useRefChips } from "./RefChips.js";
+import { useDatabaseBlocks } from "./RichTextDatabases.js";
 
 interface Props {
   html: string;
@@ -38,6 +41,8 @@ export function RichTextView({ html, className }: Props) {
           REF_TYPE_ATTR,
           REF_ID_ATTR,
           REF_SLUG_ATTR,
+          DB_BLOCK_ATTR,
+          DB_BLOCK_NAME_ATTR,
         ],
       }),
     [html],
@@ -56,6 +61,9 @@ export function RichTextView({ html, className }: Props) {
   // Reference chips get their titles, their tooltip and their click behaviour
   // here; it returns the hover card, which portals to the body.
   const tooltip = useRefChips(ref, safe);
+  // Embedded databases become real components, portalled into the placeholder
+  // divs the note carries.
+  const databases = useDatabaseBlocks(ref, safe);
 
   return (
     <>
@@ -65,6 +73,7 @@ export function RichTextView({ html, className }: Props) {
       dangerouslySetInnerHTML={{ __html: safe }}
     />
     {tooltip}
+    {databases}
     </>
   );
 }

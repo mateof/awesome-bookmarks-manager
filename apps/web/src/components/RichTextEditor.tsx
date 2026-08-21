@@ -24,6 +24,7 @@ import {
   Minimize2,
   Minus,
   AtSign,
+  Database,
   Palette,
   Paperclip,
   Quote,
@@ -32,10 +33,12 @@ import {
 } from "lucide-react";
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import { RICH_MARKS } from "../lib/richMarks.js";
+import { DatabaseBlock as DatabaseBlockNode } from "../lib/richDatabase.js";
 import { EntityRef } from "../lib/richRefs.js";
 import { dlg } from "./dialogs.js";
 import { EditorMobileBar } from "./EditorMobileBar.js";
 import { RefPicker, type PickedRef } from "./RefPicker.js";
+import { api } from "../api.js";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -121,6 +124,7 @@ export function RichTextEditor({
       UnderlineExt,
       ImageExt.configure({ allowBase64: true }),
       EntityRef,
+      DatabaseBlockNode,
       ...RICH_MARKS,
     ],
     content: value || "",
@@ -202,6 +206,23 @@ export function RichTextEditor({
     editor.view.focus();
   };
 
+  /**
+   * Creating the table first and inserting the block second, rather than the
+   * other way round: the block is nothing but an id, so there is no block to
+   * insert until the server has given us one. If the call fails, the note is
+   * left exactly as it was instead of carrying a pointer to nothing.
+   */
+  const insertDatabase = async () => {
+    if (!editor) return;
+    try {
+      const db = await api.createDatabase(t("db.newName"));
+      editor.chain().insertDatabase({ dbId: db.id, dbName: db.name }).run();
+      editor.view.focus();
+    } catch (e) {
+      await dlg.alert(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   useEffect(() => {
     if (!editor) return;
     if (editor.getHTML() !== value) editor.commands.setContent(value || "");
@@ -230,6 +251,7 @@ export function RichTextEditor({
         onToggleMaximise={() => toggleMaximised(!maximised)}
         onInsertImage={insertImage}
         onPickRef={setPicking}
+        onInsertDatabase={insertDatabase}
       />
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
@@ -249,6 +271,7 @@ export function RichTextEditor({
         editor={editor}
         onInsertImage={insertImage}
         onPickRef={setPicking}
+        onInsertDatabase={insertDatabase}
       />
       {picking && (
         <RefPicker
@@ -292,6 +315,7 @@ function Toolbar({
   onToggleMaximise,
   onInsertImage,
   onPickRef,
+  onInsertDatabase,
 }: {
   editor: Editor;
   redactSensitive: boolean;
@@ -300,6 +324,7 @@ function Toolbar({
   onToggleMaximise: () => void;
   onInsertImage: (file: File) => Promise<void>;
   onPickRef: (mode: "entity" | "asset") => void;
+  onInsertDatabase: () => void;
 }) {
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
@@ -436,6 +461,9 @@ function Toolbar({
         title={t("refs.insertAsset")}
       >
         <Paperclip className="h-3 w-3" />
+      </Btn>
+      <Btn active={false} onClick={onInsertDatabase} title={t("db.insert")}>
+        <Database className="h-3 w-3" />
       </Btn>
       <Sep />
       {/* Text colour: a fixed palette rather than a wheel — notes want "make

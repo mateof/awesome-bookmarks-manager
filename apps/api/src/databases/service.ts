@@ -1,6 +1,7 @@
 import {
   ColumnConfigSchema,
   ViewConfigSchema,
+  applyView,
   emptyValue,
   type CellValue,
   type ColumnKind,
@@ -12,8 +13,6 @@ import {
   type DbColumn,
   type DbRow,
   type DbView,
-  type Filter,
-  type Sort,
   type UpdateColumnBody,
   type UpdateRowBody,
   type UpdateViewBody,
@@ -520,100 +519,6 @@ export function deleteView(
   touch(databaseId);
 }
 
-// --- filtering and sorting -------------------------------------------------
-
-function asText(v: CellValue): string {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "number") return String(v);
-  if (typeof v === "boolean") return v ? "true" : "false";
-  if (Array.isArray(v)) return v.join(" ");
-  return v.id;
-}
-
-function isEmpty(v: CellValue | undefined): boolean {
-  if (v === null || v === undefined || v === "") return true;
-  if (Array.isArray(v)) return v.length === 0;
-  return false;
-}
-
-function matches(value: CellValue | undefined, f: Filter): boolean {
-  const v = value ?? null;
-  switch (f.op) {
-    case "isEmpty":
-      return isEmpty(v);
-    case "isNotEmpty":
-      return !isEmpty(v);
-    case "contains":
-      return asText(v).toLowerCase().includes(asText(f.value ?? "").toLowerCase());
-    case "notContains":
-      return !asText(v).toLowerCase().includes(asText(f.value ?? "").toLowerCase());
-    case "equals":
-      // Compared as text so a checkbox filter written as "true" and a select
-      // filter written as an option id go through the same path.
-      return asText(v) === asText(f.value ?? null);
-    case "notEquals":
-      return asText(v) !== asText(f.value ?? null);
-    case "greaterThan":
-      return Number(v) > Number(f.value);
-    case "lessThan":
-      return Number(v) < Number(f.value);
-    case "before":
-      return !!v && asText(v) < asText(f.value ?? "");
-    case "after":
-      return !!v && asText(v) > asText(f.value ?? "");
-    case "hasAny": {
-      const want = Array.isArray(f.value) ? f.value : [asText(f.value ?? "")];
-      const have = Array.isArray(v) ? v : [asText(v)];
-      return want.some((w) => have.includes(w));
-    }
-    default:
-      return true;
-  }
-}
-
-function compare(
-  raw: CellValue | undefined,
-  rawB: CellValue | undefined,
-  kind: ColumnKind,
-): number {
-  const a = raw ?? null;
-  const b = rawB ?? null;
-  if (isEmpty(a) && isEmpty(b)) return 0;
-  // Blanks sink, whichever direction is being sorted: an empty cell is not a
-  // small value, it is an absent one, and burying it is nearly always what the
-  // person sorting wanted.
-  if (isEmpty(a)) return 1;
-  if (isEmpty(b)) return -1;
-  if (kind === "number") return Number(a) - Number(b);
-  if (kind === "checkbox") return Number(!!a) - Number(!!b);
-  return asText(a).localeCompare(asText(b), undefined, { numeric: true });
-}
-
-/**
- * Apply a view's filters and sorts. Exported so the same rules produce the
- * same order in the table, the board and a panel's flattened copy; three
- * implementations of "what this view shows" would drift within a week.
- */
-export function applyView(
-  rows: DbRow[],
-  columns: DbColumn[],
-  config: ViewConfig,
-): DbRow[] {
-  const kindOf = new Map(columns.map((c) => [c.id, c.kind]));
-  let out = rows.filter((r) =>
-    config.filters.every((f) => matches(r.cells[f.columnId], f)),
-  );
-  for (const sort of [...config.sorts].reverse()) {
-    const kind = kindOf.get(sort.columnId) ?? "text";
-    out = [...out].sort((a, b) => {
-      const n = compare(a.cells[sort.columnId], b.cells[sort.columnId], kind);
-      return sort.direction === "asc" ? n : -n;
-    });
-  }
-  return out;
-}
-
 /** Blank cells for a fresh row, so the client does not have to know the kinds. */
 export function blankRow(columns: DbColumn[]): Record<string, CellValue> {
   const out: Record<string, CellValue> = {};
@@ -630,3 +535,6 @@ export function databaseIdsIn(html: string | null | undefined): string[] {
   }
   return [...out];
 }
+
+// Re-exported so callers in the API do not have to know it lives in shared.
+export { applyView };
