@@ -39,6 +39,16 @@ const OPTIONS: sanitizeHtml.IOptions = {
     span: ["class", "style", "data-copyable", "data-spoiler"],
     "*": ["class", "style"],
   },
+  // `style` being an allowed *attribute* is not enough: sanitize-html parses
+  // its declarations and keeps only the ones listed here, so without this the
+  // editor's text colour and font family survive the client and silently die
+  // on the way through the server.
+  allowedStyles: {
+    "*": {
+      color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s.,%]+\)$/],
+      "font-family": [/^[\w\s,'"-]{1,120}$/],
+    },
+  },
   allowedSchemes: ["http", "https", "mailto", "data"],
   allowedSchemesByTag: { img: ["http", "https", "data"] },
   transformTags: {

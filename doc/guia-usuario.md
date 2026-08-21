@@ -506,14 +506,25 @@ La descripción de una carpeta va encima de su contenido, así que unas notas
 largas empujaban los bookmarks fuera de la pantalla: abrir la carpeta obligaba
 a hacer scroll para llegar a lo que ibas a buscar.
 
-Ahora el texto se recorta a unas pocas líneas, con un degradado al final para
-que se vea que hay más, y un botón **Ver más** lo despliega entero. **Ver
-menos** lo vuelve a plegar.
+El texto tiene un **tope de altura y scroll dentro** de ese tope, así que por
+larga que sea la nota los bookmarks quedan siempre a la vista. Un botón de
+**Ver completa** la abre entera en una ventana a pantalla completa, cómoda para
+leer.
 
-El botón solo aparece si el texto de verdad no cabe: una nota de dos líneas no
-gana un control que no hace nada. La medida es de altura real, no de número de
+Los controles solo aparecen si el texto de verdad no cabe: una nota de dos
+líneas no gana botones que no hacen nada. La medida es de altura real, no de número de
 caracteres, porque una imagen o una tabla ocupan mucho más de lo que su
 longitud sugiere.
+
+**El editor tiene más herramientas.** Además de negrita, listas y demás:
+títulos en tres tamaños, subrayado, separador de sección, **color de texto**
+(paleta fija), **tipo de letra** (normal, sans, serif y mono) e **imágenes**,
+que se pueden pegar desde el portapapeles, arrastrar o elegir con el botón.
+
+Las imágenes viajan **dentro de la propia nota**, reducidas si hace falta: van
+cifradas con el resto del texto, salen en el export `.abz` y llegan a las
+carpetas compartidas sin ninguna tubería nueva. El límite práctico es el de la
+nota (1 MB), así que caben unas pocas capturas por descripción, no un álbum.
 
 Aplica igual a la descripción de un bookmark y a las carpetas y bookmarks que
 ves en Compartidos.

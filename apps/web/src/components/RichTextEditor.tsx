@@ -1,4 +1,9 @@
+import Color from "@tiptap/extension-color";
+import FontFamily from "@tiptap/extension-font-family";
+import ImageExt from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
+import TextStyle from "@tiptap/extension-text-style";
+import UnderlineExt from "@tiptap/extension-underline";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -7,18 +12,26 @@ import {
   Code,
   Eye,
   EyeOff,
+  Heading1,
   Heading2,
+  Heading3,
+  ImagePlus,
   Italic,
   Link as LinkIcon,
   List,
+  ListOrdered,
   Maximize2,
   Minimize2,
-  ListOrdered,
+  Minus,
+  Palette,
   Quote,
   Strikethrough,
+  Underline as UnderlineIcon,
 } from "lucide-react";
+import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import { RICH_MARKS } from "../lib/richMarks.js";
-import { useEffect, useState } from "react";
+import { dlg } from "./dialogs.js";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface Props {
@@ -89,12 +102,18 @@ export function RichTextEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3] },
+        heading: { levels: [1, 2, 3] },
       }),
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
       }),
+      // TextStyle is the span the other two hang their styles on.
+      TextStyle,
+      Color,
+      FontFamily,
+      UnderlineExt,
+      ImageExt.configure({ allowBase64: true }),
       ...RICH_MARKS,
     ],
     content: value || "",
@@ -105,8 +124,45 @@ export function RichTextEditor({
           "prose prose-sm max-w-none focus:outline-none dark:prose-invert min-h-[120px]",
         spellcheck: "false",
       },
+      // Pasting or dropping an image inlines it (resized) instead of being
+      // silently ignored. Text pastes fall through untouched.
+      handlePaste: (_view, event) => {
+        const file = [...(event.clipboardData?.items ?? [])]
+          .map((it) => it.getAsFile())
+          .find(isImageFile);
+        if (!file) return false;
+        event.preventDefault();
+        void insertImage(file);
+        return true;
+      },
+      handleDrop: (_view, event) => {
+        const file = [...(event.dataTransfer?.files ?? [])].find(isImageFile);
+        if (!file) return false;
+        event.preventDefault();
+        void insertImage(file);
+        return true;
+      },
     },
   });
+
+  const insertImage = async (file: File) => {
+    if (!editor) return;
+    try {
+      const src = await imageFileToDataUrl(file);
+      // Collapse the selection first. `setImage` replaces whatever is
+      // selected, and the file picker steals focus while ProseMirror keeps
+      // the old selection stored — with "select all" active, picking an image
+      // would silently replace the whole note.
+      editor
+        .chain()
+        .focus()
+        .setTextSelection(editor.state.selection.to)
+        .setImage({ src })
+        .run();
+    } catch {
+      await dlg.alert(t("richText.imageTooLarge"));
+    }
+  };
 
   useEffect(() => {
     if (!editor) return;
@@ -134,6 +190,7 @@ export function RichTextEditor({
         onToggleRedact={() => setRedactSensitive((r) => !r)}
         maximised={maximised}
         onToggleMaximise={() => toggleMaximised(!maximised)}
+        onInsertImage={insertImage}
       />
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
@@ -158,20 +215,42 @@ export function RichTextEditor({
   );
 }
 
+const TEXT_COLORS = [
+  "#dc2626",
+  "#ea580c",
+  "#d97706",
+  "#16a34a",
+  "#0d9488",
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#64748b",
+];
+
+const FONTS: { key: "sans" | "serif" | "mono"; css: string }[] = [
+  { key: "sans", css: "ui-sans-serif, system-ui, sans-serif" },
+  { key: "serif", css: "Georgia, 'Times New Roman', serif" },
+  { key: "mono", css: "ui-monospace, SFMono-Regular, Menlo, monospace" },
+];
+
 function Toolbar({
   editor,
   redactSensitive,
   onToggleRedact,
   maximised,
   onToggleMaximise,
+  onInsertImage,
 }: {
   editor: Editor;
   redactSensitive: boolean;
   onToggleRedact: () => void;
   maximised: boolean;
   onToggleMaximise: () => void;
+  onInsertImage: (file: File) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  const [showColors, setShowColors] = useState(false);
+  const imgRef = useRef<HTMLInputElement>(null);
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
       <Btn
@@ -202,13 +281,41 @@ function Toolbar({
       >
         <Code className="h-3 w-3" />
       </Btn>
+      <Btn
+        active={editor.isActive("underline")}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        title={t("richText.underline")}
+      >
+        <UnderlineIcon className="h-3 w-3" />
+      </Btn>
       <Sep />
+      <Btn
+        active={editor.isActive("heading", { level: 1 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        title={t("richText.heading1")}
+      >
+        <Heading1 className="h-3 w-3" />
+      </Btn>
       <Btn
         active={editor.isActive("heading", { level: 2 })}
         onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         title={t("richText.heading")}
       >
         <Heading2 className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("heading", { level: 3 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        title={t("richText.heading3")}
+      >
+        <Heading3 className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={false}
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        title={t("richText.rule")}
+      >
+        <Minus className="h-3 w-3" />
       </Btn>
       <Btn
         active={editor.isActive("bulletList")}
@@ -263,6 +370,83 @@ function Toolbar({
       >
         <LinkIcon className="h-3 w-3" />
       </Btn>
+      <Sep />
+      {/* Text colour: a fixed palette rather than a wheel — notes want "make
+          this red", not colorimetry. */}
+      <span className="relative inline-flex">
+        <Btn
+          active={!!editor.getAttributes("textStyle").color}
+          onClick={() => setShowColors((v) => !v)}
+          title={t("richText.textColor")}
+        >
+          <Palette className="h-3 w-3" />
+        </Btn>
+        {showColors && (
+          <span className="absolute left-0 top-full z-20 mt-1 flex w-40 flex-wrap items-center gap-1 rounded border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+            {TEXT_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                aria-label={c}
+                onClick={() => {
+                  editor.chain().focus().setColor(c).run();
+                  setShowColors(false);
+                }}
+                className="h-5 w-5 rounded-full ring-1 ring-black/10"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().unsetColor().run();
+                setShowColors(false);
+              }}
+              className="mt-1 w-full rounded border border-slate-300 px-1 py-0.5 text-[10px] dark:border-slate-600"
+            >
+              {t("richText.clearColor")}
+            </button>
+          </span>
+        )}
+      </span>
+      <select
+        value={
+          FONTS.find(
+            (f) => f.css === editor.getAttributes("textStyle").fontFamily,
+          )?.key ?? ""
+        }
+        onChange={(e) => {
+          const f = FONTS.find((x) => x.key === e.target.value);
+          if (f) editor.chain().focus().setFontFamily(f.css).run();
+          else editor.chain().focus().unsetFontFamily().run();
+        }}
+        title={t("richText.fontFamily")}
+        aria-label={t("richText.fontFamily")}
+        className="h-6 rounded border border-slate-300 bg-white px-1 text-[11px] dark:border-slate-600 dark:bg-slate-700"
+      >
+        <option value="">{t("richText.fontDefault")}</option>
+        <option value="sans">{t("richText.fontSans")}</option>
+        <option value="serif">{t("richText.fontSerif")}</option>
+        <option value="mono">{t("richText.fontMono")}</option>
+      </select>
+      <Btn
+        active={false}
+        onClick={() => imgRef.current?.click()}
+        title={t("richText.insertImage")}
+      >
+        <ImagePlus className="h-3 w-3" />
+      </Btn>
+      <input
+        ref={imgRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void onInsertImage(f);
+        }}
+      />
       <Sep />
       <Btn
         active={redactSensitive}
