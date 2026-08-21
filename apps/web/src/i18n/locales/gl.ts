@@ -103,6 +103,7 @@ const gl = {
     title: "Favoritos",
   },
   sidebar: {
+    databases: "Bases de datos",
     changeIcon: "Cambiar icona",
     changeIconTitle: "Icona de {{name}}",
     home: "Inicio",
@@ -1025,6 +1026,11 @@ const gl = {
     tooLarge: "«{{name}}» supera o máximo de {{max}} por ficheiro.",
   },
   db: {
+    allDatabases: "Bases de datos",
+    newDatabase: "Nova base de datos",
+    noDatabases: "Aínda non tes ningunha.",
+    confirmDeleteDatabase: "Eliminar «{{name}}» con todas as súas filas? Non se pode desfacer.",
+    pageHint: "Aquí están todas, tamén as que inseriches dentro dunha nota. Se borras a nota, a táboa segue aquí.",
     insert: "Base de datos",
     newName: "Sen título",
     loading: "Cargando…",

@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Database,
   Copy,
   Filter,
   LayoutDashboard,
@@ -340,6 +341,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }
         >
           <Tag className="h-4 w-4" /> {t("sidebar.tags")}
+        </NavLink>
+        <NavLink
+          to="/databases"
+          className={({ isActive }) =>
+            `flex items-center gap-2 rounded px-2 py-1 text-sm ${
+              isActive
+                ? "bg-slate-200 dark:bg-slate-800"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`
+          }
+        >
+          <Database className="h-4 w-4" /> {t("sidebar.databases")}
         </NavLink>
         <NavLink
           to="/panels"

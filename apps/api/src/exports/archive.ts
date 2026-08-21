@@ -29,6 +29,11 @@ import {
   readAttachment,
   storeAttachment,
 } from "../attachments/service.js";
+import {
+  databaseIdsIn,
+  exportDatabase,
+  importDatabase,
+} from "../databases/service.js";
 import { createTag, listTags } from "../tags/service.js";
 import { APP_VERSION } from "../util/app-version.js";
 import { BadRequest, NotFound } from "../util/errors.js";
@@ -222,6 +227,25 @@ async function collect(
       tags: allTags
         .filter((t) => usedTagIds.has(t.id))
         .map((t) => ({ name: t.name, color: t.color })),
+      // Carried whole rather than by id: an archive holding only the reference
+      // would import notes pointing at tables that do not exist on the other
+      // side, which is precisely the silent loss this format exists to avoid.
+      databases: [
+        ...new Set([
+          ...folders.flatMap((f) => databaseIdsIn(f.description)),
+          ...bookmarks.flatMap((b) => databaseIdsIn(b.description)),
+        ]),
+      ]
+        .map((dbId) => {
+          try {
+            return exportDatabase(ctx, dbId);
+          } catch {
+            // Referenced but already deleted. One missing table must not sink
+            // the whole export, same rule as an unreadable blob above.
+            return null;
+          }
+        })
+        .filter((d): d is NonNullable<typeof d> => d !== null),
     },
     blobs,
   };
@@ -397,6 +421,29 @@ export async function importArchive(
     (a, b) => depthOf(a, byOldId) - depthOf(b, byOldId),
   );
 
+  // Recreated first, so the notes can be rewritten as they are created rather
+  // than in a second pass over rows that already exist.
+  const dbIdMap = new Map<string, string>();
+  for (const source of data.databases ?? []) {
+    try {
+      dbIdMap.set(source.id, importDatabase(ctx, source));
+    } catch (err) {
+      console.warn(
+        `[archive] could not restore database ${source.name}`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+  /** Point a note's blocks at the copies just made. */
+  const rewrite = (html: string | null | undefined): string | undefined => {
+    if (!html) return undefined;
+    let out = html;
+    for (const [oldId, newId] of dbIdMap) {
+      out = out.split(`data-db-id="${oldId}"`).join(`data-db-id="${newId}"`);
+    }
+    return out;
+  };
+
   const blobCount = { n: 0 };
   for (const f of sorted) {
     const parent =
@@ -404,7 +451,7 @@ export async function importArchive(
     const created = createFolder(ctx, {
       parentId: parent,
       name: f.name,
-      description: f.description ?? undefined,
+      description: rewrite(f.description),
       bgColor: f.bgColor,
       textTone: f.textTone,
       favorite: f.favorite,
@@ -422,7 +469,7 @@ export async function importArchive(
       folderId,
       url: b.url,
       title: b.title,
-      description: b.description ?? undefined,
+      description: rewrite(b.description),
       bgColor: b.bgColor,
       textTone: b.textTone,
       favorite: b.favorite,

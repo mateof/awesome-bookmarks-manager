@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AuthedContext } from "../auth/session.js";
+import { flattenDatabases } from "../databases/flatten.js";
 import { openField } from "../auth/encryption.js";
 import { getDb } from "../db/client.js";
 import {
@@ -202,12 +203,12 @@ function loadBookmark(
     id: row.id,
     title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
     url: openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt)),
+    // Flattened for the same reason as the panels: the group reads a
+    // materialised copy and cannot call the owner's database API.
     description: row.descriptionCt
-      ? openField(
-          dek,
-          userId,
-          "bookmark.description",
-          Buffer.from(row.descriptionCt),
+      ? flattenDatabases(
+          { userId, dek },
+          openField(dek, userId, "bookmark.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     bgColor: row.bgColor ?? null,
@@ -273,12 +274,12 @@ function loadFolder(
     type: "folder",
     id: row.id,
     name: openField(dek, userId, "folder.name", Buffer.from(row.nameCt)),
+    // Flattened for the same reason as the panels: the group reads a
+    // materialised copy and cannot call the owner's database API.
     description: row.descriptionCt
-      ? openField(
-          dek,
-          userId,
-          "folder.description",
-          Buffer.from(row.descriptionCt),
+      ? flattenDatabases(
+          { userId, dek },
+          openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     bgColor: row.bgColor ?? null,

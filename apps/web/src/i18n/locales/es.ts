@@ -103,6 +103,7 @@ const es = {
     title: "Favoritos",
   },
   sidebar: {
+    databases: "Bases de datos",
     changeIcon: "Cambiar icono",
     changeIconTitle: "Icono de {{name}}",
     home: "Inicio",
@@ -1023,6 +1024,11 @@ const es = {
     tooLarge: "«{{name}}» supera el máximo de {{max}} por fichero.",
   },
   db: {
+    allDatabases: "Bases de datos",
+    newDatabase: "Nueva base de datos",
+    noDatabases: "Todavía no tienes ninguna.",
+    confirmDeleteDatabase: "¿Eliminar «{{name}}» con todas sus filas? No se puede deshacer.",
+    pageHint: "Aquí están todas, también las que insertaste dentro de una nota. Si borras la nota, la tabla sigue estando aquí.",
     insert: "Base de datos",
     newName: "Sin título",
     loading: "Cargando…",

@@ -12,6 +12,7 @@ import type {
 import { and, eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { masterUnwrap, masterWrap, openField } from "../auth/encryption.js";
+import { flattenDatabases } from "../databases/flatten.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import {
@@ -82,8 +83,13 @@ function buildBookmark(
     id: row.id,
     title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
     url: openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt)),
+    // Flattened: a published panel is a materialised copy read without a
+    // session, so a live database block would render as an empty box.
     description: row.descriptionCt
-      ? openField(dek, userId, "bookmark.description", Buffer.from(row.descriptionCt))
+      ? flattenDatabases(
+          { userId, dek },
+          openField(dek, userId, "bookmark.description", Buffer.from(row.descriptionCt)),
+        )
       : null,
     tags: bookmarkTagList(row.id),
   };
@@ -156,8 +162,13 @@ function buildFolder(
   return {
     id: row.id,
     name: openField(dek, userId, "folder.name", Buffer.from(row.nameCt)),
+    // Flattened: a published panel is a materialised copy read without a
+    // session, so a live database block would render as an empty box.
     description: row.descriptionCt
-      ? openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt))
+      ? flattenDatabases(
+          { userId, dek },
+          openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt)),
+        )
       : null,
     bookmarks: childBookmarks.map((b) => buildBookmark(userId, dek, b)),
     subfolders: childFolders.map((f) => buildFolder(userId, dek, f.id, new Set(visiting))),

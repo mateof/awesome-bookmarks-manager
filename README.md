@@ -65,6 +65,18 @@ one port.
   top and the description underneath. Stored as anchors with `data-ref`
   attributes so they survive the server's sanitiser and render everywhere the
   HTML does.
+- **Inline databases** — a Notion/SiYuan-style typed table embedded in any
+  description: text, number, checkbox, date, select, multi-select, URL and a
+  **reference** column pointing at your own bookmarks and folders. Three views
+  over the same rows (table, kanban board, gallery), each with its own filters,
+  sorting, visible columns and grouping. The note stores only an id; the rows
+  live in their own tables, sealed per row, because a description is one
+  AES-GCM field resealed in full on every save. Filtering and sorting run in
+  memory after decryption (the server cannot compare ciphertext in SQL, and the
+  app's own search already works this way), which caps a table at ~5000 rows by
+  design. Databases travel whole inside the `.abz` archive with their ids
+  rewritten on import, and are flattened into a static table for public panels
+  and group shares, whose readers have no session to query with.
 - **Mobile editor bar** — on a narrow screen the toolbar detaches and pins
   itself directly above the on-screen keyboard, tracking its height through
   `visualViewport`, with a `+` that opens the rest of the actions as a grid.

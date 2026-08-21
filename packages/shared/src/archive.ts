@@ -97,10 +97,49 @@ export const ArchiveBookmarkSchema = z.object({
   attachments: z.array(ArchiveAttachmentSchema).default([]),
 });
 
+/**
+ * A database embedded in one of the exported notes, carried whole.
+ *
+ * Exported by value rather than by reference: an archive that kept only the id
+ * would import notes pointing at tables that do not exist on the other side,
+ * which is the quiet kind of data loss this format exists to avoid.
+ */
+export const ArchiveDatabaseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  columns: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.string(),
+      name: z.string(),
+      config: z.unknown().optional(),
+      position: z.number().int(),
+    }),
+  ),
+  rows: z.array(
+    z.object({
+      id: z.string(),
+      cells: z.record(z.string(), z.unknown()),
+      position: z.number().int(),
+    }),
+  ),
+  views: z.array(
+    z.object({
+      id: z.string(),
+      kind: z.string(),
+      name: z.string(),
+      config: z.unknown().optional(),
+      position: z.number().int(),
+    }),
+  ),
+});
+
 export const ArchiveDataSchema = z.object({
   folders: z.array(ArchiveFolderSchema),
   bookmarks: z.array(ArchiveBookmarkSchema),
   tags: z.array(ArchiveTagSchema),
+  /** Defaulted so archives written before databases existed still import. */
+  databases: z.array(ArchiveDatabaseSchema).default([]),
 });
 export type ArchiveData = z.infer<typeof ArchiveDataSchema>;
 

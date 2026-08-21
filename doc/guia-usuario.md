@@ -38,6 +38,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
 26. [Ficheros adjuntos](#26-ficheros-adjuntos)
 27. [Referencias dentro del texto](#27-referencias-dentro-del-texto)
+28. [Bases de datos en las notas](#28-bases-de-datos-en-las-notas)
 
 ---
 
@@ -859,6 +860,69 @@ Dos detalles que evitan sorpresas:
 Los adjuntos se referencian **por slug** y no por identificador a propósito: si
 sustituyes el fichero por una versión nueva con el mismo slug, todas las notas
 que lo mencionan siguen funcionando.
+
+---
+
+## 28. Bases de datos en las notas
+
+Dentro de la descripción de cualquier carpeta o bookmark puedes meter una
+**base de datos**: una tabla con columnas con tipo, como la de Notion o SiYuan.
+Se inserta con el botón de base de datos de la barra del editor (o desde el
+**+** en el móvil).
+
+**Se inserta en el editor y se rellena en la ficha.** En el editor verás una
+tarjeta con el nombre de la tabla, no la rejilla. Es a propósito: en esta
+aplicación la descripción se *edita* en un diálogo y se *lee* en la página de
+la carpeta o del bookmark, así que la rejilla con la que se trabaja de verdad
+está donde lees. Editar un texto y editar trescientas celdas son dos trabajos
+distintos y meterlos en el mismo modal no sirve a ninguno.
+
+Una tabla nueva ya viene utilizable: columna de **Título**, columna de
+**Estado** con tres opciones, una vista de tabla y tres filas vacías.
+
+**Tipos de columna.** Texto, número, casilla, fecha, selección, selección
+múltiple, URL y **referencia**, que apunta a un bookmark o una carpeta tuyos y
+se ve como la pastilla de siempre, con su enlace para abrir la web.
+
+El tipo de una columna no se puede cambiar después. Habría que decidir en qué
+se convierte una fecha al volverse casilla, y toda respuesta a eso o es
+incorrecta o te borra datos sin avisar. Si te equivocaste, crea otra columna.
+
+**Tres vistas sobre las mismas filas.**
+
+- **Tabla**, con las filas reordenables arrastrando.
+- **Tablero** tipo kanban, agrupando por una columna de selección. Arrastrar
+  una tarjeta de carril a carril cambia esa columna en esa fila, ni más ni
+  menos. Siempre hay un carril de *sin asignar* para las filas que no tienen
+  valor, para que no desaparezcan.
+- **Galería**, las mismas tarjetas sin carriles.
+
+Cada vista guarda sus **filtros**, su **orden**, qué columnas enseña y por qué
+agrupa. Y guarda solo eso: filtrar no borra filas y ordenar no cambia el orden
+guardado, así que dos vistas de la misma tabla pueden enseñar cosas distintas
+sin mentir ninguna.
+
+**Dónde están todas.** En el menú lateral, en *Bases de datos*. Ahí aparecen
+también las que insertaste en una nota, así que si borras la nota la tabla
+sigue estando (y se puede borrar de verdad desde ahí, que es la forma de
+recuperar el espacio).
+
+Lo que conviene saber:
+
+- **Van cifradas como todo**: el nombre, los nombres de las columnas, sus
+  opciones y el contenido de cada fila.
+- **El filtrado se hace en memoria**, después de descifrar, porque el servidor
+  no puede comparar texto cifrado. Es lo mismo que ya hacía el buscador. La
+  consecuencia honesta es un tope de unos **5000 registros** por tabla: de
+  sobra para notas y proyectos, insuficiente para un almacén de datos. La
+  aplicación te lo dice si llegas.
+- **Viaja en el export `.abz`** con sus filas dentro, y al importar las notas
+  se reapuntan a la copia.
+- **En un panel público o en una carpeta compartida se ve como tabla estática**
+  con los datos del momento en que se generó la copia. Quien la lee no tiene tu
+  sesión, así que no puede consultar la tabla viva; se le da el contenido en
+  vez de una caja vacía. Las columnas ocultas siguen ocultas y las referencias
+  no se enseñan, porque apuntan a cosas tuyas que esa persona no puede abrir.
 
 ---
 

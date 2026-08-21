@@ -538,3 +538,115 @@ export function databaseIdsIn(html: string | null | undefined): string[] {
 
 // Re-exported so callers in the API do not have to know it lives in shared.
 export { applyView };
+
+/**
+ * Everything an archive needs to recreate a database elsewhere, decrypted.
+ * Ids are carried so the exported notes, which reference them, can be rewritten
+ * to the new ones on import.
+ */
+export function exportDatabase(ctx: AuthedContext, id: string) {
+  const d = getDatabase(ctx, id);
+  return {
+    id: d.id,
+    name: d.name,
+    columns: d.columns.map((c) => ({
+      id: c.id,
+      kind: c.kind as string,
+      name: c.name,
+      config: c.config as unknown,
+      position: c.position,
+    })),
+    rows: d.rows.map((r) => ({
+      id: r.id,
+      cells: r.cells as Record<string, unknown>,
+      position: r.position,
+    })),
+    views: d.views.map((v) => ({
+      id: v.id,
+      kind: v.kind as string,
+      name: v.name,
+      config: v.config as unknown,
+      position: v.position,
+    })),
+  };
+}
+
+/**
+ * Recreate an exported database under the importing user's key.
+ *
+ * Every id is new, and the cells are rewritten to the new column ids as they
+ * go: keeping the old ones would produce rows whose keys match nothing, which
+ * renders as a table full of blanks rather than as an error anyone could spot.
+ * Returns the new database id so the importer can rewrite the notes.
+ */
+export interface ImportableDatabase {
+  id: string;
+  name: string;
+  columns: { id: string; kind: string; name: string; config?: unknown; position: number }[];
+  rows: { id: string; cells: Record<string, unknown>; position: number }[];
+  views: { id: string; kind: string; name: string; config?: unknown; position: number }[];
+}
+
+export function importDatabase(
+  ctx: AuthedContext,
+  source: ImportableDatabase,
+): string {
+  const id = randomUUID();
+  getDb()
+    .insert(databases)
+    .values({
+      id,
+      userId: ctx.userId,
+      nameCt: sealField(ctx.dek, ctx.userId, "db.name", source.name),
+    })
+    .run();
+
+  const columnIdMap = new Map<string, string>();
+  for (const c of source.columns) {
+    const created = addColumn(ctx, id, {
+      kind: c.kind as never,
+      name: c.name,
+      config: ColumnConfigSchema.parse(c.config ?? {}),
+    });
+    columnIdMap.set(c.id, created.id);
+  }
+
+  for (const r of source.rows) {
+    const cells: Record<string, CellValue> = {};
+    for (const [oldColumnId, value] of Object.entries(r.cells)) {
+      const next = columnIdMap.get(oldColumnId);
+      if (next) cells[next] = value as CellValue;
+    }
+    addRow(ctx, id, { cells });
+  }
+
+  for (const v of source.views) {
+    const created = addView(ctx, id, {
+      kind: v.kind as never,
+      name: v.name,
+    });
+    const cfg = ViewConfigSchema.parse(v.config ?? {});
+    updateView(ctx, id, created.id, {
+      config: {
+        ...cfg,
+        filters: cfg.filters
+          .filter((f) => columnIdMap.has(f.columnId))
+          .map((f) => ({ ...f, columnId: columnIdMap.get(f.columnId)! })),
+        sorts: cfg.sorts
+          .filter((so) => columnIdMap.has(so.columnId))
+          .map((so) => ({ ...so, columnId: columnIdMap.get(so.columnId)! })),
+        hiddenColumnIds: cfg.hiddenColumnIds
+          .map((c) => columnIdMap.get(c))
+          .filter((c): c is string => !!c),
+        groupByColumnId: cfg.groupByColumnId
+          ? (columnIdMap.get(cfg.groupByColumnId) ?? null)
+          : null,
+        titleColumnId: cfg.titleColumnId
+          ? (columnIdMap.get(cfg.titleColumnId) ?? null)
+          : null,
+      },
+    });
+  }
+
+  return id;
+}

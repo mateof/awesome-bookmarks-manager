@@ -103,6 +103,7 @@ const en = {
     title: "Favorites",
   },
   sidebar: {
+    databases: "Databases",
     changeIcon: "Change icon",
     changeIconTitle: "Icon for {{name}}",
     home: "Home",
@@ -1022,6 +1023,11 @@ const en = {
     tooLarge: "“{{name}}” is over the {{max}} per-file limit.",
   },
   db: {
+    allDatabases: "Databases",
+    newDatabase: "New database",
+    noDatabases: "You have none yet.",
+    confirmDeleteDatabase: "Delete “{{name}}” with all its rows? This cannot be undone.",
+    pageHint: "All of them, including the ones you put inside a note. Delete the note and the table is still here.",
     insert: "Database",
     newName: "Untitled",
     loading: "Loading…",

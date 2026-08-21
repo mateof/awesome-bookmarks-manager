@@ -1,3 +1,4 @@
+import { DatabasesPage } from "./pages/DatabasesPage.js";
 import { Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./auth.js";
 import { DialogProvider } from "./components/dialogs.js";
@@ -59,6 +60,8 @@ export default function App() {
               />
                   <Route path="/panels" element={<PanelsPage />} />
                   <Route path="/tags" element={<TagsPage />} />
+                  <Route path="/databases" element={<DatabasesPage />} />
+                  <Route path="/databases/:id" element={<DatabasesPage />} />
                   <Route path="/filter" element={<TagFilterPage />} />
                   <Route path="/smart/:id" element={<SmartFolderPage />} />
                   <Route path="/tag/:id" element={<TagRedirectPage />} />
