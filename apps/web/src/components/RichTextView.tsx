@@ -1,8 +1,14 @@
 import DOMPurify from "dompurify";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  REF_ID_ATTR,
+  REF_SLUG_ATTR,
+  REF_TYPE_ATTR,
+} from "@awesome-bookmarks/shared";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
+import { useRefChips } from "./RefChips.js";
 
 interface Props {
   html: string;
@@ -24,7 +30,15 @@ export function RichTextView({ html, className }: Props) {
   const safe = useMemo(
     () =>
       DOMPurify.sanitize(html, {
-        ADD_ATTR: ["target", "rel", COPYABLE_ATTR, SPOILER_ATTR],
+        ADD_ATTR: [
+          "target",
+          "rel",
+          COPYABLE_ATTR,
+          SPOILER_ATTR,
+          REF_TYPE_ATTR,
+          REF_ID_ATTR,
+          REF_SLUG_ATTR,
+        ],
       }),
     [html],
   );
@@ -39,11 +53,18 @@ export function RichTextView({ html, className }: Props) {
     });
   }, [t]);
 
+  // Reference chips get their titles, their tooltip and their click behaviour
+  // here; it returns the hover card, which portals to the body.
+  const tooltip = useRefChips(ref, safe);
+
   return (
+    <>
     <div
       ref={ref}
       className={`prose prose-sm max-w-none dark:prose-invert ${className ?? ""}`}
       dangerouslySetInnerHTML={{ __html: safe }}
     />
+    {tooltip}
+    </>
   );
 }

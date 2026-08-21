@@ -120,7 +120,9 @@ test("el editor de texto se maximiza a pantalla completa, con sus botones", asyn
 
   // The save buttons come along: the overlay covers the dialog they live in,
   // so without them here you would have to shrink it back just to save.
-  await expect(page.getByRole("button", { name: "Guardar" })).toBeInViewport();
+  await expect(
+    page.getByRole("button", { name: "Guardar y cerrar" }),
+  ).toBeInViewport();
 
   // Escape restores instead of closing the dialog and losing the text.
   await page.keyboard.press("Escape");

@@ -23,14 +23,19 @@ import {
   Maximize2,
   Minimize2,
   Minus,
+  AtSign,
   Palette,
+  Paperclip,
   Quote,
   Strikethrough,
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import { RICH_MARKS } from "../lib/richMarks.js";
+import { EntityRef } from "../lib/richRefs.js";
 import { dlg } from "./dialogs.js";
+import { EditorMobileBar } from "./EditorMobileBar.js";
+import { RefPicker, type PickedRef } from "./RefPicker.js";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -78,6 +83,7 @@ export function RichTextEditor({
   const { t } = useTranslation();
   const [redactSensitive, setRedactSensitive] = useState(false);
   const [maximised, setMaximised] = useState(false);
+  const [picking, setPicking] = useState<"entity" | "asset" | null>(null);
   const toggleMaximised = (next: boolean) => {
     setMaximised(next);
     onMaximisedChange?.(next);
@@ -114,6 +120,7 @@ export function RichTextEditor({
       FontFamily,
       UnderlineExt,
       ImageExt.configure({ allowBase64: true }),
+      EntityRef,
       ...RICH_MARKS,
     ],
     content: value || "",
@@ -133,6 +140,17 @@ export function RichTextEditor({
         if (!file) return false;
         event.preventDefault();
         void insertImage(file);
+        return true;
+      },
+      // Typing "@" opens the folder/bookmark picker and "#" the file picker,
+      // but only at a word boundary: an email address or a CSS colour in the
+      // middle of a sentence must stay typeable. Returning true consumes the
+      // character, so no stray trigger is left behind to delete later.
+      handleTextInput: (view, from, _to, text) => {
+        if (text !== "@" && text !== "#") return false;
+        const before = from > 0 ? view.state.doc.textBetween(from - 1, from) : "";
+        if (before && !/\s/.test(before)) return false;
+        setPicking(text === "@" ? "entity" : "asset");
         return true;
       },
       handleDrop: (_view, event) => {
@@ -164,6 +182,26 @@ export function RichTextEditor({
     }
   };
 
+  const applyRef = (r: PickedRef) => {
+    if (!editor) return;
+    setPicking(null);
+    editor
+      .chain()
+      .insertRef({
+        refType: r.refType,
+        refId: r.refId ?? null,
+        refSlug: r.refSlug ?? null,
+        label: r.label,
+      })
+      .run();
+    // Focused directly through ProseMirror rather than with TipTap's focus()
+    // command, which defers the real DOM focus to a requestAnimationFrame (it
+    // has to, for React). Deferred is a race: keep typing immediately after
+    // choosing and the next characters land nowhere, because the picker's
+    // input has gone and the editor has not been given focus yet.
+    editor.view.focus();
+  };
+
   useEffect(() => {
     if (!editor) return;
     if (editor.getHTML() !== value) editor.commands.setContent(value || "");
@@ -191,6 +229,7 @@ export function RichTextEditor({
         maximised={maximised}
         onToggleMaximise={() => toggleMaximised(!maximised)}
         onInsertImage={insertImage}
+        onPickRef={setPicking}
       />
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
@@ -206,6 +245,18 @@ export function RichTextEditor({
           aria-label={placeholder ?? t("richText.descriptionAria")}
         />
       </div>
+      <EditorMobileBar
+        editor={editor}
+        onInsertImage={insertImage}
+        onPickRef={setPicking}
+      />
+      {picking && (
+        <RefPicker
+          mode={picking}
+          onPick={applyRef}
+          onClose={() => setPicking(null)}
+        />
+      )}
       {maximised && actions && (
         <div className="shrink-0 border-t border-slate-200 p-2 dark:border-slate-700">
           {actions}
@@ -240,6 +291,7 @@ function Toolbar({
   maximised,
   onToggleMaximise,
   onInsertImage,
+  onPickRef,
 }: {
   editor: Editor;
   redactSensitive: boolean;
@@ -247,6 +299,7 @@ function Toolbar({
   maximised: boolean;
   onToggleMaximise: () => void;
   onInsertImage: (file: File) => Promise<void>;
+  onPickRef: (mode: "entity" | "asset") => void;
 }) {
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
@@ -369,6 +422,20 @@ function Toolbar({
         title={t("richText.link")}
       >
         <LinkIcon className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={false}
+        onClick={() => onPickRef("entity")}
+        title={t("refs.insertEntity")}
+      >
+        <AtSign className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={false}
+        onClick={() => onPickRef("asset")}
+        title={t("refs.insertAsset")}
+      >
+        <Paperclip className="h-3 w-3" />
       </Btn>
       <Sep />
       {/* Text colour: a fixed palette rather than a wheel — notes want "make

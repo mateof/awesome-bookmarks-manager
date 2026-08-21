@@ -3,6 +3,10 @@ import type {
   ArchiveScope,
   Attachment,
   AttachmentEntity,
+  RefCandidate,
+  ResolveRefsBody,
+  ResolvedRef,
+  UpdateAttachmentBody,
   ImportArchiveResult,
   CloudBackup,
   PeerCertificate,
@@ -647,9 +651,13 @@ export const api = {
     entity: AttachmentEntity,
     id: string,
     file: File,
+    meta: { name?: string; description?: string; slug?: string } = {},
   ): Promise<Attachment> => {
     const fd = new FormData();
     fd.append("file", file);
+    if (meta.name) fd.append("name", meta.name);
+    if (meta.description) fd.append("description", meta.description);
+    if (meta.slug) fd.append("slug", meta.slug);
     const res = await fetch(`${BASE}/${entity}s/${id}/attachments`, {
       method: "POST",
       credentials: "include",
@@ -671,8 +679,24 @@ export const api = {
     }
     return res.json() as Promise<Attachment>;
   },
+  updateAttachment: (id: string, body: UpdateAttachmentBody) =>
+    request<Attachment>(`/attachments/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  /** Every file in the account, for the reference picker. */
+  allAttachments: () => request<Attachment[]>("/attachments/all"),
   deleteAttachment: (id: string) =>
     request<void>(`/attachments/${id}`, { method: "DELETE" }),
+
+  // references inside descriptions
+  searchRefs: (q: string) =>
+    request<RefCandidate[]>(`/refs/search?q=${encodeURIComponent(q)}`),
+  resolveRefs: (refs: ResolveRefsBody["refs"]) =>
+    request<ResolvedRef[]>("/refs/resolve", {
+      method: "POST",
+      body: JSON.stringify({ refs }),
+    }),
   /** Download URL. `inline` is honoured only for real raster images. */
   attachmentUrl: (id: string, inline = false) =>
     `${BASE}/attachments/${id}${inline ? "?inline=1" : ""}`,

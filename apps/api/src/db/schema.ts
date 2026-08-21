@@ -627,6 +627,16 @@ export const attachments = sqliteTable(
     entityType: text("entity_type").notNull(),
     entityId: text("entity_id").notNull(),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    descriptionCt: blob("description_ct", { mode: "buffer" }),
+    /** Encrypted, for display. */
+    slugCt: blob("slug_ct", { mode: "buffer" }),
+    /**
+     * Deterministic per-user hash of the slug. Uniqueness has to be enforced
+     * by the database, and a UNIQUE index over AES-GCM ciphertext would never
+     * fire (random IV per write). Same trick as bookmarks.url_hash. Salted
+     * with the user id so the same slug in two accounts does not correlate.
+     */
+    slugHash: text("slug_hash"),
     mimeCt: blob("mime_ct", { mode: "buffer" }).notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     blobPath: text("blob_path").notNull(),
@@ -638,5 +648,6 @@ export const attachments = sqliteTable(
       t.entityType,
       t.entityId,
     ),
+    slugIdx: uniqueIndex("attachments_user_slug_idx").on(t.userId, t.slugHash),
   }),
 );

@@ -5,10 +5,12 @@ import {
   type AttachmentEntity,
 } from "@awesome-bookmarks/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Paperclip, Plus, Trash2 } from "lucide-react";
+import { Download, Paperclip, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
+import { AttachmentDialog } from "./AttachmentDialog.js";
+import { CopyButton } from "./CopyButton.js";
 import { dlg } from "./dialogs.js";
 
 /**
@@ -38,6 +40,14 @@ export function Attachments({
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Attachment | null>(null);
+  /**
+   * Files picked but not yet uploaded. They queue rather than upload straight
+   * away because each one now gets a name, a description and a slug first, and
+   * the slug in particular is worth a look before it becomes the key a note
+   * refers to.
+   */
+  const [queue, setQueue] = useState<File[]>([]);
+  const [editing, setEditing] = useState<Attachment | null>(null);
 
   const key = ["attachments", entity, id];
   const { data: files } = useQuery({
@@ -45,42 +55,24 @@ export function Attachments({
     queryFn: () => api.listAttachments(entity, id),
   });
 
-  const upload = useMutation({
-    // Takes a plain array, never the input's own FileList: clearing the
-    // input's value (which the change handler must do) empties that list, and
-    // the mutation body runs a tick later — it would find nothing to upload
-    // and report success having sent zero files.
-    mutationFn: async (list: File[]) => {
-      // Sequential rather than parallel: each upload is checked against the
-      // quota as it lands, and three concurrent 25 MB seals is a lot of heap
-      // for no gain the user would notice.
-      for (const file of list) {
-        if (file.size > MAX_ATTACHMENT_BYTES) {
-          throw new Error(
-            t("attachments.tooLarge", {
-              name: file.name,
-              max: formatBytes(MAX_ATTACHMENT_BYTES, i18n.language),
-            }),
-          );
-        }
-        await api.uploadAttachment(entity, id, file);
-      }
-    },
-    onSuccess: () => {
-      setError(null);
-      qc.invalidateQueries({ queryKey: key });
-      // The bytes count against the quota, so the storage figure is now stale.
-      qc.invalidateQueries({ queryKey: ["storage"] });
-    },
-    onError: (e) => setError(e instanceof Error ? e.message : String(e)),
-  });
+  const tooBig = (f: File) =>
+    t("attachments.tooLarge", {
+      name: f.name,
+      max: formatBytes(MAX_ATTACHMENT_BYTES, i18n.language),
+    });
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: key });
+    // The list feeding the "#" picker is account-wide, so a new file has to
+    // invalidate that too or it stays unreferenceable until a reload.
+    qc.invalidateQueries({ queryKey: ["attachments", "all"] });
+    // The bytes count against the quota, so the storage figure is now stale.
+    qc.invalidateQueries({ queryKey: ["storage"] });
+  };
 
   const remove = useMutation({
     mutationFn: (attachmentId: string) => api.deleteAttachment(attachmentId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: key });
-      qc.invalidateQueries({ queryKey: ["storage"] });
-    },
+    onSuccess: refresh,
   });
 
   const list = files ?? [];
@@ -102,13 +94,10 @@ export function Attachments({
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={upload.isPending}
             className="ml-auto flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             <Plus className="h-3 w-3" />
-            {upload.isPending
-              ? t("attachments.uploading")
-              : t("attachments.add")}
+            {t("attachments.add")}
           </button>
         )}
         <input
@@ -121,7 +110,13 @@ export function Attachments({
             const picked = Array.from(e.target.files ?? []);
             // Clear it, or picking the same file twice in a row does nothing.
             e.target.value = "";
-            if (picked.length) upload.mutate(picked);
+            const oversized = picked.find((f) => f.size > MAX_ATTACHMENT_BYTES);
+            if (oversized) {
+              setError(tooBig(oversized));
+              return;
+            }
+            setError(null);
+            setQueue(picked);
           }}
         />
       </div>
@@ -154,10 +149,33 @@ export function Attachments({
                 <div className="truncate text-sm" title={f.name}>
                   {f.name}
                 </div>
-                <div className="text-xs text-slate-400">
-                  {formatBytes(f.sizeBytes, i18n.language)}
+                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                  {f.slug ? (
+                    <span className="font-mono text-slate-500 dark:text-slate-400">
+                      #{f.slug}
+                    </span>
+                  ) : (
+                    <span className="italic">{t("attachments.noSlug")}</span>
+                  )}
+                  <span>·</span>
+                  <span>{formatBytes(f.sizeBytes, i18n.language)}</span>
                 </div>
+                {f.description && (
+                  <div
+                    className="truncate text-xs text-slate-500 dark:text-slate-400"
+                    title={f.description}
+                  >
+                    {f.description}
+                  </div>
+                )}
               </div>
+              {f.slug && (
+                <CopyButton
+                  text={`#${f.slug}`}
+                  title={t("attachments.copySlug")}
+                  size="h-4 w-4"
+                />
+              )}
               <a
                 href={api.attachmentUrl(f.id)}
                 download={f.name}
@@ -167,6 +185,17 @@ export function Attachments({
               >
                 <Download className="h-4 w-4" />
               </a>
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(f)}
+                  title={t("attachments.edit")}
+                  aria-label={t("attachments.edit")}
+                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
               {canEdit && (
                 <button
                   type="button"
@@ -187,6 +216,29 @@ export function Attachments({
             </li>
           ))}
         </ul>
+      )}
+
+      {queue.length > 0 && queue[0] && (
+        <AttachmentDialog
+          key={`${queue[0].name}:${queue.length}`}
+          entity={entity}
+          entityId={id}
+          file={queue[0]}
+          // Dropping the head either way: cancelling one of a multi-file pick
+          // should move on to the next rather than abandon the whole batch.
+          onClose={() => setQueue((q) => q.slice(1))}
+          onDone={refresh}
+        />
+      )}
+
+      {editing && (
+        <AttachmentDialog
+          entity={entity}
+          entityId={id}
+          existing={editing}
+          onClose={() => setEditing(null)}
+          onDone={refresh}
+        />
       )}
 
       {preview && (

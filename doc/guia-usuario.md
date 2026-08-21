@@ -37,6 +37,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 24. [Copiar una selección como lista](#24-copiar-una-selección-como-lista)
 25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
 26. [Ficheros adjuntos](#26-ficheros-adjuntos)
+27. [Referencias dentro del texto](#27-referencias-dentro-del-texto)
 
 ---
 
@@ -517,6 +518,18 @@ líneas no gana botones que no hacen nada. La medida es de altura real, no de n�
 caracteres, porque una imagen o una tabla ocupan mucho más de lo que su
 longitud sugiere.
 
+**Tres botones al guardar.** *Guardar* guarda y deja el editor abierto, para
+ir salvando mientras escribes algo largo; *Guardar y cerrar* hace las dos
+cosas; *Cancelar* sale sin guardar. Tras un *Guardar* aparece un "Guardado"
+durante un momento, para que se note que el botón hizo algo.
+
+**En el móvil, la barra sale encima del teclado.** En pantalla estrecha, en
+cuanto el texto toma el foco, aparece abajo una barra pegada al teclado con lo
+que más se usa (negrita, cursiva, subrayado, lista, deshacer y rehacer) y un
+botón **+** que despliega el resto de acciones en una cuadrícula: encabezados,
+cita, separador, color, tipo de letra, imagen, enlace y las dos referencias.
+La barra desaparece al soltar el foco.
+
 **El editor tiene más herramientas.** Además de negrita, listas y demás:
 títulos en tres tamaños, subrayado, separador de sección, **color de texto**
 (paleta fija), **tipo de letra** (normal, sans, serif y mono) e **imágenes**,
@@ -761,9 +774,22 @@ contrato en PDF junto al enlace del proveedor, la hoja de cálculo al lado de
 la carpeta del proyecto. La sección **Adjuntos** aparece en la ficha, debajo
 de la descripción, con el botón *Adjuntar*. Se pueden subir varios de una vez.
 
-Cada fichero se lista con su nombre y su tamaño, con un botón para descargarlo
-y otro para borrarlo. Si es una imagen, se muestra una miniatura y al pulsarla
-se ve a pantalla completa.
+Al elegir un fichero se abre una ficha antes de subirlo, con tres campos:
+
+- **Nombre**, que empieza siendo el del fichero y puedes cambiar.
+- **Slug**, que se propone solo a partir del nombre (`Acta Marzo.pdf` →
+  `acta-marzo`). Es la clave con la que lo referencias desde cualquier nota, y
+  es **única en tu cuenta**: si escribes uno que ya existe te lo dice en vez de
+  cambiártelo por otro sin avisar, porque si no la referencia que ibas a
+  escribir apuntaría a otra cosa. Si no tocas nada y el propuesto está cogido,
+  se usa el siguiente libre (`acta-marzo-2`).
+- **Descripción**, para recordar qué es ese fichero.
+
+Los tres se pueden cambiar después con el lápiz de cada fila.
+
+Cada fichero se lista con su nombre, su slug, su tamaño y su descripción, con
+botones para copiar la referencia, descargarlo, editarlo y borrarlo. Si es una
+imagen, se muestra una miniatura y al pulsarla se ve a pantalla completa.
 
 **No es lo mismo que pegar una imagen en la descripción.** Una imagen pegada
 forma parte del texto y va dentro de la nota, con su límite; un adjunto es un
@@ -793,6 +819,46 @@ Lo que conviene saber:
 Lo que **todavía no hacen**: no viajan a las carpetas compartidas con un grupo.
 Quien abra un compartido verá el texto y los enlaces, pero no los ficheros
 adjuntos del dueño.
+
+---
+
+## 27. Referencias dentro del texto
+
+Dentro de la descripción de cualquier carpeta o bookmark puedes **referenciar**
+otras cosas de tu cuenta: otra carpeta, otro bookmark o un fichero adjunto.
+Aparecen como una pastilla, no como un enlace suelto, porque no llevan a una
+URL cualquiera sino a algo tuyo.
+
+**Cómo se insertan.** Escribiendo **`@`** se abre el buscador de carpetas y
+bookmarks; escribiendo **`#`**, el de ficheros adjuntos, que busca por slug o
+por nombre. El carácter no se queda escrito: solo abre el buscador. También
+hay dos botones en la barra del editor, que es lo cómodo en el móvil.
+
+El buscador se maneja entero con el teclado: escribes, te mueves con las
+flechas y eliges con Enter.
+
+**Qué hacen al pulsarlas.**
+
+- **Un bookmark** tiene dos destinos, y por eso tiene dos zonas. El **texto**
+  abre su ficha dentro de la aplicación; la **flecha ↗** abre su URL en una
+  pestaña nueva.
+- **Una carpeta** te lleva a esa carpeta.
+- **Un adjunto** descarga el fichero.
+
+**Al pasar el ratón** sale una tarjeta con lo que apunta arriba (la URL si es
+un bookmark, el `#slug` si es un adjunto) y su descripción abajo, así que sabes
+a dónde vas sin ir.
+
+Dos detalles que evitan sorpresas:
+
+- La pastilla enseña el **nombre actual** de lo que apunta, no el que tenía
+  cuando la insertaste. Si renombras el bookmark, la referencia se entera.
+- Si lo referenciado **ya no existe**, la pastilla se ve tachada y en rojo en
+  vez de fingir que sigue ahí.
+
+Los adjuntos se referencian **por slug** y no por identificador a propósito: si
+sustituyes el fichero por una versión nueva con el mismo slug, todas las notas
+que lo mencionan siguen funcionando.
 
 ---
 

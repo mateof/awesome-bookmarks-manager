@@ -1,13 +1,20 @@
-import type { AttachmentEntity } from "@awesome-bookmarks/shared";
+import {
+  UpdateAttachmentBodySchema,
+  type AttachmentEntity,
+} from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import { BadRequest } from "../util/errors.js";
 import {
-  addAttachment,
+  assertOwnsEntity,
   deleteAttachment,
+  listAllAttachments,
   listAttachments,
   readAttachment,
+  readUpload,
+  storeAttachment,
+  updateAttachment,
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
@@ -36,10 +43,46 @@ export const attachmentRoutes: FastifyPluginAsync = async (app) => {
       if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
       const file = await req.file();
       if (!file) throw BadRequest("file part missing");
+      // Reject before streaming 25 MB up if the parent is not this user's.
+      assertOwnsEntity(ctx, entity, id);
+
+      // The bytes are read *before* the text fields are looked at, and that
+      // order is the whole point: @fastify/multipart only exposes parts it has
+      // already parsed, so fields declared after the file in the form are
+      // invisible until the file's stream has been consumed. Reading first
+      // means the form can put them in any order.
+      const bytes = await readUpload(file);
+      const field = (k: string): string | undefined => {
+        const f = (file.fields as Record<string, unknown> | undefined)?.[k];
+        const v = (f as { value?: unknown } | undefined)?.value;
+        return typeof v === "string" && v.trim() ? v.trim() : undefined;
+      };
+
       reply.code(201);
-      return addAttachment(ctx, entity, id, file);
+      return storeAttachment(
+        ctx,
+        entity,
+        id,
+        field("name") || file.filename || "archivo",
+        file.mimetype || "application/octet-stream",
+        bytes,
+        {
+          description: field("description"),
+          slug: field("slug"),
+          fileName: file.filename,
+        },
+      );
     });
   }
+
+  // Declared before "/attachments/:id" so "all" is never read as an id.
+  app.get("/attachments/all", async (req) => listAllAttachments(requireAuth(req)));
+
+  app.patch("/attachments/:id", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return updateAttachment(ctx, id, UpdateAttachmentBodySchema.parse(req.body));
+  });
 
   app.get("/attachments/:id", async (req, reply) => {
     const ctx = requireAuth(req);

@@ -59,6 +59,9 @@ export const ArchiveAttachmentSchema = z.object({
   id: z.string(),
   name: z.string(),
   mime: z.string(),
+  /** Both default so archives written before these fields still import. */
+  description: z.string().nullable().default(null),
+  slug: z.string().default(""),
 });
 
 /** A tag as exported: matched by name on import, not by id. */

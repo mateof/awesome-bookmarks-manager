@@ -46,12 +46,28 @@ one port.
   note ride inside the note's own encrypted field, resized client-side, so they
   survive the `.abz` export and reach group shares with the text.
 - **Attachments** — real files hanging off a folder or a bookmark, up to 25 MB
-  each. Sealed with the owner's key like everything else, and so are the file
-  name and MIME type: the server knows how many bytes you stored and nothing
-  else. They count against the storage quota (with their own slice in the
-  breakdown), travel inside the `.abz` archive, and are deleted along with
-  their parent when it is purged from the trash. The list is a separate query
-  made only on a detail view, so browsing costs exactly what it did before.
+  each, each with a name, a description and a **slug**. Sealed with the owner's
+  key like everything else, and so are all three plus the MIME type: the server
+  knows how many bytes you stored and nothing else. The slug is unique per
+  account (enforced by a UNIQUE index over a per-user hash, since a unique
+  index over AES-GCM ciphertext could never fire) and is what notes refer to,
+  so replacing a file under the same slug keeps every reference working. They
+  count against the storage quota (with their own slice in the breakdown),
+  travel inside the `.abz` archive, and are deleted along with their parent
+  when it is purged from the trash. The list is a separate query made only on a
+  detail view, so browsing costs exactly what it did before.
+- **References inside descriptions** — type `@` for a folder or bookmark and
+  `#` for an attached file, and the note carries a chip instead of a dead
+  title. Chips show the target's *current* name (they resolve in one batched
+  request per note, not one per chip) and mark themselves broken when it is
+  gone. A bookmark chip has two destinations: the label opens its detail page,
+  the arrow opens the URL in a new tab. Hovering shows a card with the URL on
+  top and the description underneath. Stored as anchors with `data-ref`
+  attributes so they survive the server's sanitiser and render everywhere the
+  HTML does.
+- **Mobile editor bar** — on a narrow screen the toolbar detaches and pins
+  itself directly above the on-screen keyboard, tracking its height through
+  `visualViewport`, with a `+` that opens the rest of the actions as a grid.
 - **Favourites** — star any folder or bookmark; the "Favoritos" bar in the
   header is a flat, quick-access list of everything you starred.
 - **Symlinks** — place a link to a folder or bookmark that lives elsewhere.

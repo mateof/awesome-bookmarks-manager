@@ -742,7 +742,7 @@ test("la ficha de un bookmark compartido: misma página, datos del compartido", 
   await editor.click();
   await m.page.keyboard.press("ControlOrMeta+a");
   await m.page.keyboard.type("Notas corregidas");
-  await m.page.getByRole("button", { name: "Guardar" }).click();
+  await m.page.getByRole("button", { name: "Guardar y cerrar" }).click();
   await expect(m.page.getByText("Notas corregidas")).toBeVisible();
 
   // Tags are edited in place too, by name.

@@ -40,10 +40,6 @@ test("el editor guarda títulos, color, tipo de letra e imágenes", async ({
   await page.getByRole("button", { name: "Editar el texto" }).click();
 
   const editor = page.locator(".tiptap.ProseMirror");
-  // Focus, then select. Clicking is not enough on its own: a toolbar click
-  // moves DOM focus and ProseMirror takes it back asynchronously, so a Ctrl+A
-  // fired in between selects nothing and the styling lands on an empty range.
-  // Waiting for focus turns that race into an explicit condition.
   const selectAll = async () => {
     await editor.click();
     await expect(editor).toBeFocused();
@@ -53,15 +49,22 @@ test("el editor guarda títulos, color, tipo de letra e imágenes", async ({
   await selectAll();
   await page.keyboard.type("Sección nueva");
 
-  // Heading on the line, then colour on the selection.
-  await page.getByRole("button", { name: "Título grande" }).click();
+  // Select the line once, then apply everything to that one selection.
+  //
+  // Re-selecting between toolbar clicks looks harmless and is not: TipTap's
+  // focus() command restores the stored selection inside a
+  // requestAnimationFrame, so a select-all fired right after a toolbar click
+  // gets overwritten a frame later, and the next command lands on an empty
+  // range — where a mark becomes an invisible stored mark instead of styling
+  // anything. A person selects once and hits several buttons; so does this.
   await selectAll();
+  await page.getByRole("button", { name: "Título grande" }).click();
+  await expect(editor.locator("h1")).toBeVisible();
+
   await page.getByRole("button", { name: "Color del texto" }).click();
   await page.getByRole("button", { name: "#dc2626" }).click();
   await expect(editor.locator('span[style*="color"]')).toBeVisible();
 
-  // Font family for the same selection.
-  await selectAll();
   await page.getByLabel("Tipo de letra").selectOption("mono");
   await expect(editor.locator('span[style*="font-family"]')).toBeVisible();
 
@@ -72,7 +75,7 @@ test("el editor guarda títulos, color, tipo de letra e imágenes", async ({
     .setInputFiles({ name: "p.png", mimeType: "image/png", buffer: PNG });
   await expect(editor.locator("img")).toBeVisible();
 
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar y cerrar" }).click();
   await expect(async () => {
     const after = await (await req.get(`/api/folders/${folder.id}`)).json();
     expect(after.description).toContain("<h1");

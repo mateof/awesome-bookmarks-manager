@@ -136,7 +136,13 @@ async function collect(
       kind === "folders" ? "folder" : "bookmark",
       entityId,
     );
-    const meta: { id: string; name: string; mime: string }[] = [];
+    const meta: {
+      id: string;
+      name: string;
+      mime: string;
+      description: string | null;
+      slug: string;
+    }[] = [];
     for (const f of files) {
       try {
         const { bytes } = await readAttachment(ctx, f.id);
@@ -144,7 +150,13 @@ async function collect(
           path: `blobs/${kind}/${entityId}/att-${f.id}.bin`,
           bytes,
         });
-        meta.push({ id: f.id, name: f.name, mime: f.mime });
+        meta.push({
+          id: f.id,
+          name: f.name,
+          mime: f.mime,
+          description: f.description,
+          slug: f.slug,
+        });
       } catch {
         // Same rule as the icons above: one unreadable blob must not sink
         // the whole export.
@@ -153,8 +165,9 @@ async function collect(
     return meta;
   };
 
-  const folderFiles = new Map<string, { id: string; name: string; mime: string }[]>();
-  const bookmarkFiles = new Map<string, { id: string; name: string; mime: string }[]>();
+  type FileMeta = Awaited<ReturnType<typeof attachmentsOf>>[number];
+  const folderFiles = new Map<string, FileMeta[]>();
+  const bookmarkFiles = new Map<string, FileMeta[]>();
 
   for (const f of folders) {
     if (f.iconBlobPath) {
@@ -490,7 +503,16 @@ async function restoreAttachments(
   ctx: AuthedContext,
   entries: Map<string, Buffer>,
   kind: "folders" | "bookmarks",
-  source: { id: string; attachments?: { id: string; name: string; mime: string }[] },
+  source: {
+    id: string;
+    attachments?: {
+      id: string;
+      name: string;
+      mime: string;
+      description?: string | null;
+      slug?: string;
+    }[];
+  },
   newId: string,
   counter: { n: number },
 ): Promise<void> {
@@ -505,6 +527,9 @@ async function restoreAttachments(
         a.name,
         a.mime,
         bytes,
+        // A suggestion, not a demand: importing an archive back into the same
+        // account must not fail on its own slugs, it should sit beside them.
+        { description: a.description ?? undefined, suggestSlug: a.slug || undefined },
       );
       counter.n++;
     } catch (err) {

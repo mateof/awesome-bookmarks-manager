@@ -344,6 +344,18 @@ export function ensureSchema() {
       ON attachments(user_id, entity_type, entity_id);
   `);
 
+  // Attachment metadata added after the table shipped. The slug hash carries
+  // the uniqueness constraint (see schema.ts); NULLs are allowed so rows
+  // written before slugs existed keep working, and SQLite lets multiple NULLs
+  // coexist under a UNIQUE index.
+  tryAddColumn("attachments", "description_ct", "BLOB");
+  tryAddColumn("attachments", "slug_ct", "BLOB");
+  tryAddColumn("attachments", "slug_hash", "TEXT");
+  getSqlite().exec(
+    `CREATE UNIQUE INDEX IF NOT EXISTS attachments_user_slug_idx
+       ON attachments(user_id, slug_hash);`,
+  );
+
   // Best-effort additions to existing tables. SQLite has no
   // ALTER TABLE ... ADD COLUMN IF NOT EXISTS, so we attempt and ignore the
   // 'duplicate column name' error.

@@ -158,7 +158,9 @@ test("los adjuntos se suben, se descargan intactos y se van con su dueño", asyn
   await expect(o.page.getByText("informe final.pdf")).toBeVisible();
   await expect(o.page.getByText("captura.png")).toBeVisible();
 
-  // Uploading from the page itself, not just the API.
+  // Uploading from the page itself, not just the API. Picking a file now opens
+  // the metadata dialog first: the slug it suggests is the key notes will use
+  // to reference the file, so it is worth a look before the upload happens.
   await o.page
     .getByTestId("attachment-input")
     .setInputFiles({
@@ -166,7 +168,16 @@ test("los adjuntos se suben, se descargan intactos y se van con su dueño", asyn
       mimeType: "application/pdf",
       buffer: PDF_ISH,
     });
+  await expect(
+    o.page.getByRole("heading", { name: "Adjuntar fichero" }),
+  ).toBeVisible();
+  // Suggested from the file name, without the extension.
+  await expect(o.page.getByLabel("Slug")).toHaveValue("desde-la-ui");
+  await o.page.getByLabel("Descripción").fill("Subido desde la página");
+  await o.page.getByRole("button", { name: "Guardar" }).click();
   await expect(o.page.getByText("desde-la-ui.pdf")).toBeVisible();
+  await expect(o.page.getByText("#desde-la-ui")).toBeVisible();
+  await expect(o.page.getByText("Subido desde la página")).toBeVisible();
 
   // The folder's own file shows on the folder page, and only that one.
   await o.page.goto(`/folder/${folder.id}`);

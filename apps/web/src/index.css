@@ -624,3 +624,78 @@ body,
 .tiptap .ab-copyable {
   cursor: text;
 }
+
+/* ---------------------------------------------------------------------------
+   Reference chips inside descriptions.
+
+   Styled as a pill rather than a link because they are not links: clicking
+   goes somewhere inside the app, and a bookmark chip has two destinations.
+   Looking like an <a> would promise a URL that the label does not open.
+   --------------------------------------------------------------------------- */
+.ab-ref {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgb(203 213 225);
+  background: rgb(248 250 252);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 0.95em;
+  line-height: 1.4;
+  /* A long title should wrap with the paragraph, not force a sideways scroll. */
+  white-space: normal;
+}
+.dark .ab-ref {
+  border-color: rgb(51 65 85);
+  background: rgb(30 41 59);
+}
+.ab-ref:hover {
+  background: rgb(241 245 249);
+  border-color: rgb(148 163 184);
+}
+.dark .ab-ref:hover {
+  background: rgb(51 65 85);
+  border-color: rgb(100 116 139);
+}
+
+/* A hairline in the type's colour, so folder/bookmark/file are tellable at a
+   glance without spending horizontal room on an icon. */
+.ab-ref-folder {
+  border-left: 3px solid rgb(245 158 11);
+}
+.ab-ref-bookmark {
+  border-left: 3px solid rgb(14 165 233);
+}
+.ab-ref-asset {
+  border-left: 3px solid rgb(148 163 184);
+}
+
+/* The target is gone. Say so instead of offering a chip that does nothing. */
+.ab-ref-missing {
+  border-style: dashed;
+  border-left-color: rgb(220 38 38);
+  color: rgb(148 163 184);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* The arrow on a bookmark chip: opens the site, where the label opens the
+   bookmark's page. Given its own hit area so the two are not a coin toss. */
+.ab-ref-open {
+  display: inline-block;
+  padding: 0 0.15rem;
+  border-radius: 0.25rem;
+  color: rgb(100 116 139);
+  font-size: 0.85em;
+}
+.ab-ref-open:hover {
+  background: rgb(226 232 240);
+  color: rgb(2 132 199);
+}
+.dark .ab-ref-open:hover {
+  background: rgb(71 85 105);
+  color: rgb(56 189 248);
+}

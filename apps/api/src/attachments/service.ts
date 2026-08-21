@@ -1,12 +1,15 @@
 import { aeadDecrypt, aeadEncrypt } from "@awesome-bookmarks/crypto";
 import {
   MAX_ATTACHMENT_BYTES,
+  SLUG_RE,
+  slugify,
   type Attachment,
   type AttachmentEntity,
+  type UpdateAttachmentBody,
 } from "@awesome-bookmarks/shared";
 import type { MultipartFile } from "@fastify/multipart";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type { AuthedContext } from "../auth/session.js";
 import { openField, sealField } from "../auth/encryption.js";
@@ -20,7 +23,7 @@ import {
   readBlob,
   writeBlob,
 } from "../storage/blobs.js";
-import { BadRequest, NotFound } from "../util/errors.js";
+import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { detectImageContentType } from "../util/image.js";
 
 /**
@@ -88,7 +91,7 @@ export function assertOwnsEntity(
 }
 
 /** Plaintext bytes of an upload, with the per-file cap enforced as it streams. */
-async function readUpload(file: MultipartFile): Promise<Buffer> {
+export async function readUpload(file: MultipartFile): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of file.file) {
@@ -119,24 +122,51 @@ function cleanName(raw: string): string {
   return (safe || "archivo").slice(0, 200);
 }
 
-export async function addAttachment(
-  ctx: AuthedContext,
-  entityType: AttachmentEntity,
-  entityId: string,
-  file: MultipartFile,
-): Promise<Attachment> {
-  // Ownership is checked inside storeAttachment, but do it before reading the
-  // body too: no point streaming 25 MB up to reject the entity afterwards.
-  assertOwnsEntity(ctx, entityType, entityId);
-  const bytes = await readUpload(file);
-  return storeAttachment(
-    ctx,
-    entityType,
-    entityId,
-    file.filename ?? "archivo",
-    file.mimetype || "application/octet-stream",
-    bytes,
-  );
+/**
+ * Per-user deterministic hash of a slug.
+ *
+ * The uniqueness constraint has to live in the database, and a UNIQUE index
+ * over AES-GCM ciphertext would never fire because every write gets a fresh
+ * IV. Hashing gives the index something stable to compare while keeping the
+ * slug itself unreadable at rest. Salted with the user id, exactly like
+ * `urlHash`, so the same slug in two accounts does not produce the same row.
+ */
+function slugHashOf(userId: string, slug: string): string {
+  return createHash("sha256").update(userId).update("|slug|").update(slug).digest("hex");
+}
+
+function slugTaken(userId: string, slug: string, exceptId?: string): boolean {
+  const row = getDb()
+    .select({ id: attachments.id })
+    .from(attachments)
+    .where(
+      and(
+        eq(attachments.userId, userId),
+        eq(attachments.slugHash, slugHashOf(userId, slug)),
+      ),
+    )
+    .get();
+  return !!row && row.id !== exceptId;
+}
+
+/**
+ * A free slug near the one asked for: `contrato`, then `contrato-2`, `-3`…
+ *
+ * Used only where the app is *suggesting* (an upload with no slug of its own).
+ * When the user types a slug explicitly and it collides they get a 409 and get
+ * to choose, because silently saving their note's key under a different name
+ * than they wrote would break the reference they were about to type.
+ */
+function freeSlug(userId: string, base: string): string {
+  const clean = SLUG_RE.test(base) ? base : slugify(base);
+  if (!slugTaken(userId, clean)) return clean;
+  for (let n = 2; n < 1000; n++) {
+    const candidate = `${clean.slice(0, 60)}-${n}`;
+    if (!slugTaken(userId, candidate)) return candidate;
+  }
+  // 999 files sharing a base name is not a real scenario, but returning
+  // something unique beats throwing on an upload that is otherwise fine.
+  return `${clean.slice(0, 50)}-${randomUUID().slice(0, 8)}`;
 }
 
 /**
@@ -151,6 +181,14 @@ export async function storeAttachment(
   rawName: string,
   rawMime: string,
   bytes: Buffer,
+  meta: {
+    description?: string;
+    /** Refused with a 409 if taken: the user typed this and must be told. */
+    slug?: string;
+    /** Nudged aside if taken: the app is guessing, not obeying. */
+    suggestSlug?: string;
+    fileName?: string;
+  } = {},
 ): Promise<Attachment> {
   // Checked here rather than only in the caller: this is the one door every
   // path to a new attachment goes through, so the guard belongs on it.
@@ -158,6 +196,20 @@ export async function storeAttachment(
   const id = randomUUID();
   const name = cleanName(rawName);
   const mime = rawMime || "application/octet-stream";
+  const description = meta.description?.trim() || null;
+
+  // An explicit slug is honoured or refused; a suggested one is nudged aside
+  // until it is free. See freeSlug.
+  let slug: string;
+  if (meta.slug) {
+    if (!SLUG_RE.test(meta.slug)) throw BadRequest("Slug inválido");
+    if (slugTaken(ctx.userId, meta.slug)) {
+      throw Conflict(`El slug "${meta.slug}" ya está en uso`);
+    }
+    slug = meta.slug;
+  } else {
+    slug = freeSlug(ctx.userId, meta.suggestSlug || slugify(meta.fileName || name));
+  }
 
   const sealed = aeadEncrypt(
     ctx.dek,
@@ -178,6 +230,11 @@ export async function storeAttachment(
     entityType,
     entityId,
     nameCt: sealField(ctx.dek, ctx.userId, "attachment.name", name),
+    descriptionCt: description
+      ? sealField(ctx.dek, ctx.userId, "attachment.description", description)
+      : null,
+    slugCt: sealField(ctx.dek, ctx.userId, "attachment.slug", slug),
+    slugHash: slugHashOf(ctx.userId, slug),
     mimeCt: sealField(ctx.dek, ctx.userId, "attachment.mime", mime),
     sizeBytes: bytes.length,
     blobPath,
@@ -195,6 +252,8 @@ export async function storeAttachment(
     entityType,
     entityId,
     name,
+    description,
+    slug,
     mime,
     sizeBytes: bytes.length,
     // The *declared* type, exactly as the listing computes it. Sniffing the
@@ -221,7 +280,7 @@ export function listAttachments(
         eq(attachments.entityId, entityId),
       ),
     )
-    .orderBy(asc(attachments.createdAt))
+    .orderBy(asc(attachments.createdAt), asc(attachments.id))
     .all();
 
   return rows.map((r) => {
@@ -231,6 +290,15 @@ export function listAttachments(
       entityType,
       entityId,
       name: openField(ctx.dek, ctx.userId, "attachment.name", r.nameCt),
+      description: r.descriptionCt
+        ? openField(ctx.dek, ctx.userId, "attachment.description", r.descriptionCt)
+        : null,
+      // Rows written before slugs existed have none. Reporting an empty slug
+      // is honest; the UI offers to give them one rather than inventing it
+      // behind the user's back.
+      slug: r.slugCt
+        ? openField(ctx.dek, ctx.userId, "attachment.slug", r.slugCt)
+        : "",
       mime,
       sizeBytes: r.sizeBytes,
       // The declared type is enough to decide whether to *offer* a thumbnail;
@@ -370,6 +438,13 @@ export async function copyAttachments(
         r.blobPath,
         join(entityDir(ctx.userId, entityType, newId), `${id}.bin`),
       );
+      // The one field that cannot be copied as ciphertext: the slug is unique
+      // per account, so the copy gets the next free variant (`acta` -> `acta-2`)
+      // and has to be re-sealed. It is a few bytes; the blob is still untouched.
+      const oldSlug = r.slugCt
+        ? openField(ctx.dek, ctx.userId, "attachment.slug", r.slugCt)
+        : "archivo";
+      const slug = freeSlug(ctx.userId, oldSlug);
       getDb()
         .insert(attachments)
         .values({
@@ -378,6 +453,9 @@ export async function copyAttachments(
           entityType,
           entityId: newId,
           nameCt: r.nameCt,
+          descriptionCt: r.descriptionCt,
+          slugCt: sealField(ctx.dek, ctx.userId, "attachment.slug", slug),
+          slugHash: slugHashOf(ctx.userId, slug),
           mimeCt: r.mimeCt,
           sizeBytes: r.sizeBytes,
           blobPath,
@@ -392,4 +470,146 @@ export async function copyAttachments(
       );
     }
   }
+}
+
+/**
+ * Every attachment this user has, for the reference picker.
+ *
+ * Slugs are stored hashed, so the server cannot do a prefix search over them.
+ * Rather than give that up and store slugs in the clear, the picker fetches
+ * the list once and filters in the browser. For the number of files a person
+ * attaches to their bookmarks that is instant, and the slug stays unreadable
+ * at rest, which was the point.
+ */
+export function listAllAttachments(ctx: AuthedContext): Attachment[] {
+  const rows = getDb()
+    .select()
+    .from(attachments)
+    .where(eq(attachments.userId, ctx.userId))
+    .orderBy(asc(attachments.createdAt), asc(attachments.id))
+    .all();
+
+  return rows.map((r) => {
+    const mime = openField(ctx.dek, ctx.userId, "attachment.mime", r.mimeCt);
+    return {
+      id: r.id,
+      entityType: r.entityType as AttachmentEntity,
+      entityId: r.entityId,
+      name: openField(ctx.dek, ctx.userId, "attachment.name", r.nameCt),
+      description: r.descriptionCt
+        ? openField(ctx.dek, ctx.userId, "attachment.description", r.descriptionCt)
+        : null,
+      slug: r.slugCt
+        ? openField(ctx.dek, ctx.userId, "attachment.slug", r.slugCt)
+        : "",
+      mime,
+      sizeBytes: r.sizeBytes,
+      previewable: PREVIEWABLE.has(mime),
+      createdAt: r.createdAt,
+    };
+  });
+}
+
+/** Look one up by the key a note wrote down. Null when nothing matches. */
+export function attachmentBySlug(
+  ctx: AuthedContext,
+  slug: string,
+): Attachment | null {
+  const r = getDb()
+    .select()
+    .from(attachments)
+    .where(
+      and(
+        eq(attachments.userId, ctx.userId),
+        eq(attachments.slugHash, slugHashOf(ctx.userId, slug)),
+      ),
+    )
+    .get();
+  if (!r) return null;
+  const mime = openField(ctx.dek, ctx.userId, "attachment.mime", r.mimeCt);
+  return {
+    id: r.id,
+    entityType: r.entityType as AttachmentEntity,
+    entityId: r.entityId,
+    name: openField(ctx.dek, ctx.userId, "attachment.name", r.nameCt),
+    description: r.descriptionCt
+      ? openField(ctx.dek, ctx.userId, "attachment.description", r.descriptionCt)
+      : null,
+    slug,
+    mime,
+    sizeBytes: r.sizeBytes,
+    previewable: PREVIEWABLE.has(mime),
+    createdAt: r.createdAt,
+  };
+}
+
+/**
+ * Rename, re-describe or re-slug a file.
+ *
+ * A colliding slug is a 409, never a silent rename: the slug is the key the
+ * user's own notes refer to, so quietly storing a different one would break
+ * the reference they are about to type and give them no way to know.
+ */
+export function updateAttachment(
+  ctx: AuthedContext,
+  id: string,
+  body: UpdateAttachmentBody,
+): Attachment {
+  const row = getDb()
+    .select()
+    .from(attachments)
+    .where(and(eq(attachments.id, id), eq(attachments.userId, ctx.userId)))
+    .get();
+  if (!row) throw NotFound("Attachment not found");
+
+  const patch: Record<string, unknown> = {};
+  if (body.name !== undefined) {
+    patch.nameCt = sealField(
+      ctx.dek,
+      ctx.userId,
+      "attachment.name",
+      cleanName(body.name),
+    );
+  }
+  if (body.description !== undefined) {
+    const d = body.description?.trim() || null;
+    patch.descriptionCt = d
+      ? sealField(ctx.dek, ctx.userId, "attachment.description", d)
+      : null;
+  }
+  if (body.slug !== undefined) {
+    if (!SLUG_RE.test(body.slug)) throw BadRequest("Slug inválido");
+    if (slugTaken(ctx.userId, body.slug, id)) {
+      throw Conflict(`El slug "${body.slug}" ya está en uso`);
+    }
+    patch.slugCt = sealField(ctx.dek, ctx.userId, "attachment.slug", body.slug);
+    patch.slugHash = slugHashOf(ctx.userId, body.slug);
+  }
+
+  if (Object.keys(patch).length > 0) {
+    getDb().update(attachments).set(patch).where(eq(attachments.id, id)).run();
+  }
+
+  const updated = getDb()
+    .select()
+    .from(attachments)
+    .where(eq(attachments.id, id))
+    .get()!;
+  const mime = openField(ctx.dek, ctx.userId, "attachment.mime", updated.mimeCt);
+  return {
+    id,
+    entityType: updated.entityType as AttachmentEntity,
+    entityId: updated.entityId,
+    name: openField(ctx.dek, ctx.userId, "attachment.name", updated.nameCt),
+    description: updated.descriptionCt
+      ? openField(ctx.dek, ctx.userId, "attachment.description", updated.descriptionCt)
+      : null,
+    slug: updated.slugCt
+      ? openField(ctx.dek, ctx.userId, "attachment.slug", updated.slugCt)
+      : "",
+    mime,
+    sizeBytes: updated.sizeBytes,
+    previewable: PREVIEWABLE.has(mime),
+    createdAt: updated.createdAt,
+  };
 }

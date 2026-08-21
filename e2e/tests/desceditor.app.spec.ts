@@ -53,7 +53,7 @@ test("lápiz en el texto de una carpeta: edita solo la descripción", async ({
   await editor.click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Texto corregido");
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar y cerrar" }).click();
 
   await expect(page.getByText("Texto corregido")).toBeVisible();
 
@@ -96,7 +96,7 @@ test("lápiz en el texto de un bookmark, y vaciarlo lo quita del todo", async ({
   await editor.click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("Backspace");
-  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar y cerrar" }).click();
 
   // An empty editor means "no description", not an empty paragraph: otherwise
   // the text block (and its pencil) would stay on screen with nothing in it.
@@ -163,7 +163,7 @@ test("el editor de texto: barra y botones fijos, y el scroll va dentro", async (
   await page.goto(`/folder/${folder.id}`);
   await page.getByRole("button", { name: "Editar el texto" }).click();
 
-  const save = page.getByRole("button", { name: "Guardar" });
+  const save = page.getByRole("button", { name: "Guardar y cerrar" });
   const bold = page.getByRole("button", { name: "Negrita" });
   await expect(save).toBeInViewport();
   await expect(bold).toBeInViewport();
