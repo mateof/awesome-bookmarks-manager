@@ -344,6 +344,53 @@ export function ensureSchema() {
       ON attachments(user_id, entity_type, entity_id);
   `);
 
+  getSqlite().exec(`
+    CREATE TABLE IF NOT EXISTS databases (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name_ct BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS databases_user_idx ON databases(user_id);
+
+    CREATE TABLE IF NOT EXISTS database_columns (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      name_ct BLOB NOT NULL,
+      config_ct BLOB,
+      position INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS database_columns_db_idx
+      ON database_columns(database_id, position);
+
+    CREATE TABLE IF NOT EXISTS database_rows (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      cells_ct BLOB NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS database_rows_db_idx
+      ON database_rows(database_id, position);
+
+    CREATE TABLE IF NOT EXISTS database_views (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      name_ct BLOB NOT NULL,
+      config_ct BLOB,
+      position INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS database_views_db_idx
+      ON database_views(database_id, position);
+  `);
+
   // Attachment metadata added after the table shipped. The slug hash carries
   // the uniqueness constraint (see schema.ts); NULLs are allowed so rows
   // written before slugs existed keep working, and SQLite lets multiple NULLs

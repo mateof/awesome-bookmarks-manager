@@ -48,6 +48,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
     // these they would be stripped on the way in and the marks would silently
     // stop working after a round-trip through the server.
     span: ["class", "style", "data-copyable", "data-spoiler"],
+    // An embedded database is a div holding only the id; the rows live in
+    // their own tables and are fetched when the note renders.
+    div: ["class", "style", "data-db-id", "data-db-name"],
     "*": ["class", "style"],
   },
   // `style` being an allowed *attribute* is not enough: sanitize-html parses

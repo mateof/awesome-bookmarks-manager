@@ -139,6 +139,17 @@ function databaseBytes(userId: string): number {
       userId,
     ) +
     one(
+      `SELECT COALESCE(SUM(length(cells_ct)), 0) AS n
+       FROM database_rows WHERE user_id = ?`,
+      userId,
+    ) +
+    one(
+      `SELECT COALESCE(SUM(
+         length(name_ct) + COALESCE(length(config_ct), 0)
+       ), 0) AS n FROM database_columns WHERE user_id = ?`,
+      userId,
+    ) +
+    one(
       `SELECT COALESCE(SUM(length(payload_ct)), 0) AS n
        FROM panels WHERE user_id = ? AND payload_ct IS NOT NULL`,
       userId,

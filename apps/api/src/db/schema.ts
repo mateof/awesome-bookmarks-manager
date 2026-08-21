@@ -651,3 +651,85 @@ export const attachments = sqliteTable(
     slugIdx: uniqueIndex("attachments_user_slug_idx").on(t.userId, t.slugHash),
   }),
 );
+
+
+/**
+ * Inline databases. See packages/shared/src/databases.ts for why the shape is
+ * what it is; the short version is that a row is one sealed blob because
+ * filtering happens in memory after decryption anyway, so per-cell rows would
+ * buy a query capability that cannot be used.
+ */
+export const databases = sqliteTable(
+  "databases",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    userIdx: index("databases_user_idx").on(t.userId),
+  }),
+);
+
+export const databaseColumns = sqliteTable(
+  "database_columns",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => databases.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** ColumnKind. Plaintext: it is a fixed vocabulary, not user content. */
+    kind: text("kind").notNull(),
+    nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    /** Sealed JSON: select options, width. */
+    configCt: blob("config_ct", { mode: "buffer" }),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => ({
+    dbIdx: index("database_columns_db_idx").on(t.databaseId, t.position),
+  }),
+);
+
+export const databaseRows = sqliteTable(
+  "database_rows",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => databases.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** Sealed JSON object keyed by column id. */
+    cellsCt: blob("cells_ct", { mode: "buffer" }).notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    dbIdx: index("database_rows_db_idx").on(t.databaseId, t.position),
+  }),
+);
+
+export const databaseViews = sqliteTable(
+  "database_views",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => databases.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    /** ViewKind. */
+    kind: text("kind").notNull(),
+    nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    /** Sealed JSON: filters, sorts, hidden columns, grouping. */
+    configCt: blob("config_ct", { mode: "buffer" }),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => ({
+    dbIdx: index("database_views_db_idx").on(t.databaseId, t.position),
+  }),
+);
