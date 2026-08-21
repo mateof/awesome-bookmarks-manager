@@ -129,3 +129,42 @@ test("el editor de texto se maximiza a pantalla completa, con sus botones", asyn
     page.getByRole("heading", { name: /Editar el texto de/ }),
   ).toBeVisible();
 });
+
+test("la caja de añadir tag se repliega al perder la atención", async ({
+  browser,
+}) => {
+  // Everything in the picker saves as you go, so an open box holds nothing
+  // unsent — but it reads like an unsaved form. Switching browser tab (blur
+  // with no destination) or clicking elsewhere folds it back to the chips.
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "inline.tags.blur.e2e@example.com",
+    nickname: "inlinetagsblur",
+    password: "FoldOnFocusLoss26x",
+  });
+  const folder = await (
+    await page.request.post("/api/folders", { data: { name: "Repliegue" } })
+  ).json();
+
+  await page.goto(`/folder/${folder.id}`);
+  await page.getByRole("button", { name: "Añadir tag" }).click();
+  const input = page.getByPlaceholder(/tag/i).first();
+  await expect(input).toBeFocused();
+
+  // A browser-tab switch is a window blur: the element blurs with nowhere for
+  // the focus to go.
+  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
+  await expect(input).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Añadir tag" })).toBeVisible();
+
+  // Adding a tag first must not be interrupted: the suggestion flow keeps the
+  // focus inside, and the fold only happens after attention truly leaves.
+  await page.getByRole("button", { name: "Añadir tag" }).click();
+  await page.keyboard.type("valida");
+  await page.keyboard.press("Enter");
+  await page.getByRole("heading", { name: "Repliegue" }).click();
+  await expect(page.getByPlaceholder(/tag/i)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "valida" })).toBeVisible();
+});

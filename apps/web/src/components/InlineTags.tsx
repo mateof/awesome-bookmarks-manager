@@ -76,7 +76,23 @@ export function InlineTags({
 
   if (editing) {
     return (
-      <div className="flex items-start gap-2">
+      <div
+        className="flex items-start gap-2"
+        // Everything in the picker saves as you go, so an open box holds no
+        // unsent state — but it *reads* like an unsaved form. Fold it back to
+        // the chip row whenever attention leaves: focus moving elsewhere on
+        // the page, or the whole window losing it (switching browser tab
+        // fires blur with no relatedTarget). Clicks inside — the suggestion
+        // list, the done button — keep focus in here and stay unaffected.
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setEditing(false);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") setEditing(false);
+        }}
+      >
         <div className="min-w-0 flex-1">
           <TagPicker
             value={tagIds}
