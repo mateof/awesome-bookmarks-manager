@@ -25,6 +25,7 @@ const BUCKETS: Array<{ key: keyof StorageBreakdown; color: string }> = [
   { key: "images", color: "#0ea5e9" },
   { key: "icons", color: "#10b981" },
   { key: "panelAssets", color: "#f59e0b" },
+  { key: "attachments", color: "#ec4899" },
   { key: "database", color: "#94a3b8" },
 ];
 

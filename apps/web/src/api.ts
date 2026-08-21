@@ -1,6 +1,8 @@
 import type {
   AdminStorageRow,
   ArchiveScope,
+  Attachment,
+  AttachmentEntity,
   ImportArchiveResult,
   CloudBackup,
   PeerCertificate,
@@ -636,6 +638,45 @@ export const api = {
     if (!res.ok) throw await iconError(res);
     return res.json() as Promise<{ iconBlobPath: string }>;
   },
+  // attachments — a separate query from the entity itself, deliberately: the
+  // grid and the bookmark list never pay for a file the user has not asked to
+  // see, so browsing costs exactly what it did before the feature existed.
+  listAttachments: (entity: AttachmentEntity, id: string) =>
+    request<Attachment[]>(`/${entity}s/${id}/attachments`),
+  uploadAttachment: async (
+    entity: AttachmentEntity,
+    id: string,
+    file: File,
+  ): Promise<Attachment> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${BASE}/${entity}s/${id}/attachments`, {
+      method: "POST",
+      credentials: "include",
+      body: fd,
+    });
+    signalAuthInvalidated(res.status);
+    if (!res.ok) {
+      const text = await res.text();
+      let msg = `Subida fallida (HTTP ${res.status})`;
+      let code = "upload_failed";
+      try {
+        const parsed = JSON.parse(text) as { error?: string; code?: string };
+        if (parsed.error) msg = parsed.error;
+        if (parsed.code) code = parsed.code;
+      } catch {
+        /* keep the default */
+      }
+      throw new ApiError(res.status, code, msg);
+    }
+    return res.json() as Promise<Attachment>;
+  },
+  deleteAttachment: (id: string) =>
+    request<void>(`/attachments/${id}`, { method: "DELETE" }),
+  /** Download URL. `inline` is honoured only for real raster images. */
+  attachmentUrl: (id: string, inline = false) =>
+    `${BASE}/attachments/${id}${inline ? "?inline=1" : ""}`,
+
   uploadFolderBgImage: async (id: string, file: File) => {
     const fd = new FormData();
     fd.append("file", file);

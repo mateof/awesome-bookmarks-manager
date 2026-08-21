@@ -12,7 +12,7 @@ import { z } from "zod";
  * Layout:
  *   manifest.json          always plaintext; says what is inside
  *   data.json              folders, bookmarks and tags
- *   blobs/<kind>/<id>/…    icons, background images, snapshots
+ *   blobs/<kind>/<id>/…    icons, background images, snapshots, attachments
  *
  * With a passphrase, `data.json` and `blobs/` are replaced by a single
  * `payload.bin` holding the encrypted inner archive.
@@ -51,6 +51,16 @@ export const ArchiveManifestSchema = z.object({
 });
 export type ArchiveManifest = z.infer<typeof ArchiveManifestSchema>;
 
+/**
+ * An attached file as exported. The bytes ride in `blobs/<kind>/<id>/att-…`;
+ * this is only what the importer needs to name and serve them again.
+ */
+export const ArchiveAttachmentSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mime: z.string(),
+});
+
 /** A tag as exported: matched by name on import, not by id. */
 export const ArchiveTagSchema = z.object({
   name: z.string(),
@@ -67,6 +77,7 @@ export const ArchiveFolderSchema = z.object({
   favorite: z.boolean(),
   position: z.number().int(),
   tags: z.array(z.string()),
+  attachments: z.array(ArchiveAttachmentSchema).default([]),
 });
 
 export const ArchiveBookmarkSchema = z.object({
@@ -80,6 +91,7 @@ export const ArchiveBookmarkSchema = z.object({
   favorite: z.boolean(),
   position: z.number().int(),
   tags: z.array(z.string()),
+  attachments: z.array(ArchiveAttachmentSchema).default([]),
 });
 
 export const ArchiveDataSchema = z.object({

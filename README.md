@@ -35,11 +35,23 @@ one port.
 ## Features
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
-  (Tiptap editor with **click-to-copy** and **hidden-until-clicked** marks for
-  the credentials people actually keep in these notes), custom icons, and tags. Bookmarks with no icon fall back to
-  a coloured letter tile derived from the name. Long descriptions are clamped
-  with a "show more" toggle so a wall of notes never pushes a folder's contents
-  off screen; the toggle only appears when the text really overflows.
+  (Tiptap editor with headings, underline, section rules, text colour, font
+  family, pasted/dropped **images**, and **click-to-copy** and
+  **hidden-until-clicked** marks for the credentials people actually keep in
+  these notes), custom icons, and tags. Bookmarks with no icon fall back to
+  a coloured letter tile derived from the name. Long descriptions are capped at
+  a fixed height and scroll inside it, with a button that opens the whole text
+  full-screen, so a wall of notes never pushes a folder's contents off screen;
+  the controls only appear when the text really overflows. Images pasted into a
+  note ride inside the note's own encrypted field, resized client-side, so they
+  survive the `.abz` export and reach group shares with the text.
+- **Attachments** — real files hanging off a folder or a bookmark, up to 25 MB
+  each. Sealed with the owner's key like everything else, and so are the file
+  name and MIME type: the server knows how many bytes you stored and nothing
+  else. They count against the storage quota (with their own slice in the
+  breakdown), travel inside the `.abz` archive, and are deleted along with
+  their parent when it is purged from the trash. The list is a separate query
+  made only on a detail view, so browsing costs exactly what it did before.
 - **Favourites** — star any folder or bookmark; the "Favoritos" bar in the
   header is a flat, quick-access list of everything you starred.
 - **Symlinks** — place a link to a folder or bookmark that lives elsewhere.

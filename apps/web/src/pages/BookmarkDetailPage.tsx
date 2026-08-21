@@ -28,6 +28,7 @@ import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { KebabMenu } from "../components/KebabMenu.js";
+import { Attachments } from "../components/Attachments.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
@@ -248,6 +249,8 @@ export function BookmarkDetailPage() {
           onEdit={() => setEditDescription(true)}
         />
       )}
+
+      <Attachments entity="bookmark" id={b.id} />
 
       {editDescription && (
         <DescriptionEditDialog

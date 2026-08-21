@@ -9,6 +9,7 @@ import {
   setBookmarkIconPath,
 } from "../bookmarks/service.js";
 import { bookmarkBlobDir, copyBlob, folderBlobDir } from "../storage/blobs.js";
+import { copyAttachments } from "../attachments/service.js";
 import { NotFound } from "../util/errors.js";
 import {
   createFolder,
@@ -41,6 +42,7 @@ async function copyFolderBlobs(
     );
     setFolderBgImagePath(ctx, newId, p);
   }
+  await copyAttachments(ctx, "folder", src.id, newId);
 }
 
 async function copyBookmarkBlobs(
@@ -64,6 +66,7 @@ async function copyBookmarkBlobs(
     );
     setBookmarkBgImagePath(ctx, newId, p);
   }
+  await copyAttachments(ctx, "bookmark", src.id, newId);
 }
 
 function newBookmarkFrom(

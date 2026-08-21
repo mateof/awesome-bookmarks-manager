@@ -322,6 +322,7 @@ const en = {
       icons: "Icons and favicons",
       panelAssets: "Panel backgrounds and icons",
       database: "Database (estimated)",
+      attachments: "Attached files",
     },
     defaultQuota: "Default limit",
     defaultQuotaHint:
@@ -995,6 +996,17 @@ const en = {
       "Your browser couldn't download the image (likely CORS-blocked). If the URL is only reachable from here, save the image to disk and use 'Upload'.",
     notAnImage: "That resource doesn't look like an image",
     tooLarge: "The image exceeds 4MB",
+  },
+  attachments: {
+    heading: "Attachments",
+    add: "Attach",
+    uploading: "Uploading…",
+    empty: "No attached files.",
+    download: "Download",
+    delete: "Delete attachment",
+    preview: "View the image",
+    confirmDelete: "Delete “{{name}}”? This cannot be undone.",
+    tooLarge: "“{{name}}” is over the {{max}} per-file limit.",
   },
   richText: {
     maximise: "Maximise the editor",

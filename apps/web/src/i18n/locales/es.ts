@@ -322,6 +322,7 @@ const es = {
       icons: "Iconos y favicons",
       panelAssets: "Fondos e iconos de paneles",
       database: "Base de datos (estimado)",
+      attachments: "Ficheros adjuntos",
     },
     defaultQuota: "Límite por defecto",
     defaultQuotaHint:
@@ -996,6 +997,17 @@ const es = {
       "Tu navegador no pudo descargar la imagen (puede ser CORS bloqueado). Si la URL solo es accesible aquí, prueba a guardar la imagen en disco y subirla con 'Subir'.",
     notAnImage: "El recurso no parece ser una imagen",
     tooLarge: "La imagen excede 4MB",
+  },
+  attachments: {
+    heading: "Adjuntos",
+    add: "Adjuntar",
+    uploading: "Subiendo…",
+    empty: "Sin ficheros adjuntos.",
+    download: "Descargar",
+    delete: "Eliminar adjunto",
+    preview: "Ver la imagen",
+    confirmDelete: "¿Eliminar «{{name}}»? No se puede deshacer.",
+    tooLarge: "«{{name}}» supera el máximo de {{max}} por fichero.",
   },
   richText: {
     maximise: "Maximizar el editor",

@@ -14,6 +14,7 @@ import { resealSharesForFolderTree } from "../groups/resync.js";
 import { rebuildPanelsForFolderTree } from "../panels/resync.js";
 import { deleteSnapshotIndex } from "../search/service.js";
 import { deleteBlob } from "../storage/blobs.js";
+import { purgeAttachmentsFor } from "../attachments/service.js";
 import { NotFound } from "../util/errors.js";
 
 /**
@@ -436,6 +437,11 @@ export async function purgeTrash(
 
   for (const id of bookmarkIds) deleteSnapshotIndex(id);
 
+  // Attached files go with their entity. Left behind they would be
+  // unreachable rows whose bytes still count against the quota.
+  await purgeAttachmentsFor(ctx.userId, "folder", folderIds);
+  await purgeAttachmentsFor(ctx.userId, "bookmark", bookmarkIds);
+
   // Blobs last: the DB rows are already gone, so a failed unlink leaves an
   // orphan file rather than an unreachable row.
   const paths: Array<string | null> = [];
@@ -501,6 +507,7 @@ export async function purgeOne(
     getDb().delete(bookmarks).where(eq(bookmarks.aliasOf, id)).run();
     getDb().delete(bookmarks).where(eq(bookmarks.id, id)).run();
     deleteSnapshotIndex(id);
+    await purgeAttachmentsFor(ctx.userId, "bookmark", [id]);
     for (const p of Object.values(blobs ?? {})) await deleteBlob(p);
     return;
   }
@@ -533,6 +540,7 @@ export async function purgeOne(
     .get();
   getDb().delete(folders).where(eq(folders.aliasOf, id)).run();
   getDb().delete(folders).where(eq(folders.id, id)).run();
+  await purgeAttachmentsFor(ctx.userId, "folder", [id]);
   for (const p of Object.values(blobs ?? {})) await deleteBlob(p);
 }
 

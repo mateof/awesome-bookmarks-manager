@@ -14,6 +14,8 @@ export const StorageBreakdownSchema = z.object({
   icons: z.number().int(),
   /** Panel backgrounds and tab icons. */
   panelAssets: z.number().int(),
+  /** Files attached to folders and bookmarks. */
+  attachments: z.number().int(),
   /**
    * Encrypted rows: titles, URLs, descriptions, version history, panel
    * snapshots and the search index. An estimate — it sums the stored field

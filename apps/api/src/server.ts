@@ -18,6 +18,7 @@ import { keyCache } from "./auth/key-cache.js";
 import { registerSession } from "./auth/session.js";
 import { bookmarkRoutes } from "./bookmarks/routes.js";
 import { snapshotRoutes } from "./bookmarks/snapshot-routes.js";
+import { attachmentRoutes } from "./attachments/routes.js";
 import { cloudRoutes } from "./cloud/routes.js";
 import { backfillShareAppearance } from "./groups/resync.js";
 import { groupRoutes } from "./groups/routes.js";
@@ -177,6 +178,7 @@ export async function buildServer() {
       await api.register(folderRoutes);
       await api.register(bookmarkRoutes);
       await api.register(snapshotRoutes);
+  await api.register(attachmentRoutes);
       await api.register(iconRoutes);
       await api.register(tagRoutes);
       await api.register(smartFolderRoutes);

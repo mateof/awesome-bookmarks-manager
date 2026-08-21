@@ -325,6 +325,23 @@ export function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS entity_versions_entity_idx
       ON entity_versions(user_id, entity_type, entity_id, created_at);
+
+    -- Files attached to a folder or bookmark. The bytes are a sealed blob on
+    -- disk; name and MIME are encrypted too, so a look at the database says
+    -- how many files you have and how big, and nothing else.
+    CREATE TABLE IF NOT EXISTS attachments (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      name_ct BLOB NOT NULL,
+      mime_ct BLOB NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      blob_path TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS attachments_entity_idx
+      ON attachments(user_id, entity_type, entity_id);
   `);
 
   // Best-effort additions to existing tables. SQLite has no

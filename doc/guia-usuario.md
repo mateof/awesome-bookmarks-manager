@@ -36,6 +36,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 23. [Copias en la nube](#23-copias-en-la-nube)
 24. [Copiar una selección como lista](#24-copiar-una-selección-como-lista)
 25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
+26. [Ficheros adjuntos](#26-ficheros-adjuntos)
 
 ---
 
@@ -750,6 +751,48 @@ es lo esperable, en vez de un reemplazo silencioso.
 Sin contraseña el archivo lleva tus datos en claro, así que trátalo como
 tratarías la exportación de un gestor de contraseñas. El diálogo te lo avisa
 mientras el campo esté vacío.
+
+---
+
+## 26. Ficheros adjuntos
+
+Tanto una carpeta como un bookmark pueden llevar **ficheros adjuntos**: el
+contrato en PDF junto al enlace del proveedor, la hoja de cálculo al lado de
+la carpeta del proyecto. La sección **Adjuntos** aparece en la ficha, debajo
+de la descripción, con el botón *Adjuntar*. Se pueden subir varios de una vez.
+
+Cada fichero se lista con su nombre y su tamaño, con un botón para descargarlo
+y otro para borrarlo. Si es una imagen, se muestra una miniatura y al pulsarla
+se ve a pantalla completa.
+
+**No es lo mismo que pegar una imagen en la descripción.** Una imagen pegada
+forma parte del texto y va dentro de la nota, con su límite; un adjunto es un
+fichero aparte, con su propio espacio y su descarga. Para una captura que
+ilustra lo que estás contando, pégala en el texto. Para un documento que
+querrás abrir tal cual, adjúntalo.
+
+Lo que conviene saber:
+
+- **Van cifrados como todo lo demás**, con tu clave. El servidor no puede
+  abrirlos, y tampoco sabe cómo se llaman: el nombre y el tipo de fichero van
+  cifrados también. Lo único visible desde fuera es cuánto ocupan, que es
+  inevitable.
+- **Máximo 25 MB por fichero.** El cifrado se hace sobre el fichero entero en
+  memoria, así que el tope es tanto una cuestión de recursos como de política.
+  Caben documentos, hojas de cálculo o imágenes; no un vídeo largo.
+- **Cuentan en tu cuota**, y aparecen con su propia franja en *Almacenamiento*,
+  así que siempre se ve cuánto se llevan.
+- **No ralentizan la navegación.** La lista de ficheros se pide solo al abrir
+  una ficha; recorrer carpetas y ver bookmarks no consulta nada de esto.
+- **Viajan en el export `.abz`**, así que una exportación no pierde los
+  documentos por el camino. Al importar se vuelven a cifrar con la clave de
+  quien importa.
+- **Se van con su dueño.** Al borrar definitivamente la carpeta o el bookmark
+  desde la papelera, sus adjuntos se borran también y el espacio se libera.
+
+Lo que **todavía no hacen**: no viajan a las carpetas compartidas con un grupo.
+Quien abra un compartido verá el texto y los enlaces, pero no los ficheros
+adjuntos del dueño.
 
 ---
 

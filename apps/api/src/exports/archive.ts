@@ -24,6 +24,11 @@ import {
   readBlob,
   writeBlob,
 } from "../storage/blobs.js";
+import {
+  listAttachments,
+  readAttachment,
+  storeAttachment,
+} from "../attachments/service.js";
 import { createTag, listTags } from "../tags/service.js";
 import { APP_VERSION } from "../util/app-version.js";
 import { BadRequest, NotFound } from "../util/errors.js";
@@ -114,6 +119,43 @@ async function collect(
     ids.map((id) => tagById.get(id)?.name).filter((n): n is string => !!n);
 
   const blobs: BlobEntry[] = [];
+
+  /**
+   * Attached files travel with their entity. Leaving them out would make the
+   * archive a quiet data-loss trap: the user exports to move accounts and the
+   * files are simply gone on the other side. They are not gated behind
+   * `includeSnapshots` because, unlike a page copy, they are content the user
+   * put there on purpose.
+   */
+  const attachmentsOf = async (
+    kind: "folders" | "bookmarks",
+    entityId: string,
+  ) => {
+    const files = listAttachments(
+      ctx,
+      kind === "folders" ? "folder" : "bookmark",
+      entityId,
+    );
+    const meta: { id: string; name: string; mime: string }[] = [];
+    for (const f of files) {
+      try {
+        const { bytes } = await readAttachment(ctx, f.id);
+        blobs.push({
+          path: `blobs/${kind}/${entityId}/att-${f.id}.bin`,
+          bytes,
+        });
+        meta.push({ id: f.id, name: f.name, mime: f.mime });
+      } catch {
+        // Same rule as the icons above: one unreadable blob must not sink
+        // the whole export.
+      }
+    }
+    return meta;
+  };
+
+  const folderFiles = new Map<string, { id: string; name: string; mime: string }[]>();
+  const bookmarkFiles = new Map<string, { id: string; name: string; mime: string }[]>();
+
   for (const f of folders) {
     if (f.iconBlobPath) {
       const bytes = await openBlob(ctx, f.iconBlobPath, "folder.icon");
@@ -123,6 +165,7 @@ async function collect(
       const bytes = await openBlob(ctx, f.imageBlobPath, "folder.bg");
       if (bytes) blobs.push({ path: `blobs/folders/${f.id}/bg.bin`, bytes });
     }
+    folderFiles.set(f.id, await attachmentsOf("folders", f.id));
   }
   for (const b of bookmarks) {
     if (b.iconBlobPath) {
@@ -133,6 +176,7 @@ async function collect(
       const bytes = await openBlob(ctx, b.imageBlobPath, "bookmark.bg");
       if (bytes) blobs.push({ path: `blobs/bookmarks/${b.id}/bg.bin`, bytes });
     }
+    bookmarkFiles.set(b.id, await attachmentsOf("bookmarks", b.id));
   }
 
   return {
@@ -147,6 +191,7 @@ async function collect(
         favorite: f.favorite,
         position: f.position,
         tags: nameOf(f.tagIds),
+        attachments: folderFiles.get(f.id) ?? [],
       })),
       bookmarks: bookmarks.map((b) => ({
         id: b.id,
@@ -159,6 +204,7 @@ async function collect(
         favorite: b.favorite,
         position: b.position,
         tags: nameOf(b.tagIds),
+        attachments: bookmarkFiles.get(b.id) ?? [],
       })),
       tags: allTags
         .filter((t) => usedTagIds.has(t.id))
@@ -353,6 +399,7 @@ export async function importArchive(
     });
     idMap.set(f.id, created.id);
     await restoreBlobs(ctx, entries, "folders", f.id, created.id, blobCount);
+    await restoreAttachments(ctx, entries, "folders", f, created.id, blobCount);
   }
 
   for (const b of data.bookmarks) {
@@ -371,6 +418,7 @@ export async function importArchive(
       fetchSnapshot: false,
     });
     await restoreBlobs(ctx, entries, "bookmarks", b.id, created.id, blobCount);
+    await restoreAttachments(ctx, entries, "bookmarks", b, created.id, blobCount);
   }
 
   return {
@@ -434,5 +482,38 @@ async function restoreBlobs(
       else setBookmarkBgImagePath(ctx, newId, path);
     }
     counter.n++;
+  }
+}
+
+/** Recreate the attached files an archive carries, under the importer's key. */
+async function restoreAttachments(
+  ctx: AuthedContext,
+  entries: Map<string, Buffer>,
+  kind: "folders" | "bookmarks",
+  source: { id: string; attachments?: { id: string; name: string; mime: string }[] },
+  newId: string,
+  counter: { n: number },
+): Promise<void> {
+  for (const a of source.attachments ?? []) {
+    const bytes = entries.get(`blobs/${kind}/${source.id}/att-${a.id}.bin`);
+    if (!bytes) continue;
+    try {
+      await storeAttachment(
+        ctx,
+        kind === "folders" ? "folder" : "bookmark",
+        newId,
+        a.name,
+        a.mime,
+        bytes,
+      );
+      counter.n++;
+    } catch (err) {
+      // Almost always the importer's quota. Skip the file and keep going:
+      // losing one attachment beats losing the rest of the import.
+      console.warn(
+        `[archive] could not restore attachment ${a.name}`,
+        err instanceof Error ? err.message : err,
+      );
+    }
   }
 }

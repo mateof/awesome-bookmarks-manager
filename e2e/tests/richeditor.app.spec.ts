@@ -40,23 +40,28 @@ test("el editor guarda títulos, color, tipo de letra e imágenes", async ({
   await page.getByRole("button", { name: "Editar el texto" }).click();
 
   const editor = page.locator(".tiptap.ProseMirror");
-  await editor.click();
-  await page.keyboard.press("ControlOrMeta+a");
+  // Focus, then select. Clicking is not enough on its own: a toolbar click
+  // moves DOM focus and ProseMirror takes it back asynchronously, so a Ctrl+A
+  // fired in between selects nothing and the styling lands on an empty range.
+  // Waiting for focus turns that race into an explicit condition.
+  const selectAll = async () => {
+    await editor.click();
+    await expect(editor).toBeFocused();
+    await page.keyboard.press("ControlOrMeta+a");
+  };
+
+  await selectAll();
   await page.keyboard.type("Sección nueva");
 
-  // Heading on the line, then colour on the selection. Clicking back into
-  // the editor before each select-all matters: a toolbar click moves DOM
-  // focus, and a Ctrl+A racing the editor's refocus selects nothing.
+  // Heading on the line, then colour on the selection.
   await page.getByRole("button", { name: "Título grande" }).click();
-  await editor.click();
-  await page.keyboard.press("ControlOrMeta+a");
+  await selectAll();
   await page.getByRole("button", { name: "Color del texto" }).click();
   await page.getByRole("button", { name: "#dc2626" }).click();
   await expect(editor.locator('span[style*="color"]')).toBeVisible();
 
   // Font family for the same selection.
-  await editor.click();
-  await page.keyboard.press("ControlOrMeta+a");
+  await selectAll();
   await page.getByLabel("Tipo de letra").selectOption("mono");
   await expect(editor.locator('span[style*="font-family"]')).toBeVisible();
 

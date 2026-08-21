@@ -607,3 +607,36 @@ export const entityVersions = sqliteTable(
     ),
   }),
 );
+
+/**
+ * Files attached to a folder or a bookmark. The bytes live in a blob sealed
+ * with the owner's DEK; the row keeps only what listing needs, and even the
+ * name and MIME type are encrypted (the server has no business knowing you
+ * attached a payslip). `sizeBytes` is the plaintext length, recorded because
+ * the sealed file on disk is a few bytes longer and the user should see the
+ * size they uploaded.
+ */
+export const attachments = sqliteTable(
+  "attachments",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // "folder" | "bookmark"
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id").notNull(),
+    nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
+    mimeCt: blob("mime_ct", { mode: "buffer" }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    blobPath: text("blob_path").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    entityIdx: index("attachments_entity_idx").on(
+      t.userId,
+      t.entityType,
+      t.entityId,
+    ),
+  }),
+);

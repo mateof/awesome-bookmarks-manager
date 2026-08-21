@@ -33,6 +33,7 @@ const EMPTY: StorageBreakdown = {
   images: 0,
   icons: 0,
   panelAssets: 0,
+  attachments: 0,
   database: 0,
 };
 
@@ -61,6 +62,7 @@ export function invalidateAllUsage() {
  */
 function bucketOf(relPath: string): keyof StorageBreakdown {
   const file = relPath.split("/").pop() ?? "";
+  if (relPath.includes("/attachments/")) return "attachments";
   if (relPath.includes("/panels/")) return "panelAssets";
   if (file === "page.html.bin" || file === "text.bin" || file.startsWith("screenshot")) {
     return "snapshots";

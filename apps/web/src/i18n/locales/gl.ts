@@ -322,6 +322,7 @@ const gl = {
       icons: "Iconas e favicons",
       panelAssets: "Fondos e iconas de paneis",
       database: "Base de datos (estimado)",
+      attachments: "Ficheiros anexos",
     },
     defaultQuota: "Límite por defecto",
     defaultQuotaHint:
@@ -998,6 +999,17 @@ const gl = {
       "O teu navegador non puido descargar a imaxe (probable bloqueo CORS). Se o URL só é accesible aquí, garda a imaxe en disco e súbea con 'Subir'.",
     notAnImage: "Ese recurso non semella unha imaxe",
     tooLarge: "A imaxe supera 4MB",
+  },
+  attachments: {
+    heading: "Anexos",
+    add: "Anexar",
+    uploading: "Subindo…",
+    empty: "Sen ficheiros anexos.",
+    download: "Descargar",
+    delete: "Eliminar anexo",
+    preview: "Ver a imaxe",
+    confirmDelete: "Eliminar «{{name}}»? Non se pode desfacer.",
+    tooLarge: "«{{name}}» supera o máximo de {{max}} por ficheiro.",
   },
   richText: {
     maximise: "Maximizar o editor",

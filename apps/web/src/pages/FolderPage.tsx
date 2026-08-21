@@ -52,6 +52,7 @@ import { KebabMenu, type KebabItem } from "../components/KebabMenu.js";
 import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
+import { Attachments } from "../components/Attachments.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { InlineTags } from "../components/InlineTags.js";
@@ -733,6 +734,8 @@ export function FolderPage() {
           onEdit={() => setEditDescription(true)}
         />
       )}
+
+      {folder && <Attachments entity="folder" id={folder.id} />}
 
       {editDescription && folder && (
         <DescriptionEditDialog
