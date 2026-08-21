@@ -11,6 +11,7 @@ import { Database, Plus, Table2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
+import { DatabaseBoard, DatabaseGallery } from "./DatabaseBoard.js";
 import { DatabaseTable } from "./DatabaseTable.js";
 import { ViewBar } from "./DatabaseViewBar.js";
 
@@ -84,10 +85,12 @@ export function DatabaseBlock({
   });
 
   const addRow = useMutation({
-    mutationFn: () => {
+    // `seed` lets the board put a new card straight into the lane it was added
+    // from, instead of dropping it in "unassigned" for the user to move.
+    mutationFn: (seed: Record<string, CellValue> = {}) => {
       const cells: Record<string, CellValue> = {};
       for (const c of db?.columns ?? []) cells[c.id] = emptyValue(c.kind);
-      return api.addDbRow(databaseId, cells);
+      return api.addDbRow(databaseId, { ...cells, ...seed });
     },
     onSuccess: refresh,
   });
@@ -166,33 +169,40 @@ export function DatabaseBlock({
   );
 
   function renderView(kind: ViewKind) {
-    if (kind === "table") {
+    const onCell = (rowId: string, columnId: string, value: CellValue) =>
+      cell.mutate({ rowId, columnId, value });
+
+    if (kind === "board") {
       return (
-        <DatabaseTable
+        <DatabaseBoard
           db={shown}
           rows={rows}
+          config={config}
           readOnly={readOnly}
-          onCell={(rowId, columnId, value) =>
-            cell.mutate({ rowId, columnId, value })
-          }
-          onAddRow={() => addRow.mutate()}
-          onDeleteRow={(id) => removeRow.mutate(id)}
-          onReorder={(order) => reorder.mutate(order)}
-          onColumnChanged={refresh}
+          onCell={onCell}
+          onAddRow={(seed) => addRow.mutate(seed)}
         />
       );
     }
-    // Board and gallery arrive in the next step; until then the table is a
-    // correct rendering of the same data rather than an empty panel.
+    if (kind === "gallery") {
+      return (
+        <DatabaseGallery
+          db={shown}
+          rows={rows}
+          config={config}
+          readOnly={readOnly}
+          onCell={onCell}
+          onAddRow={(seed) => addRow.mutate(seed)}
+        />
+      );
+    }
     return (
       <DatabaseTable
         db={shown}
         rows={rows}
         readOnly={readOnly}
-        onCell={(rowId, columnId, value) =>
-          cell.mutate({ rowId, columnId, value })
-        }
-        onAddRow={() => addRow.mutate()}
+        onCell={onCell}
+        onAddRow={() => addRow.mutate({})}
         onDeleteRow={(id) => removeRow.mutate(id)}
         onReorder={(order) => reorder.mutate(order)}
         onColumnChanged={refresh}
