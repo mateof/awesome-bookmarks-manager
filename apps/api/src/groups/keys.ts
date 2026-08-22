@@ -1,7 +1,8 @@
 import { generateGroupKey, sealToPublicKey } from "@awesome-bookmarks/crypto";
 import { and, eq } from "drizzle-orm";
 import type { AuthedContext } from "../auth/session.js";
-import { masterUnwrap, masterWrap } from "../auth/encryption.js";
+import { masterUnwrap } from "../auth/encryption.js";
+import { unwrapGroupDek, wrapGroupDek } from "./encryption.js";
 import {
   ensureUserKeys,
   openSealedForUser,
@@ -31,6 +32,27 @@ import { Forbidden, NotFound } from "../util/errors.js";
  */
 
 const AAD = (groupId: string, version: number) => `groupkey|${groupId}|v${version}`;
+
+/**
+ * Open the master-wrapped copy of a group key, whichever way it was written.
+ *
+ * Two shapes exist in the wild and they use different AAD:
+ *
+ * - `group|<id>`, written by every release up to v0.77, when the master copy
+ *   was the *only* copy. Every group on an upgraded instance looks like this.
+ * - `master|<id>`, written since, for groups that opted into `recoverable`.
+ *
+ * Trying only the second one is the bug that made every pre-v0.78 group
+ * unopenable, surfacing as "Unsupported state or unable to authenticate data"
+ * the moment anybody tried to share into one.
+ */
+function openMasterCopy(groupId: string, sealed: Buffer): Buffer {
+  try {
+    return unwrapGroupDek(groupId, sealed);
+  } catch {
+    return masterUnwrap(groupId, sealed);
+  }
+}
 
 function groupRow(groupId: string) {
   const row = getDb().select().from(groups).where(eq(groups.id, groupId)).get();
@@ -90,7 +112,7 @@ export function createGroupKey(groupId: string, recoverable: boolean): Buffer {
       recoverable,
       // Only kept when the group asked for it. Otherwise the column stays null
       // and the server genuinely cannot open the group on its own.
-      groupDekWrapped: recoverable ? masterWrap(groupId, key) : null,
+      groupDekWrapped: recoverable ? wrapGroupDek(groupId, key) : null,
     })
     .where(eq(groups.id, groupId))
     .run();
@@ -131,7 +153,7 @@ export function groupKeyFor(ctx: AuthedContext, groupId: string): Buffer {
   }
 
   if (g.groupDekWrapped) {
-    const key = masterUnwrap(groupId, Buffer.from(g.groupDekWrapped));
+    const key = openMasterCopy(groupId, Buffer.from(g.groupDekWrapped));
     const member = getDb()
       .select({ userId: groupMembers.userId })
       .from(groupMembers)
@@ -223,7 +245,7 @@ export function rotateGroupKey(
     .update(groups)
     .set({
       keyVersion: version,
-      groupDekWrapped: g.recoverable ? masterWrap(groupId, current) : null,
+      groupDekWrapped: g.recoverable ? wrapGroupDek(groupId, current) : null,
     })
     .where(eq(groups.id, groupId))
     .run();

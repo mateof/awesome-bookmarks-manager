@@ -4,6 +4,9 @@ import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
 import { ensureUserKeys } from "../auth/userKeys.js";
+import { getFolder } from "../folders/service.js";
+import { getBookmark } from "../bookmarks/service.js";
+import { getDatabase } from "../databases/service.js";
 import {
   adoptBookmarkIntoGroup,
   adoptDatabaseIntoGroup,
@@ -702,6 +705,28 @@ export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
   return listSharesInMyGroups(ctx).filter((s) => s.sharedById !== ctx.userId);
 }
 
+/**
+ * What a share points at, by name. Null when the source is gone.
+ *
+ * Read through the ordinary services so it works whichever key seals the row:
+ * the sharer's own, a group's, or a key scope's.
+ */
+function labelForSource(
+  ctx: AuthedContext,
+  sourceType: string,
+  sourceId: string,
+): string | null {
+  try {
+    if (sourceType === "folder") return getFolder(ctx, sourceId).name;
+    if (sourceType === "bookmark") return getBookmark(ctx, sourceId).title;
+    if (sourceType === "database") return getDatabase(ctx, sourceId).name;
+  } catch {
+    // Deleted, or not readable by this caller. The payload fallback covers the
+    // first; the second is not something to shout about in a listing.
+  }
+  return null;
+}
+
 function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
   const roleByGroup = new Map(
     getDb()
@@ -734,11 +759,16 @@ function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
     .where(inArray(groupShares.groupId, groupIds))
     .all();
   return rows.map((r) => {
-    let label: string | null = null;
-    // The label comes from the caller's own copy of the group key, not from a
-    // master-wrapped one: the server no longer holds group keys by itself, and
-    // whoever is asking is a member of the group by construction.
-    if (r.payloadStatus === "ready" && r.payloadCt) {
+    // The name comes from the source row, not from the materialised payload.
+    //
+    // The payload is built by a background job, so right after sharing it is
+    // still "pending" and the list showed "Elemento compartido" for a few
+    // seconds. Worse, a payload that failed to seal left it that way for good.
+    // The row is there the moment the share is, and reading it is one query.
+    let label = labelForSource(ctx, r.sourceType, r.sourceId);
+    if (label === null && r.payloadStatus === "ready" && r.payloadCt) {
+      // Falls back to the payload for shares whose source has since been
+      // deleted: the copy still says what it was.
       try {
         const dek = groupKeyFor(ctx, r.groupId);
         const content = JSON.parse(

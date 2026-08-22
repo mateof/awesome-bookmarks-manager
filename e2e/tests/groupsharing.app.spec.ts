@@ -266,3 +266,58 @@ test("el diálogo de compartir ya no pregunta permisos y admite varios grupos", 
 
   await o.ctx.close();
 });
+
+test("la lista dice qué se comparte, sin esperar al trabajo de fondo", async ({
+  browser,
+}) => {
+  const o = await newUser(browser, {
+    email: "gs.label.e2e@example.com",
+    nickname: "gslabel",
+    password: "ShareLabels28xxx",
+  });
+
+  const group = await (
+    await o.req.post("/api/groups", { data: { name: "Etiquetas" } })
+  ).json();
+  const folder = await (
+    await o.req.post("/api/folders", { data: { name: "Carpeta con nombre" } })
+  ).json();
+  const db = await (
+    await o.req.post("/api/databases", { data: { name: "Tabla con nombre" } })
+  ).json();
+
+  await o.req.post("/api/shares/to-groups", {
+    data: { sourceType: "folder", sourceId: folder.id, groupIds: [group.id] },
+  });
+  await o.req.post("/api/shares/to-groups", {
+    data: { sourceType: "database", sourceId: db.id, groupIds: [group.id] },
+  });
+
+  // Read straight away: the name comes from the row, not from the payload the
+  // background job seals, so there is nothing to wait for. It used to say
+  // "Elemento compartido" until that job had run, and for good if it failed.
+  const mine = await (await o.req.get("/api/shared/by-me")).json();
+  expect(mine.map((s: { label: string | null }) => s.label).sort()).toEqual([
+    "Carpeta con nombre",
+    "Tabla con nombre",
+  ]);
+
+  // Renaming the folder is reflected without re-sharing anything.
+  await o.req.patch(`/api/folders/${folder.id}`, {
+    data: { name: "Renombrada" },
+  });
+  const after = await (await o.req.get("/api/shared/by-me")).json();
+  expect(after.map((s: { label: string | null }) => s.label)).toContain(
+    "Renombrada",
+  );
+
+  // And the interface shows it rather than the generic placeholder.
+  await o.page.goto(`/groups/${group.id}`);
+  // The button in the shares list, not the folder in the sidebar tree.
+  await expect(
+    o.page.getByRole("button", { name: "Renombrada" }),
+  ).toBeVisible();
+  await expect(o.page.getByText("Elemento compartido")).toHaveCount(0);
+
+  await o.ctx.close();
+});
