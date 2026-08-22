@@ -1023,6 +1023,9 @@ const en = {
     tooLarge: "“{{name}}” is over the {{max}} per-file limit.",
   },
   db: {
+    moveBlock: "Drag to move the table",
+    moveUp: "Move the table up",
+    moveDown: "Move the table down",
     pickView: "Which view of “{{name}}”?",
     pickViewHint: "Embed the whole table with its tabs, or pin a single view.",
     wholeDatabase: "The whole database, with its views",

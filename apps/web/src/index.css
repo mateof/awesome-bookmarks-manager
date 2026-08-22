@@ -727,3 +727,10 @@ body,
 .ab-db-block.ProseMirror-selectednode {
   outline: 2px solid rgb(56 189 248);
 }
+
+/* While a block is being dragged, ProseMirror marks it. Fading it makes it
+   obvious which one is moving, since the drop indicator alone is a thin line
+   that is easy to miss. */
+.ab-db-block.ProseMirror-selectednode:active {
+  opacity: 0.6;
+}

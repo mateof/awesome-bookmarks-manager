@@ -1024,6 +1024,9 @@ const es = {
     tooLarge: "«{{name}}» supera el máximo de {{max}} por fichero.",
   },
   db: {
+    moveBlock: "Arrastrar para mover la tabla",
+    moveUp: "Subir la tabla",
+    moveDown: "Bajar la tabla",
     pickView: "¿Qué vista de «{{name}}»?",
     pickViewHint: "Puedes poner la tabla entera con sus pestañas, o fijar una sola vista.",
     wholeDatabase: "La base de datos entera, con sus vistas",

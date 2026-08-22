@@ -930,6 +930,12 @@ su manera: la nota del trimestre la quiere en tablero por estado, la de
 proveedores en tabla filtrada. Esa vista no aparece ni en la página de la base
 de datos ni donde esa tabla esté embebida en otras notas.
 
+**Se mueve dentro de la nota.** En el editor, la tarjeta de la tabla tiene un
+asa a la izquierda para **arrastrarla** a donde quieras, y dos flechas para
+**subirla o bajarla** un sitio. Las flechas están porque arrastrar un bloque
+dentro de un texto es incómodo en el móvil e imposible con el teclado. Deshacer
+revierte el movimiento de una vez.
+
 **Se inserta en el editor y se rellena en la ficha.** En el editor verás una
 tarjeta con el nombre de la tabla y cuántas filas tiene (y desde ahí puedes
 cambiarle el nombre), no la rejilla. Es a propósito: en esta

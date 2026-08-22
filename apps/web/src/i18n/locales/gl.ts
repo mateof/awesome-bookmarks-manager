@@ -1026,6 +1026,9 @@ const gl = {
     tooLarge: "«{{name}}» supera o máximo de {{max}} por ficheiro.",
   },
   db: {
+    moveBlock: "Arrastrar para mover a táboa",
+    moveUp: "Subir a táboa",
+    moveDown: "Baixar a táboa",
     pickView: "Que vista de «{{name}}»?",
     pickViewHint: "Podes poñer a táboa enteira coas súas lapelas, ou fixar unha soa vista.",
     wholeDatabase: "A base de datos enteira, coas súas vistas",
