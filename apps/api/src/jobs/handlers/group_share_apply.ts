@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { AuthedContext } from "../../auth/session.js";
+import { groupKeyFor } from "../../groups/keys.js";
 import { getDb } from "../../db/client.js";
 import { bookmarks, folders, groupShares, groups } from "../../db/schema.js";
 import { aeadEncrypt } from "@awesome-bookmarks/crypto";
@@ -25,7 +26,6 @@ import {
   writeBlob,
 } from "../../storage/blobs.js";
 import { createTag, listTags } from "../../tags/service.js";
-import { unwrapGroupDek } from "../../groups/encryption.js";
 import { clearOps, pendingOps, type ShareOp } from "../../groups/ops.js";
 import { deleteBookmark } from "../../bookmarks/service.js";
 import { deleteFolder } from "../../folders/service.js";
@@ -72,10 +72,7 @@ export async function runGroupShareApplyJob(
     throw new Error("Job user does not match share owner");
   }
 
-  const groupDek = unwrapGroupDek(
-    row.groupId,
-    Buffer.from(row.groupDekWrapped),
-  );
+  const groupDek = groupKeyFor({ userId, dek } as AuthedContext, row.groupId);
   const ops = pendingOps(row.shareId, row.groupId, groupDek);
   if (ops.length === 0) return;
 

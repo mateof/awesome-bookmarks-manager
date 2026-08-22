@@ -3,6 +3,23 @@ import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
+import { ensureUserKeys } from "../auth/userKeys.js";
+import { groupKeyVersion, resealGroupContent } from "./reseal.js";
+import {
+  assertCanAssign,
+  assertCanRemove,
+  roleOf,
+  roleOfUser,
+  type GroupRole,
+} from "./roles.js";
+import {
+  backfillKeys,
+  createGroupKey,
+  grantKeyTo,
+  groupKeyFor,
+  revokeKeysOf,
+  rotateGroupKey,
+} from "./keys.js";
 import { getDb } from "../db/client.js";
 import {
   groupInvitations,
@@ -16,10 +33,10 @@ import { pushNotification } from "../notifications/service.js";
 import { BadRequest, Forbidden, NotFound } from "../util/errors.js";
 import { deleteShareAssets } from "./assets.js";
 import {
-  generateGroupDek,
+
   openGroupField,
   unwrapGroupDek,
-  wrapGroupDek,
+
 } from "./encryption.js";
 
 export function listMyGroups(ctx: AuthedContext): Group[] {
@@ -91,11 +108,9 @@ function ensureOwnerOrAdmin(ctx: AuthedContext, groupId: string) {
 
 export function createGroup(
   ctx: AuthedContext,
-  input: { name: string; description?: string },
+  input: { name: string; description?: string; recoverable?: boolean },
 ): Group {
   const id = uuidv4();
-  const dek = generateGroupDek();
-  const wrapped = wrapGroupDek(id, dek);
   const db = getDb();
   db.transaction(() => {
     db.insert(groups)
@@ -104,13 +119,19 @@ export function createGroup(
         ownerId: ctx.userId,
         name: input.name,
         description: input.description ?? null,
-        groupDekWrapped: wrapped,
+        groupDekWrapped: null,
+        recoverable: input.recoverable ?? false,
       })
       .run();
     db.insert(groupMembers)
       .values({ groupId: id, userId: ctx.userId, role: "owner" })
       .run();
   });
+  // After the members row exists, so the key is sealed to somebody. Off the
+  // transaction because it needs the creator's keypair, which may itself be
+  // generated on the way past.
+  ensureUserKeys(ctx.userId, ctx.dek);
+  createGroupKey(id, input.recoverable ?? false);
   return {
     id,
     name: input.name,
@@ -192,19 +213,11 @@ export function removeMember(
   groupId: string,
   userId: string,
 ) {
-  ensureOwnerOrAdmin(ctx, groupId);
-  const target = getDb()
-    .select({ role: groupMembers.role })
-    .from(groupMembers)
-    .where(
-      and(
-        eq(groupMembers.groupId, groupId),
-        eq(groupMembers.userId, userId),
-      ),
-    )
-    .get();
+  const actor = roleOf(ctx, groupId);
+  const target = roleOfUser(groupId, userId);
   if (!target) throw NotFound("Member not found");
-  if (target.role === "owner") throw Forbidden("Owner cannot be removed");
+  assertCanRemove(actor, target);
+
   getDb()
     .delete(groupMembers)
     .where(
@@ -212,6 +225,40 @@ export function removeMember(
         eq(groupMembers.groupId, groupId),
         eq(groupMembers.userId, userId),
       ),
+    )
+    .run();
+  revokeKeysOf(groupId, userId);
+
+  // They could read, and now they cannot: the key has to change, or their
+  // copy keeps working on everything written from here on.
+  //
+  // What this does not do, and cannot: it does not un-see what they already
+  // saw. Rotation protects the future only.
+  const rotated = rotateGroupKey(ctx, groupId);
+  resealGroupContent(ctx, groupId, rotated.previous, rotated.current);
+}
+
+/**
+ * Change somebody's level.
+ *
+ * No rotation: every level from viewer up can already decrypt, so moving
+ * between them changes what the server allows, not what the key opens.
+ */
+export function setMemberRole(
+  ctx: AuthedContext,
+  groupId: string,
+  userId: string,
+  next: GroupRole,
+): void {
+  const actor = roleOf(ctx, groupId);
+  const target = roleOfUser(groupId, userId);
+  if (!target) throw NotFound("Member not found");
+  assertCanAssign(actor, target, next);
+  getDb()
+    .update(groupMembers)
+    .set({ role: next })
+    .where(
+      and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)),
     )
     .run();
 }
@@ -295,10 +342,13 @@ export function inviteMember(
         })
         .run();
       db.insert(groupMembers)
-        .values({ groupId, userId: target.id, role: "member" })
+        .values({ groupId, userId: target.id, role: "editor" })
         .onConflictDoNothing()
         .run();
     });
+    // Hand them the key straight away. Silently skipped when they have never
+    // signed in, and completed by backfillKeys when they do.
+    grantKeyTo(groupId, target.id, groupKeyVersion(groupId), groupKeyFor(ctx, groupId));
     pushNotification(target.id, { type: "joined", groupId, groupName });
     return { id, token, email: inviteEmail, expiresAt, autoAccepted: true };
   }
@@ -315,6 +365,23 @@ export function inviteMember(
     })
     .run();
   if (target) {
+    // Seal the group key to them **now**, before they accept.
+    //
+    // This is the safe version of handing out a key with the invitation: the
+    // key is sealed to their public key, so the row is useless to anybody
+    // else and nothing secret travels in the email or the link. It also means
+    // accepting is instant, instead of waiting for a member who already has
+    // the key to come along and grant it.
+    try {
+      grantKeyTo(
+        groupId,
+        target.id,
+        groupKeyVersion(groupId),
+        groupKeyFor(ctx, groupId),
+      );
+    } catch {
+      /* they have no keypair yet; granted when a member next opens the group */
+    }
     pushNotification(target.id, {
       type: "invitation",
       groupId,
@@ -446,7 +513,7 @@ export function listMySharesByMe(ctx: AuthedContext): SharedItem[] {
     .all()
     .map((r) => r.id);
   if (groupIds.length === 0) return [];
-  return rawShares(groupIds).filter((s) => s.sharedById === ctx.userId);
+  return rawShares(ctx, groupIds).filter((s) => s.sharedById === ctx.userId);
 }
 
 export function acceptInvitation(ctx: AuthedContext, token: string) {
@@ -473,7 +540,7 @@ export function acceptInvitation(ctx: AuthedContext, token: string) {
   db.transaction(() => {
     // INSERT OR IGNORE — user might already be a member
     db.insert(groupMembers)
-      .values({ groupId: inv.groupId, userId: ctx.userId, role: "member" })
+      .values({ groupId: inv.groupId, userId: ctx.userId, role: "editor" })
       .onConflictDoNothing()
       .run();
     db.update(groupInvitations)
@@ -481,6 +548,19 @@ export function acceptInvitation(ctx: AuthedContext, token: string) {
       .where(eq(groupInvitations.id, inv.id))
       .run();
   });
+  // The accepting user now needs a keypair (they may not have one) and their
+  // own sealed copy of the group key. Whoever invited them could not seal it
+  // to a public key that did not exist yet, so it happens here.
+  ensureUserKeys(ctx.userId, ctx.dek);
+  // The inviter could not seal the key to a public key that did not exist
+  // yet, so it is completed here, by the person joining, from the copy that
+  // the group still has for somebody. Failing this must not undo the join:
+  // they are a member either way, and backfillKeys runs again on next access.
+  try {
+    backfillKeys(ctx, inv.groupId);
+  } catch {
+    /* no key reachable yet; the next member to open the group grants it */
+  }
   return { groupId: inv.groupId };
 }
 
@@ -520,7 +600,7 @@ export function listGroupShares(
   groupId: string,
 ): SharedItem[] {
   ensureMember(ctx, groupId);
-  return rawShares([groupId]);
+  return rawShares(ctx, [groupId]);
 }
 
 function myGroupIds(ctx: AuthedContext): string[] {
@@ -537,7 +617,7 @@ function myGroupIds(ctx: AuthedContext): string[] {
  * whereas the "shared with me" list hides my own. */
 export function listSharesInMyGroups(ctx: AuthedContext): SharedItem[] {
   const ids = myGroupIds(ctx);
-  return ids.length === 0 ? [] : rawShares(ids);
+  return ids.length === 0 ? [] : rawShares(ctx, ids);
 }
 
 export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
@@ -545,7 +625,7 @@ export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
   return listSharesInMyGroups(ctx).filter((s) => s.sharedById !== ctx.userId);
 }
 
-function rawShares(groupIds: string[]): SharedItem[] {
+function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
   const rows = getDb()
     .select({
       id: groupShares.id,
@@ -570,9 +650,12 @@ function rawShares(groupIds: string[]): SharedItem[] {
     .all();
   return rows.map((r) => {
     let label: string | null = null;
+    // The label comes from the caller's own copy of the group key, not from a
+    // master-wrapped one: the server no longer holds group keys by itself, and
+    // whoever is asking is a member of the group by construction.
     if (r.payloadStatus === "ready" && r.payloadCt) {
       try {
-        const dek = unwrapGroupDek(r.groupId, Buffer.from(r.groupDekWrapped));
+        const dek = groupKeyFor(ctx, r.groupId);
         const content = JSON.parse(
           openGroupField(dek, r.groupId, "share.payload", Buffer.from(r.payloadCt)),
         );

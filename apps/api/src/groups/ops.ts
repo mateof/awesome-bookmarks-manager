@@ -11,7 +11,8 @@ import type {
   SharedContent,
   SharedFolderContent,
 } from "./content.js";
-import { openGroupField, sealGroupField, unwrapGroupDek } from "./encryption.js";
+import { openGroupField, sealGroupField } from "./encryption.js";
+import { groupKeyFor } from "./keys.js";
 
 /**
  * Structural editing inside an editor share.
@@ -93,7 +94,7 @@ interface ShareRow {
   groupDek: Buffer;
 }
 
-function loadEditableShare(shareId: string): ShareRow {
+function loadEditableShare(ctx: AuthedContext, shareId: string): ShareRow {
   const row = getDb()
     .select({
       shareId: groupShares.id,
@@ -103,10 +104,8 @@ function loadEditableShare(shareId: string): ShareRow {
       rev: groupShares.rev,
       payloadCt: groupShares.payloadCt,
       payloadStatus: groupShares.payloadStatus,
-      groupDekWrapped: groups.groupDekWrapped,
     })
     .from(groupShares)
-    .innerJoin(groups, eq(groups.id, groupShares.groupId))
     .where(eq(groupShares.id, shareId))
     .get();
   if (!row) throw NotFound("Share not found");
@@ -121,7 +120,7 @@ function loadEditableShare(shareId: string): ShareRow {
     access: row.access,
     rev: row.rev,
     payloadCt: Buffer.from(row.payloadCt),
-    groupDek: unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped)),
+    groupDek: groupKeyFor(ctx, row.groupId),
   };
 }
 
@@ -237,7 +236,7 @@ export function createSharedFolder(
   shareId: string,
   input: { parentId?: string | null; name: string; baseRev?: number },
 ): { id: string; rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const parent = folderAt(tree, input.parentId);
   const id = uuidv4();
@@ -276,7 +275,7 @@ export function createSharedBookmark(
     baseRev?: number;
   },
 ): { id: string; rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const parent = folderAt(tree, input.folderId);
   const id = uuidv4();
@@ -311,7 +310,7 @@ export function deleteSharedNode(
   nodeId: string,
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   if (tree.type !== "folder") throw Forbidden("Nothing to delete here");
   if (tree.id === nodeId) {
@@ -339,7 +338,7 @@ export function queueFieldEdit(
   nodeId: string,
   fields: { title?: string; url?: string; name?: string; description?: string | null },
 ): void {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   getDb()
     .insert(groupShareOps)
     .values({
@@ -425,7 +424,7 @@ export function moveSharedNode(
   position?: number,
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   if (tree.type !== "folder") throw Forbidden("Nothing to move here");
   if (nodeId === tree.id) throw Forbidden("The shared folder cannot be moved");
@@ -472,7 +471,7 @@ export function setSharedFavorite(
   favorite: boolean,
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const node = findNodeIn(tree, nodeId);
   if (!node) throw NotFound("Node not found in share");
@@ -494,7 +493,7 @@ export function setSharedTags(
   names: string[],
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const node = findNodeIn(tree, nodeId);
   if (!node) throw NotFound("Node not found in share");
@@ -521,7 +520,7 @@ export function setSharedAppearance(
   nodeId: string,
   input: { bgColor?: string | null; textTone?: string | null; baseRev?: number },
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const node = findNodeIn(tree, nodeId);
   if (!node) throw NotFound("Node not found in share");
@@ -574,7 +573,7 @@ export function setSharedAsset(
   version: string,
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const node = findNodeIn(tree, nodeId);
   if (!node) throw NotFound("Node not found in share");
@@ -608,13 +607,16 @@ export function pendingAssetKeys(
 
 /** The share row a member's upload needs: where to put the bytes and under
  * which key. Membership is checked at the route. */
-export function shareAssetTarget(shareId: string): {
+export function shareAssetTarget(
+  ctx: AuthedContext,
+  shareId: string,
+): {
   ownerUserId: string;
   groupId: string;
   groupDek: Buffer;
   rev: number;
 } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   return {
     ownerUserId: row.sharedBy,
     groupId: row.groupId,
@@ -679,7 +681,7 @@ export function clearSharedAsset(
   nodeId: string,
   baseRev?: number,
 ): { rev: number } {
-  const row = loadEditableShare(shareId);
+  const row = loadEditableShare(ctx, shareId);
   const tree = readPayload(row);
   const node = findNodeIn(tree, nodeId);
   if (!node) throw NotFound("Node not found in share");

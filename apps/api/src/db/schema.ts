@@ -18,6 +18,14 @@ export const users = sqliteTable(
     passwordHash: text("password_hash").notNull(),
     kdfSalt: blob("kdf_salt", { mode: "buffer" }).notNull(),
     masterWrap: blob("master_wrap", { mode: "buffer" }).notNull(),
+    /**
+     * X25519 keypair. The public half is in the clear so anybody can seal a
+     * group key to this user while they are offline; the private half is
+     * sealed with their own DEK. Nullable because accounts created before
+     * keypairs existed get theirs on their next authenticated request.
+     */
+    kxPublic: blob("kx_public", { mode: "buffer" }),
+    kxPrivateCt: blob("kx_private_ct", { mode: "buffer" }),
     role: text("role").notNull().default("user"),
     autoSnapshots: integer("auto_snapshots", { mode: "boolean" })
       .notNull()
@@ -226,7 +234,16 @@ export const groups = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
-    groupDekWrapped: blob("group_dek_wrapped", { mode: "buffer" }).notNull(),
+    /**
+     * Master-key-wrapped copy of the group key. Null unless the group opted
+     * into being recoverable: normally the key lives only in the members'
+     * sealed copies, so the server cannot open the group by itself.
+     */
+    groupDekWrapped: blob("group_dek_wrapped", { mode: "buffer" }),
+    keyVersion: integer("key_version").notNull().default(1),
+    recoverable: integer("recoverable", { mode: "boolean" })
+      .notNull()
+      .default(false),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (t) => ({
@@ -339,6 +356,13 @@ export const folders = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Which key seals this row. Null means the owner's own DEK, which is the
+     * normal case. When set, the row belongs to that group and is sealed with
+     * the group key, so every member with the key reads and writes it directly
+     * instead of through a copy that has to be reconciled later.
+     */
+    keyGroupId: text("key_group_id"),
     parentId: text("parent_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
     descriptionCt: blob("description_ct", { mode: "buffer" }),
@@ -381,6 +405,13 @@ export const bookmarks = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Which key seals this row. Null means the owner's own DEK, which is the
+     * normal case. When set, the row belongs to that group and is sealed with
+     * the group key, so every member with the key reads and writes it directly
+     * instead of through a copy that has to be reconciled later.
+     */
+    keyGroupId: text("key_group_id"),
     folderId: text("folder_id"),
     titleCt: blob("title_ct", { mode: "buffer" }).notNull(),
     urlCt: blob("url_ct", { mode: "buffer" }).notNull(),
@@ -666,12 +697,20 @@ export const databases = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    /**
+     * Which key seals this row. Null means the owner's own DEK, which is the
+     * normal case. When set, the row belongs to that group and is sealed with
+     * the group key, so every member with the key reads and writes it directly
+     * instead of through a copy that has to be reconciled later.
+     */
+    keyGroupId: text("key_group_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
   },
   (t) => ({
     userIdx: index("databases_user_idx").on(t.userId),
+    groupIdx: index("databases_group_idx").on(t.keyGroupId),
   }),
 );
 
@@ -731,5 +770,28 @@ export const databaseViews = sqliteTable(
   },
   (t) => ({
     dbIdx: index("database_views_db_idx").on(t.databaseId, t.position),
+  }),
+);
+
+
+/**
+ * The group key, sealed to one member's public key.
+ *
+ * One row per (group, member, key version). Versions exist so a rotation can
+ * hand out a new key without a moment where nobody can read anything, and so
+ * the old rows can be dropped deliberately rather than overwritten in place.
+ */
+export const groupMemberKeys = sqliteTable(
+  "group_member_keys",
+  {
+    groupId: text("group_id").notNull(),
+    userId: text("user_id").notNull(),
+    keyVersion: integer("key_version").notNull().default(1),
+    wrappedKey: blob("wrapped_key", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.groupId, t.userId, t.keyVersion] }),
+    userIdx: index("group_member_keys_user_idx").on(t.userId),
   }),
 );

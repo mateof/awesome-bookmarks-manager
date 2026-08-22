@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import type { AuthedContext } from "../../auth/session.js";
+import { groupKeyFor } from "../../groups/keys.js";
 import { getDb } from "../../db/client.js";
 import { groupShares, groups } from "../../db/schema.js";
 import { materializeShareAssets } from "../../groups/assets.js";
@@ -11,7 +13,6 @@ import {
 import {
   openGroupField,
   sealGroupField,
-  unwrapGroupDek,
 } from "../../groups/encryption.js";
 import {
   pendingAssetKeys,
@@ -84,10 +85,7 @@ export async function runGroupShareSealJob(
   const assets: ShareAssetSource[] = [];
   const content = buildPayloadForShare(userId, dek, row.share, assets);
 
-  const groupDek = unwrapGroupDek(
-    row.group.id,
-    Buffer.from(row.group.groupDekWrapped),
-  );
+  const groupDek = groupKeyFor({ userId, dek } as AuthedContext, row.group.id);
 
   const previousPayload =
     row.share.payloadStatus === "ready" && row.share.payloadCt

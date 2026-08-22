@@ -67,7 +67,7 @@ async function copyAssets(
   ] as const) {
     if (!node[kind]) continue;
     try {
-      const bytes = await readGroupShareAsset(shareId, node.id, kind);
+      const bytes = await readGroupShareAsset(ctx, shareId, node.id, kind);
       if (!bytes) continue;
       const aad = `${prefix}.${kind === "icon" ? "icon" : "bg"}`;
       const path = await writeBlob(

@@ -15,7 +15,8 @@ import {
 import { Conflict, Forbidden, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { readShareAsset, type ShareAssetKind } from "./assets.js";
-import { openGroupField, sealGroupField, unwrapGroupDek } from "./encryption.js";
+import { openGroupField, sealGroupField } from "./encryption.js";
+import { groupKeyFor } from "./keys.js";
 
 /** A tag as it travels in a share: by name and colour, never by id. The
  * member has their own tag table and none of the owner's ids mean anything
@@ -416,10 +417,10 @@ export function readGroupShareContent(
   ctx: AuthedContext,
   shareId: string,
 ): SharedContentResult {
-  // Membership is verified at the route layer before this is invoked.
-  void ctx;
+  // Membership is verified at the route layer before this is invoked; the
+  // key itself now comes from the reader's own sealed copy.
   const row = loadShareRow(shareId);
-  const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
+  const groupDek = groupKeyFor(ctx, row.groupId);
   const json = openGroupField(
     groupDek,
     row.groupId,
@@ -440,6 +441,7 @@ export function readGroupShareContent(
  * guessed.
  */
 export async function readGroupShareAsset(
+  ctx: AuthedContext,
   shareId: string,
   nodeId: string,
   kind: ShareAssetKind,
@@ -455,7 +457,7 @@ export async function readGroupShareAsset(
     .where(eq(groupShares.id, shareId))
     .get();
   if (!row) return null;
-  const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
+  const groupDek = groupKeyFor(ctx, row.groupId);
   return readShareAsset(
     row.sharedBy,
     shareId,
@@ -495,12 +497,11 @@ export function editSharedNode(
     baseRev?: number;
   },
 ): SharedContentResult {
-  void ctx;
   const row = loadShareRow(shareId);
   if (row.access !== "editor") {
     throw Forbidden("This share is read-only");
   }
-  const groupDek = unwrapGroupDek(row.groupId, Buffer.from(row.groupDekWrapped));
+  const groupDek = groupKeyFor(ctx, row.groupId);
   const tree = JSON.parse(
     openGroupField(groupDek, row.groupId, "share.payload", Buffer.from(row.payloadCt!)),
   ) as SharedContent;

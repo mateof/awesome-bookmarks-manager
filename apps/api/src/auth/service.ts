@@ -10,6 +10,7 @@ import {
 import { randomBytes } from "node:crypto";
 import { eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { ensureUserKeys } from "./userKeys.js";
 import { getDb } from "../db/client.js";
 import { users } from "../db/schema.js";
 import {
@@ -105,6 +106,9 @@ export async function signup(
   });
 
   keyCache.put(id, dek);
+  // Generated now rather than on first use, so a brand new account can be
+  // invited into a group before it has ever made another request.
+  ensureUserKeys(id, dek);
   return { id, email, nickname, role };
 }
 

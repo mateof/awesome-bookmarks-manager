@@ -69,6 +69,11 @@ export function backfillShareAppearance(): void {
   for (const r of rows) {
     if (r.payloadStatus !== "ready" || !r.payloadCt) continue;
     let tree: SharedContent;
+    // No member is present in a background sweep, so the only key available is
+    // the master-wrapped copy, which exists solely for groups that opted into
+    // being recoverable. The rest are skipped: the resync is an optimisation,
+    // and not being able to run it is not a failure.
+    if (!r.groupDekWrapped) continue;
     try {
       const groupDek = unwrapGroupDek(
         r.groupId,

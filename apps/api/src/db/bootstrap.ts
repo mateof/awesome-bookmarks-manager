@@ -253,7 +253,7 @@ export function ensureSchema() {
       owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       description TEXT,
-      group_dek_wrapped BLOB NOT NULL,
+      group_dek_wrapped BLOB,
       created_at TEXT NOT NULL DEFAULT (current_timestamp)
     );
     CREATE INDEX IF NOT EXISTS groups_owner_idx ON groups(owner_id);
@@ -395,6 +395,31 @@ export function ensureSchema() {
   // the uniqueness constraint (see schema.ts); NULLs are allowed so rows
   // written before slugs existed keep working, and SQLite lets multiple NULLs
   // coexist under a UNIQUE index.
+  getSqlite().exec(`
+    CREATE TABLE IF NOT EXISTS group_member_keys (
+      group_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      key_version INTEGER NOT NULL DEFAULT 1,
+      wrapped_key BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      PRIMARY KEY (group_id, user_id, key_version)
+    );
+    CREATE INDEX IF NOT EXISTS group_member_keys_user_idx
+      ON group_member_keys(user_id);
+  `);
+  relaxGroupDekNotNull();
+  tryAddColumn("folders", "key_group_id", "TEXT");
+  tryAddColumn("bookmarks", "key_group_id", "TEXT");
+  tryAddColumn("databases", "key_group_id", "TEXT");
+  getSqlite().exec(`
+    CREATE INDEX IF NOT EXISTS folders_group_idx ON folders(key_group_id);
+    CREATE INDEX IF NOT EXISTS bookmarks_group_idx ON bookmarks(key_group_id);
+    CREATE INDEX IF NOT EXISTS databases_group_idx ON databases(key_group_id);
+  `);
+  tryAddColumn("groups", "key_version", "INTEGER NOT NULL DEFAULT 1");
+  tryAddColumn("groups", "recoverable", "INTEGER NOT NULL DEFAULT 0");
+  tryAddColumn("users", "kx_public", "BLOB");
+  tryAddColumn("users", "kx_private_ct", "BLOB");
   tryAddColumn("attachments", "description_ct", "BLOB");
   tryAddColumn("attachments", "slug_ct", "BLOB");
   tryAddColumn("attachments", "slug_hash", "TEXT");
@@ -496,6 +521,61 @@ function ensureAdminExists() {
   if (!oldest) return; // no users registered yet
   sql.prepare(`UPDATE users SET role = 'admin' WHERE id = ?`).run(oldest.id);
   console.log(`[bootstrap] No admin found — promoted ${oldest.email} to admin.`);
+}
+
+/**
+ * Make `groups.group_dek_wrapped` nullable on databases created before the key
+ * moved to the members.
+ *
+ * SQLite cannot relax a NOT NULL constraint in place, so the table has to be
+ * rebuilt. Guarded on the current shape so it runs exactly once, and wrapped
+ * with foreign keys off because several tables reference `groups` and dropping
+ * it mid-transaction would otherwise cascade them away.
+ */
+function relaxGroupDekNotNull() {
+  const sql = getSqlite();
+  const cols = sql.prepare(`PRAGMA table_info(groups)`).all() as {
+    name: string;
+    notnull: number;
+  }[];
+  const col = cols.find((c) => c.name === "group_dek_wrapped");
+  if (!col || col.notnull === 0) return;
+
+  sql.pragma("foreign_keys = OFF");
+  try {
+    sql.exec(`
+      BEGIN;
+      CREATE TABLE groups_migrated (
+        id TEXT PRIMARY KEY,
+        owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        description TEXT,
+        group_dek_wrapped BLOB,
+        key_version INTEGER NOT NULL DEFAULT 1,
+        recoverable INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (current_timestamp)
+      );
+      INSERT INTO groups_migrated
+        (id, owner_id, name, description, group_dek_wrapped, key_version, recoverable, created_at)
+      SELECT id, owner_id, name, description, group_dek_wrapped,
+             COALESCE(key_version, 1), COALESCE(recoverable, 0), created_at
+      FROM groups;
+      DROP TABLE groups;
+      ALTER TABLE groups_migrated RENAME TO groups;
+      CREATE INDEX IF NOT EXISTS groups_owner_idx ON groups(owner_id);
+      COMMIT;
+    `);
+    console.log("[bootstrap] groups.group_dek_wrapped is now nullable");
+  } catch (err) {
+    try {
+      sql.exec("ROLLBACK");
+    } catch {
+      /* nothing to roll back */
+    }
+    throw err;
+  } finally {
+    sql.pragma("foreign_keys = ON");
+  }
 }
 
 function tryAddColumn(table: string, column: string, def: string) {

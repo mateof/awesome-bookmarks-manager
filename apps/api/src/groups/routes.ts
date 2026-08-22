@@ -262,7 +262,7 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     }
     const version = (req.query as { v?: string } | undefined)?.v;
     if (version && imageNotModified(req, reply, version)) return;
-    const bytes = await readGroupShareAsset(shareId, nodeId, kind);
+    const bytes = await readGroupShareAsset(ctx, shareId, nodeId, kind);
     if (!bytes) return reply.code(404).send({ error: "not_found" });
     return reply.type(detectImageContentType(bytes)).send(bytes);
   });
@@ -368,7 +368,7 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     if (!req.isMultipart()) throw BadRequest("multipart/form-data expected");
     const file = await req.file();
     if (!file) throw BadRequest("file part missing");
-    const target = shareAssetTarget(shareId);
+    const target = shareAssetTarget(ctx, shareId);
     const bytes = await readImageUpload(file, kind === "image");
     await writeShareAsset(
       target.ownerUserId,
@@ -398,7 +398,7 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     if (!listSharesInMyGroups(ctx).find((s) => s.id === shareId)) {
       return reply.code(404).send({ error: "not_found" });
     }
-    const target = shareAssetTarget(shareId);
+    const target = shareAssetTarget(ctx, shareId);
     await deleteShareAssetFile(target.ownerUserId, shareId, nodeId, "image");
     return clearSharedAsset(ctx, shareId, nodeId);
   });
