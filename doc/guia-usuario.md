@@ -510,7 +510,10 @@ largas empujaban los bookmarks fuera de la pantalla: abrir la carpeta obligaba
 a hacer scroll para llegar a lo que ibas a buscar.
 
 El texto tiene un **tope de altura y scroll dentro** de ese tope, así que por
-larga que sea la nota los bookmarks quedan siempre a la vista. Un botón de
+larga que sea la nota los bookmarks quedan siempre a la vista. La excepción son
+las notas con una base de datos dentro: ahí no se recorta, porque una tabla
+metida en un recuadro de unos centímetros enseña la cabecera y esconde todas
+las filas. La tabla trae su propio tope. Un botón de
 **Ver completa** la abre entera en una ventana a pantalla completa, cómoda para
 leer.
 
@@ -871,7 +874,8 @@ Se inserta con el botón de base de datos de la barra del editor (o desde el
 **+** en el móvil).
 
 **Se inserta en el editor y se rellena en la ficha.** En el editor verás una
-tarjeta con el nombre de la tabla, no la rejilla. Es a propósito: en esta
+tarjeta con el nombre de la tabla y cuántas filas tiene (y desde ahí puedes
+cambiarle el nombre), no la rejilla. Es a propósito: en esta
 aplicación la descripción se *edita* en un diálogo y se *lee* en la página de
 la carpeta o del bookmark, así que la rejilla con la que se trabaja de verdad
 está donde lees. Editar un texto y editar trescientas celdas son dos trabajos
@@ -896,6 +900,10 @@ incorrecta o te borra datos sin avisar. Si te equivocaste, crea otra columna.
   menos. Siempre hay un carril de *sin asignar* para las filas que no tienen
   valor, para que no desaparezcan.
 - **Galería**, las mismas tarjetas sin carriles.
+
+Una vista es **otra forma de ver las mismas filas**, no otra tabla: si quieres
+una tabla distinta, inserta otra base de datos. Para cambiarle el nombre a una
+vista, pulsa en su pestaña estando ya en ella.
 
 Cada vista guarda sus **filtros**, su **orden**, qué columnas enseña y por qué
 agrupa. Y guarda solo eso: filtrar no borra filas y ordenar no cambia el orden

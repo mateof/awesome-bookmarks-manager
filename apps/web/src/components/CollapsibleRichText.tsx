@@ -65,7 +65,18 @@ export function CollapsibleRichText({
     return () => ro.disconnect();
   }, [measure, html]);
 
+  /**
+   * A note holding a database is not capped.
+   *
+   * The cap exists so a wall of prose does not push a folder's contents off
+   * screen. A database is the opposite case: it is a component the reader put
+   * there to work with, and squeezing a grid into 240 pixels of scroll shows
+   * its header and hides every row, which reads as broken. The table brings
+   * its own height limit instead.
+   */
+  const hasDatabase = html.includes("data-db-id");
   const overflows =
+    !hasDatabase &&
     contentHeight !== null &&
     contentHeight > collapsedHeight + OVERFLOW_TOLERANCE;
 
@@ -103,7 +114,7 @@ export function CollapsibleRichText({
         // The scrollbar only appears when the cap actually bites, so a short
         // note renders exactly as before.
         className={overflows ? "overflow-y-auto" : undefined}
-        style={{ maxHeight: collapsedHeight }}
+        style={hasDatabase ? undefined : { maxHeight: collapsedHeight }}
       >
         <div ref={innerRef}>
           <RichTextView

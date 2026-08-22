@@ -8,7 +8,7 @@ import {
 } from "@awesome-bookmarks/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, Plus, Table2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 import { DatabaseBoard, DatabaseGallery } from "./DatabaseBoard.js";
@@ -37,6 +37,8 @@ export function DatabaseBlock({
   const qc = useQueryClient();
   const key = ["database", databaseId];
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [draftName, setDraftName] = useState("");
 
   const { data: db, isError } = useQuery({
     queryKey: key,
@@ -105,6 +107,19 @@ export function DatabaseBlock({
     onSuccess: refresh,
   });
 
+  const rename = useMutation({
+    mutationFn: (name: string) => api.renameDatabase(databaseId, name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: key });
+      qc.invalidateQueries({ queryKey: ["databases"] });
+    },
+  });
+
+  // Keep the draft in step with the server, except while it is being typed in.
+  useEffect(() => {
+    if (!renaming && db?.name) setDraftName(db.name);
+  }, [db?.name, renaming]);
+
   if (isError) {
     // The note outlived the table. Saying so beats an empty box that looks
     // like a rendering bug.
@@ -146,8 +161,38 @@ export function DatabaseBlock({
     >
       <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-1.5 dark:border-slate-700">
         <Table2 className="h-4 w-4 shrink-0 text-slate-400" />
-        <span className="truncate text-sm font-medium">{db.name}</span>
-        <span className="text-xs text-slate-400">
+        {renaming && !readOnly ? (
+          <input
+            value={draftName}
+            autoFocus
+            aria-label={t("db.renameDatabase")}
+            onChange={(e) => setDraftName(e.target.value)}
+            onBlur={() => {
+              setRenaming(false);
+              const next = draftName.trim();
+              if (next && next !== db.name) rename.mutate(next);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") {
+                setDraftName(db.name);
+                setRenaming(false);
+              }
+            }}
+            className="min-w-0 flex-1 rounded border border-slate-300 px-1 py-0.5 text-sm dark:border-slate-600 dark:bg-slate-800"
+          />
+        ) : (
+          <button
+            type="button"
+            disabled={readOnly}
+            onClick={() => setRenaming(true)}
+            title={readOnly ? undefined : t("db.renameDatabase")}
+            className="min-w-0 flex-1 truncate text-left text-sm font-medium disabled:cursor-default hover:underline"
+          >
+            {db.name}
+          </button>
+        )}
+        <span className="shrink-0 text-xs text-slate-400">
           {t("db.rowCount", { count: db.rows.length })}
         </span>
       </div>
@@ -162,7 +207,9 @@ export function DatabaseBlock({
         />
       )}
 
-      <div className="p-2">
+      {/* The table's own ceiling: uncapping the note means a five hundred row
+          table would otherwise run down the page forever. */}
+      <div className="max-h-[70vh] overflow-auto p-2">
         {renderView(view?.kind ?? "table")}
       </div>
     </div>

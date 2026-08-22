@@ -13,7 +13,7 @@ import {
   Table2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 import { ViewSettings } from "./DatabaseViewSettings.js";
@@ -48,15 +48,40 @@ export function ViewBar({
   const { t } = useTranslation();
   const [settings, setSettings] = useState<"filters" | "sorts" | null>(null);
   const [adding, setAdding] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(view.name);
+
+  useEffect(() => {
+    if (!renaming) setDraft(view.name);
+  }, [view.name, renaming]);
+
+  /**
+   * Named so it cannot collide with a view that already exists. Two tabs both
+   * called "Tabla" look like the same thing twice, and there is no way to tell
+   * which one you are configuring.
+   */
+  const nameFor = (kind: ViewKind) => {
+    const base = t(`db.view.${kind}` as "db.view.table");
+    const taken = new Set(db.views.map((v) => v.name));
+    if (!taken.has(base)) return base;
+    for (let n = 2; n < 100; n++) {
+      if (!taken.has(`${base} ${n}`)) return `${base} ${n}`;
+    }
+    return base;
+  };
 
   const create = useMutation({
-    mutationFn: (kind: ViewKind) =>
-      api.addDbView(db.id, { kind, name: t(`db.view.${kind}` as "db.view.table") }),
+    mutationFn: (kind: ViewKind) => api.addDbView(db.id, { kind, name: nameFor(kind) }),
     onSuccess: (created) => {
       setAdding(false);
       onChanged();
       onSelect(created.id);
     },
+  });
+
+  const rename = useMutation({
+    mutationFn: (name: string) => api.updateDbView(db.id, view.id, { name }),
+    onSuccess: onChanged,
   });
 
   const remove = useMutation({
@@ -75,11 +100,38 @@ export function ViewBar({
       {db.views.map((v) => {
         const Icon = ICONS[v.kind];
         const on = v.id === view.id;
+        if (on && renaming && !readOnly) {
+          return (
+            <input
+              key={v.id}
+              value={draft}
+              autoFocus
+              aria-label={t("db.renameView")}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => {
+                setRenaming(false);
+                const next = draft.trim();
+                if (next && next !== v.name) rename.mutate(next);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                if (e.key === "Escape") {
+                  setDraft(v.name);
+                  setRenaming(false);
+                }
+              }}
+              className="w-28 rounded border border-slate-300 px-1 py-0.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+            />
+          );
+        }
         return (
           <button
             key={v.id}
             type="button"
-            onClick={() => onSelect(v.id)}
+            // Clicking the tab you are already on renames it, which is where
+            // people look for it and costs no extra control in the strip.
+            onClick={() => (on && !readOnly ? setRenaming(true) : onSelect(v.id))}
+            title={on && !readOnly ? t("db.renameView") : v.name}
             className={`flex items-center gap-1 rounded px-2 py-1 text-xs ${
               on
                 ? "bg-slate-200 dark:bg-slate-700"
@@ -104,7 +156,13 @@ export function ViewBar({
             <Plus className="h-3.5 w-3.5" />
           </button>
           {adding && (
-            <span className="absolute left-0 top-full z-30 mt-1 flex w-40 flex-col rounded border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+            <span
+              data-testid="db-add-view-menu"
+              className="absolute left-0 top-full z-30 mt-1 flex w-52 flex-col rounded border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+            >
+              <span className="px-2 py-1 text-[10px] uppercase text-slate-400">
+                {t("db.sameRows")}
+              </span>
               {(["table", "board", "gallery"] as ViewKind[]).map((k) => {
                 const Icon = ICONS[k];
                 return (

@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from "@tiptap/core";
+import { ReactNodeViewRenderer } from "@tiptap/react";
+import { DatabaseEditorCard } from "../components/DatabaseEditorCard.js";
 import {
   DB_BLOCK_ATTR,
   DB_BLOCK_NAME_ATTR,
@@ -11,12 +13,17 @@ import {
  * tables, so the note stays a note: small, resealed cheaply on every save, and
  * unable to lose data when two tabs have it open.
  *
- * Modelled as a block-level atom. Inside the editor it renders as a card with
- * the table's name, not as the table itself. That split is deliberate rather
- * than a shortcut: in this app a description is *edited* in a dialog and *read*
- * on the entity's page, so the interactive grid belongs where the reading
- * happens. Editing prose and editing three hundred cells are different jobs and
- * putting both in one modal serves neither.
+ * Modelled as a block-level atom. Inside the editor it renders as a card
+ * showing what the table is called and how many rows it holds, not as the grid
+ * itself. That split is deliberate rather than a shortcut: in this app a
+ * description is *edited* in a dialog and *read* on the entity's page, so the
+ * interactive grid belongs where the reading happens. Editing prose and editing
+ * three hundred cells are different jobs and putting both in one modal serves
+ * neither.
+ *
+ * The card is a React node view rather than plain markup because the name has
+ * to be editable from here: the editor is where you put the table, so it is
+ * where you expect to be able to name it.
  *
  * The name is duplicated into the block so the card can say what it is before
  * the data loads, and still says something if the database is later deleted.
@@ -73,6 +80,10 @@ export const DatabaseBlock = Node.create({
 
   renderText({ node }) {
     return `[${(node.attrs.dbName as string) || "base de datos"}]`;
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(DatabaseEditorCard);
   },
 
   addCommands() {

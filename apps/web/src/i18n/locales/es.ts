@@ -1024,6 +1024,10 @@ const es = {
     tooLarge: "«{{name}}» supera el máximo de {{max}} por fichero.",
   },
   db: {
+    renameDatabase: "Cambiar el nombre",
+    renameView: "Cambiar el nombre de la vista",
+    editorHint: "La tabla se rellena en la ficha, donde se lee la nota.",
+    sameRows: "Otra forma de ver las mismas filas",
     allDatabases: "Bases de datos",
     newDatabase: "Nueva base de datos",
     noDatabases: "Todavía no tienes ninguna.",

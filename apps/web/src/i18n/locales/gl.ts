@@ -1026,6 +1026,10 @@ const gl = {
     tooLarge: "«{{name}}» supera o máximo de {{max}} por ficheiro.",
   },
   db: {
+    renameDatabase: "Cambiar o nome",
+    renameView: "Cambiar o nome da vista",
+    editorHint: "A táboa énchese na ficha, onde se le a nota.",
+    sameRows: "Outra forma de ver as mesmas filas",
     allDatabases: "Bases de datos",
     newDatabase: "Nova base de datos",
     noDatabases: "Aínda non tes ningunha.",

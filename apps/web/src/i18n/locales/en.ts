@@ -1023,6 +1023,10 @@ const en = {
     tooLarge: "“{{name}}” is over the {{max}} per-file limit.",
   },
   db: {
+    renameDatabase: "Rename",
+    renameView: "Rename the view",
+    editorHint: "The table is filled in on the page, where the note is read.",
+    sameRows: "Another way of looking at the same rows",
     allDatabases: "Databases",
     newDatabase: "New database",
     noDatabases: "You have none yet.",
