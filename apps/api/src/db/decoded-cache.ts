@@ -44,6 +44,16 @@ const folderCache = new Map<string, Entry<Folder>>();
  */
 keyCache.onEvict((userId) => invalidate(userId));
 
+/**
+ * The signature covers everything the user can *see*, not just what they own.
+ *
+ * Shared content is now rows belonging to a group, written by other people.
+ * A signature scoped to `user_id` would never move when a colleague edits the
+ * shared folder, and the member would keep serving a stale list until their
+ * own key expired. The subquery keeps this self-checking rather than relying
+ * on the writer to remember who else is affected, which is the property this
+ * whole module is built on.
+ */
 function signatureFor(table: "bookmarks" | "folders", userId: string): string {
   const row = getSqlite()
     .prepare(
@@ -51,9 +61,13 @@ function signatureFor(table: "bookmarks" | "folders", userId: string): string {
               COALESCE(SUM(rev), 0) AS r,
               COALESCE(MAX(updated_at), '') AS m
        FROM ${table}
-       WHERE user_id = ? AND deleted_at IS NULL`,
+       WHERE deleted_at IS NULL
+         AND (user_id = ?
+              OR key_group_id IN (
+                SELECT group_id FROM group_members WHERE user_id = ?
+              ))`,
     )
-    .get(userId) as { n: number; r: number; m: string };
+    .get(userId, userId) as { n: number; r: number; m: string };
   return `${row.n}:${row.r}:${row.m}`;
 }
 

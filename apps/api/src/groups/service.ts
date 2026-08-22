@@ -4,6 +4,10 @@ import { randomBytes } from "node:crypto";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
 import { ensureUserKeys } from "../auth/userKeys.js";
+import {
+  adoptBookmarkIntoGroup,
+  adoptFolderIntoGroup,
+} from "./adopt.js";
 import { groupKeyVersion, resealGroupContent } from "./reseal.js";
 import {
   assertCanAssign,
@@ -587,6 +591,19 @@ export function shareToGroup(
       payloadStatus: "pending",
     })
     .run();
+
+  // Hand the real rows to the group rather than building a copy of them. From
+  // here on the members read and write the same rows the owner does, which is
+  // what makes an editor's capabilities identical rather than imitated.
+  if (input.sourceType === "folder") {
+    adoptFolderIntoGroup(ctx, input.sourceId, groupId);
+  } else {
+    adoptBookmarkIntoGroup(ctx, input.sourceId, groupId);
+  }
+
+  // The materialised payload is still built, because the read-only share views
+  // and the panels are fed from it and older clients expect it. It is now a
+  // convenience copy, not the source of truth.
   enqueue({
     userId: ctx.userId,
     type: "group_share_seal",

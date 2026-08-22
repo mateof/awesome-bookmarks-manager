@@ -57,6 +57,7 @@ import {
   listSharesInMyGroups,
   rejectInvitation,
   removeMember,
+  setMemberRole,
   shareToGroup,
   updateGroup,
 } from "./service.js";
@@ -119,6 +120,21 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
     return listMembers(ctx, id);
+  });
+
+  /**
+   * Change somebody's level. No key rotation: every level from viewer up can
+   * already decrypt, so moving between them changes what the server permits,
+   * not what the key opens.
+   */
+  app.patch("/groups/:id/members/:userId/role", async (req) => {
+    const ctx = requireAuth(req);
+    const { id, userId } = GroupAndUserParams.parse(req.params);
+    const { role } = z
+      .object({ role: z.enum(["viewer", "editor", "admin", "super"]) })
+      .parse(req.body);
+    setMemberRole(ctx, id, userId, role);
+    return { ok: true };
   });
 
   app.delete("/groups/:id/members/:userId", async (req, reply) => {

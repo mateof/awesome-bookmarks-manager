@@ -24,6 +24,8 @@ interface FolderRow {
   parentId: string | null;
   shareOrigin: string | null;
   linkedShareId: string | null;
+  mine: boolean;
+  keyGroupId: string | null;
 }
 
 test("importar carpeta compartida: modo enlace (symlink) y modo copia", async ({
@@ -104,11 +106,17 @@ test("importar carpeta compartida: modo enlace (symlink) y modo copia", async ({
   expect(portal.parentId).toBe(destino.id);
   expect(portal.shareOrigin).toBe("Equipo Clarke");
   expect(portal.linkedShareId).toBe(shareId);
-  // Link does NOT copy the subtree: no owned "Docs", no owned "Ref".
-  expect(folders.some((f) => f.name === "Docs")).toBe(false);
-  const bmsAfterLink = await (await mreq.get("/api/bookmarks")).json();
-  expect(bmsAfterLink.length).toBe(0);
-  // The portal is read-only: adding into it is rejected.
+  // Link does not *copy* anything: the subtree the member can now see is the
+  // group's own rows, not duplicates of them. They show up because the group
+  // owns them and this member holds the group key, which is the point of the
+  // whole arrangement, and they are marked as not being theirs.
+  const groupDocs = folders.find((f) => f.name === "Docs");
+  expect(groupDocs).toBeTruthy();
+  expect(groupDocs!.mine).toBe(false);
+  expect(groupDocs!.keyGroupId).toBeTruthy();
+  expect(folders.filter((f) => f.name === "Docs")).toHaveLength(1);
+  // A viewer share stays read-only, and now that is enforced by the role
+  // rather than by the member simply not having the rows.
   const addInto = await mreq.post("/api/bookmarks", {
     data: {
       url: "https://blocked.example/",

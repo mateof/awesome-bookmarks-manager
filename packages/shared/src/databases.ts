@@ -142,6 +142,10 @@ export const DbViewSchema = z.object({
 export type DbView = z.infer<typeof DbViewSchema>;
 
 export const DatabaseSummarySchema = z.object({
+  /** The group that owns it, or null when it is the caller's own. */
+  keyGroupId: z.string().nullable().default(null),
+  /** False for a viewer inside a group: they can read it and nothing more. */
+  canWrite: z.boolean().default(true),
   id: z.string().uuid(),
   name: z.string(),
   rowCount: z.number().int(),
@@ -151,6 +155,10 @@ export const DatabaseSummarySchema = z.object({
 export type DatabaseSummary = z.infer<typeof DatabaseSummarySchema>;
 
 export const DatabaseDetailSchema = z.object({
+  /** The group that owns it, or null when it is the caller's own. */
+  keyGroupId: z.string().nullable().default(null),
+  /** False for a viewer inside a group: they can read it and nothing more. */
+  canWrite: z.boolean().default(true),
   id: z.string().uuid(),
   name: z.string(),
   columns: z.array(DbColumnSchema),

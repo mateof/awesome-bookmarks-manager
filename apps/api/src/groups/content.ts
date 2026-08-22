@@ -17,6 +17,7 @@ import { sanitizeRichText } from "../util/sanitize.js";
 import { readShareAsset, type ShareAssetKind } from "./assets.js";
 import { openGroupField, sealGroupField } from "./encryption.js";
 import { groupKeyFor } from "./keys.js";
+import { openRowField } from "./scope.js";
 
 /** A tag as it travels in a share: by name and colour, never by id. The
  * member has their own tag table and none of the owner's ids mean anything
@@ -202,14 +203,14 @@ function loadBookmark(
   return {
     type: "bookmark",
     id: row.id,
-    title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
-    url: openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt)),
+    title: openRowField({ userId, dek } as AuthedContext, row, "bookmark.title", Buffer.from(row.titleCt)),
+    url: openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt)),
     // Flattened for the same reason as the panels: the group reads a
     // materialised copy and cannot call the owner's database API.
     description: row.descriptionCt
       ? flattenDatabases(
           { userId, dek },
-          openField(dek, userId, "bookmark.description", Buffer.from(row.descriptionCt)),
+          openRowField({ userId, dek } as AuthedContext, row, "bookmark.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     bgColor: row.bgColor ?? null,
@@ -274,13 +275,13 @@ function loadFolder(
   return {
     type: "folder",
     id: row.id,
-    name: openField(dek, userId, "folder.name", Buffer.from(row.nameCt)),
+    name: openRowField({ userId, dek } as AuthedContext, row, "folder.name", Buffer.from(row.nameCt)),
     // Flattened for the same reason as the panels: the group reads a
     // materialised copy and cannot call the owner's database API.
     description: row.descriptionCt
       ? flattenDatabases(
           { userId, dek },
-          openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt)),
+          openRowField({ userId, dek } as AuthedContext, row, "folder.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     bgColor: row.bgColor ?? null,

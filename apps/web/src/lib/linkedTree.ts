@@ -51,6 +51,9 @@ export function useLinkedShareTree(folders: Folder[]): LinkedTree {
         const next = [...trail, sub.id];
         out.push({
           id: sub.id,
+          keyGroupId: null,
+          mine: false,
+          canWrite: true,
           parentId,
           name: sub.name,
           description: null,

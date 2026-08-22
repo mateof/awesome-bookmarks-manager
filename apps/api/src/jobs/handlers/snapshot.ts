@@ -1,5 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { JSDOM } from "jsdom";
+import type { AuthedContext } from "../../auth/session.js";
+import { openRowField } from "../../groups/scope.js";
 import { Readability } from "@mozilla/readability";
 import { request } from "undici";
 import { openField, sealField } from "../../auth/encryption.js";
@@ -156,7 +158,7 @@ export async function runSnapshotJob(
     );
   }
 
-  const url = openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt));
+  const url = openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt));
 
   // Mark as running so the UI shows progress instead of staying on "pending"
   getDb()

@@ -13,18 +13,20 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useNestDrop } from "../dnd.js";
 import { buildFolderPath, useActiveFolderId } from "../hooks.js";
-import { useLinkedShareTree } from "../lib/linkedTree.js";
 import { FolderIconDialog } from "./FolderIconDialog.js";
 
 export function FolderTree({ folders }: { folders: Folder[] }) {
   const { t } = useTranslation();
-  // A linked share's contents are not rows in this account, so without this
-  // the portal draws as a leaf however much is inside it.
-  const linked = useLinkedShareTree(folders);
-  const all = useMemo(
-    () => [...folders, ...linked.folders],
-    [folders, linked.folders],
-  );
+  /**
+   * Shared folders are ordinary rows in this account now.
+   *
+   * The group owns them and the member holds the group key, so they arrive
+   * from `/api/folders` like anything else and the tree draws them without
+   * help. What used to be here was a synthetic tree rebuilt from a share's
+   * payload, because a share's contents were not rows the member had. They
+   * are, and keeping it drew every shared folder twice.
+   */
+  const all = folders;
   const roots = folders.filter((f) => f.parentId === null);
   const activeId = useActiveFolderId();
   // "Home" is a drop target for the root (move a folder/bookmark to top level).
@@ -60,7 +62,6 @@ export function FolderTree({ folders }: { folders: Folder[] }) {
           depth={0}
           activeId={activeId}
           pathIds={pathIds}
-          hrefs={linked.hrefs}
           onEditIcon={setIconTarget}
         />
       ))}

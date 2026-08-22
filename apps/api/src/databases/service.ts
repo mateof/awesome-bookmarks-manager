@@ -20,7 +20,13 @@ import {
 } from "@awesome-bookmarks/shared";
 import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { openField, sealField } from "../auth/encryption.js";
+import {
+  assertCanWrite,
+  canWriteRow,
+  openRowField,
+  sealRowField,
+  visibleTo,
+} from "../groups/scope.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import {
@@ -56,17 +62,35 @@ function touch(databaseId: string) {
     .run();
 }
 
-function ownedDatabase(ctx: AuthedContext, id: string) {
+/**
+ * A database this user may read: their own, or one a group they belong to
+ * owns. Returns the row so callers can seal with whichever key it uses.
+ */
+function readableDatabase(ctx: AuthedContext, id: string) {
   const row = getDb()
     .select()
     .from(databases)
-    .where(and(eq(databases.id, id), eq(databases.userId, ctx.userId)))
+    .where(and(eq(databases.id, id), visibleTo(ctx, databases)))
     .get();
   if (!row) throw NotFound("Database not found");
   return row;
 }
 
+/** The same, but refusing viewers: a group's table is not everyone's to edit. */
+function writableDatabase(ctx: AuthedContext, id: string) {
+  const row = readableDatabase(ctx, id);
+  assertCanWrite(ctx, { userId: row.userId, keyGroupId: row.keyGroupId ?? null });
+  return row;
+}
+
+/** Shorthand for the key a database's own rows are sealed with. */
+function keyOf(ctx: AuthedContext, id: string) {
+  const row = readableDatabase(ctx, id);
+  return { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
+}
+
 function readColumns(ctx: AuthedContext, databaseId: string): DbColumn[] {
+  const keyed = keyOf(ctx, databaseId);
   return getDb()
     .select()
     .from(databaseColumns)
@@ -76,10 +100,10 @@ function readColumns(ctx: AuthedContext, databaseId: string): DbColumn[] {
     .map((c) => ({
       id: c.id,
       kind: c.kind as ColumnKind,
-      name: openField(ctx.dek, ctx.userId, "db.column", c.nameCt),
+      name: openRowField(ctx, keyed, "db.column", c.nameCt),
       config: ColumnConfigSchema.parse(
         c.configCt
-          ? JSON.parse(openField(ctx.dek, ctx.userId, "db.columnConfig", c.configCt))
+          ? JSON.parse(openRowField(ctx, keyed, "db.columnConfig", c.configCt))
           : {},
       ),
       position: c.position,
@@ -87,6 +111,7 @@ function readColumns(ctx: AuthedContext, databaseId: string): DbColumn[] {
 }
 
 function readRows(ctx: AuthedContext, databaseId: string): DbRow[] {
+  const keyed = keyOf(ctx, databaseId);
   return getDb()
     .select()
     .from(databaseRows)
@@ -96,13 +121,14 @@ function readRows(ctx: AuthedContext, databaseId: string): DbRow[] {
     .map((r) => ({
       id: r.id,
       cells: JSON.parse(
-        openField(ctx.dek, ctx.userId, "db.cells", r.cellsCt),
+        openRowField(ctx, keyed, "db.cells", r.cellsCt),
       ) as Record<string, CellValue>,
       position: r.position,
     }));
 }
 
 function readViews(ctx: AuthedContext, databaseId: string): DbView[] {
+  const keyed = keyOf(ctx, databaseId);
   return getDb()
     .select()
     .from(databaseViews)
@@ -112,27 +138,43 @@ function readViews(ctx: AuthedContext, databaseId: string): DbView[] {
     .map((v) => ({
       id: v.id,
       kind: v.kind as DbView["kind"],
-      name: openField(ctx.dek, ctx.userId, "db.view", v.nameCt),
+      name: openRowField(ctx, keyed, "db.view", v.nameCt),
       config: ViewConfigSchema.parse(
         v.configCt
-          ? JSON.parse(openField(ctx.dek, ctx.userId, "db.viewConfig", v.configCt))
+          ? JSON.parse(openRowField(ctx, keyed, "db.viewConfig", v.configCt))
           : {},
       ),
       position: v.position,
     }));
 }
 
+/** Key for a database this user is allowed to change. */
+function writeKey(ctx: AuthedContext, databaseId: string) {
+  const row = writableDatabase(ctx, databaseId);
+  return { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
+}
+
 export function listDatabases(ctx: AuthedContext): DatabaseSummary[] {
   const rows = getDb()
     .select()
     .from(databases)
-    .where(eq(databases.userId, ctx.userId))
+    .where(visibleTo(ctx, databases))
     .orderBy(asc(databases.createdAt), asc(databases.id))
     .all();
 
   return rows.map((d) => ({
     id: d.id,
-    name: openField(ctx.dek, ctx.userId, "db.name", d.nameCt),
+    keyGroupId: d.keyGroupId ?? null,
+    canWrite: canWriteRow(ctx, {
+      userId: d.userId,
+      keyGroupId: d.keyGroupId ?? null,
+    }),
+    name: openRowField(
+      ctx,
+      { userId: d.userId, keyGroupId: d.keyGroupId ?? null },
+      "db.name",
+      d.nameCt,
+    ),
     rowCount: getDb()
       .select({ id: databaseRows.id })
       .from(databaseRows)
@@ -144,10 +186,13 @@ export function listDatabases(ctx: AuthedContext): DatabaseSummary[] {
 }
 
 export function getDatabase(ctx: AuthedContext, id: string): DatabaseDetail {
-  const d = ownedDatabase(ctx, id);
+  const d = readableDatabase(ctx, id);
+  const keyed = { userId: d.userId, keyGroupId: d.keyGroupId ?? null };
   return {
     id: d.id,
-    name: openField(ctx.dek, ctx.userId, "db.name", d.nameCt),
+    keyGroupId: d.keyGroupId ?? null,
+    canWrite: canWriteRow(ctx, keyed),
+    name: openRowField(ctx, keyed, "db.name", d.nameCt),
     columns: readColumns(ctx, id),
     rows: readRows(ctx, id),
     views: readViews(ctx, id),
@@ -167,12 +212,16 @@ export function createDatabase(
   name: string,
 ): DatabaseDetail {
   const id = randomUUID();
+  // A new database is always personal. Sharing it is a separate, deliberate
+  // act, because a table can live in several notes that are not shared with
+  // the same people.
+  const keyed = { userId: ctx.userId, keyGroupId: null };
   getDb()
     .insert(databases)
     .values({
       id,
       userId: ctx.userId,
-      nameCt: sealField(ctx.dek, ctx.userId, "db.name", name),
+      nameCt: sealRowField(ctx, keyed, "db.name", name),
     })
     .run();
 
@@ -200,11 +249,12 @@ export function renameDatabase(
   id: string,
   name: string,
 ): DatabaseSummary {
-  ownedDatabase(ctx, id);
+  const row = writableDatabase(ctx, id);
+  const keyed = { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
   getDb()
     .update(databases)
     .set({
-      nameCt: sealField(ctx.dek, ctx.userId, "db.name", name),
+      nameCt: sealRowField(ctx, keyed, "db.name", name),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(databases.id, id))
@@ -214,7 +264,7 @@ export function renameDatabase(
 }
 
 export function deleteDatabase(ctx: AuthedContext, id: string): void {
-  ownedDatabase(ctx, id);
+  writableDatabase(ctx, id);
   // The child tables cascade, but SQLite only honours that with foreign keys
   // switched on, which is not something to depend on for correctness here.
   getDb().delete(databaseRows).where(eq(databaseRows.databaseId, id)).run();
@@ -230,7 +280,7 @@ export function addColumn(
   databaseId: string,
   body: CreateColumnBody,
 ): DbColumn {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const existing = readColumns(ctx, databaseId);
   if (existing.length >= MAX_COLUMNS) {
     throw BadRequest(`Una base de datos admite ${MAX_COLUMNS} columnas como mucho`);
@@ -244,12 +294,8 @@ export function addColumn(
       databaseId,
       userId: ctx.userId,
       kind: body.kind,
-      nameCt: sealField(ctx.dek, ctx.userId, "db.column", body.name),
-      configCt: sealField(
-        ctx.dek,
-        ctx.userId,
-        "db.columnConfig",
-        JSON.stringify(config),
+      nameCt: sealRowField(ctx, keyed, "db.column", body.name),
+      configCt: sealRowField(ctx, keyed, "db.columnConfig", JSON.stringify(config),
       ),
       position: existing.length,
     })
@@ -264,21 +310,17 @@ export function updateColumn(
   columnId: string,
   body: UpdateColumnBody,
 ): DbColumn {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const current = readColumns(ctx, databaseId).find((c) => c.id === columnId);
   if (!current) throw NotFound("Column not found");
 
   const patch: Record<string, unknown> = {};
   if (body.name !== undefined) {
-    patch.nameCt = sealField(ctx.dek, ctx.userId, "db.column", body.name);
+    patch.nameCt = sealRowField(ctx, keyed, "db.column", body.name);
   }
   if (body.config !== undefined) {
     const merged = ColumnConfigSchema.parse({ ...current.config, ...body.config });
-    patch.configCt = sealField(
-      ctx.dek,
-      ctx.userId,
-      "db.columnConfig",
-      JSON.stringify(merged),
+    patch.configCt = sealRowField(ctx, keyed, "db.columnConfig", JSON.stringify(merged),
     );
   }
   if (body.position !== undefined) patch.position = body.position;
@@ -299,7 +341,7 @@ export function deleteColumn(
   databaseId: string,
   columnId: string,
 ): void {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   getDb().delete(databaseColumns).where(eq(databaseColumns.id, columnId)).run();
 
   // Drop the column's values from every row as well. Leaving them would be an
@@ -311,7 +353,7 @@ export function deleteColumn(
     getDb()
       .update(databaseRows)
       .set({
-        cellsCt: sealField(ctx.dek, ctx.userId, "db.cells", JSON.stringify(rest)),
+        cellsCt: sealRowField(ctx, keyed, "db.cells", JSON.stringify(rest)),
       })
       .where(eq(databaseRows.id, row.id))
       .run();
@@ -328,7 +370,7 @@ export function deleteColumn(
       cfg.sorts.some((s) => s.columnId === columnId) ||
       cfg.hiddenColumnIds.includes(columnId);
     if (!stale) continue;
-    writeViewConfig(ctx, view.id, {
+    writeViewConfig(ctx, databaseId, view.id, {
       ...cfg,
       groupByColumnId: cfg.groupByColumnId === columnId ? null : cfg.groupByColumnId,
       titleColumnId: cfg.titleColumnId === columnId ? null : cfg.titleColumnId,
@@ -347,7 +389,7 @@ export function addRow(
   databaseId: string,
   body: CreateRowBody,
 ): DbRow {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const rows = readRows(ctx, databaseId);
   if (rows.length >= MAX_ROWS) {
     throw BadRequest(
@@ -362,7 +404,7 @@ export function addRow(
       id,
       databaseId,
       userId: ctx.userId,
-      cellsCt: sealField(ctx.dek, ctx.userId, "db.cells", JSON.stringify(cells)),
+      cellsCt: sealRowField(ctx, keyed, "db.cells", JSON.stringify(cells)),
       position: rows.length,
     })
     .run();
@@ -376,7 +418,7 @@ export function updateRow(
   rowId: string,
   body: UpdateRowBody,
 ): DbRow {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const current = readRows(ctx, databaseId).find((r) => r.id === rowId);
   if (!current) throw NotFound("Row not found");
 
@@ -389,11 +431,7 @@ export function updateRow(
     for (const [k, v] of Object.entries(body.cells)) {
       if (v === null || v === "") delete merged[k];
     }
-    patch.cellsCt = sealField(
-      ctx.dek,
-      ctx.userId,
-      "db.cells",
-      JSON.stringify(merged),
+    patch.cellsCt = sealRowField(ctx, keyed, "db.cells", JSON.stringify(merged),
     );
   }
   if (body.position !== undefined) patch.position = body.position;
@@ -408,7 +446,7 @@ export function deleteRow(
   databaseId: string,
   rowId: string,
 ): void {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   getDb().delete(databaseRows).where(eq(databaseRows.id, rowId)).run();
   touch(databaseId);
 }
@@ -419,7 +457,7 @@ export function reorderRows(
   databaseId: string,
   order: string[],
 ): void {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   order.forEach((rowId, i) => {
     getDb()
       .update(databaseRows)
@@ -432,15 +470,17 @@ export function reorderRows(
 
 // --- views -----------------------------------------------------------------
 
-function writeViewConfig(ctx: AuthedContext, viewId: string, config: ViewConfig) {
+function writeViewConfig(
+  ctx: AuthedContext,
+  databaseId: string,
+  viewId: string,
+  config: ViewConfig,
+) {
+  const keyed = writeKey(ctx, databaseId);
   getDb()
     .update(databaseViews)
     .set({
-      configCt: sealField(
-        ctx.dek,
-        ctx.userId,
-        "db.viewConfig",
-        JSON.stringify(config),
+      configCt: sealRowField(ctx, keyed, "db.viewConfig", JSON.stringify(config),
       ),
     })
     .where(eq(databaseViews.id, viewId))
@@ -452,7 +492,7 @@ export function addView(
   databaseId: string,
   body: CreateViewBody,
 ): DbView {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const existing = readViews(ctx, databaseId);
   const id = randomUUID();
   const config = ViewConfigSchema.parse({});
@@ -463,12 +503,8 @@ export function addView(
       databaseId,
       userId: ctx.userId,
       kind: body.kind,
-      nameCt: sealField(ctx.dek, ctx.userId, "db.view", body.name),
-      configCt: sealField(
-        ctx.dek,
-        ctx.userId,
-        "db.viewConfig",
-        JSON.stringify(config),
+      nameCt: sealRowField(ctx, keyed, "db.view", body.name),
+      configCt: sealRowField(ctx, keyed, "db.viewConfig", JSON.stringify(config),
       ),
       position: existing.length,
     })
@@ -483,20 +519,21 @@ export function updateView(
   viewId: string,
   body: UpdateViewBody,
 ): DbView {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const current = readViews(ctx, databaseId).find((v) => v.id === viewId);
   if (!current) throw NotFound("View not found");
 
   if (body.name !== undefined) {
     getDb()
       .update(databaseViews)
-      .set({ nameCt: sealField(ctx.dek, ctx.userId, "db.view", body.name) })
+      .set({ nameCt: sealRowField(ctx, keyed, "db.view", body.name) })
       .where(eq(databaseViews.id, viewId))
       .run();
   }
   if (body.config !== undefined) {
     writeViewConfig(
       ctx,
+      databaseId,
       viewId,
       ViewConfigSchema.parse({ ...current.config, ...body.config }),
     );
@@ -510,7 +547,7 @@ export function deleteView(
   databaseId: string,
   viewId: string,
 ): void {
-  ownedDatabase(ctx, databaseId);
+  const keyed = writeKey(ctx, databaseId);
   const views = readViews(ctx, databaseId);
   if (views.length <= 1) {
     throw BadRequest("Una base de datos necesita al menos una vista");
@@ -592,12 +629,15 @@ export function importDatabase(
   source: ImportableDatabase,
 ): string {
   const id = randomUUID();
+  // An imported copy is personal, whatever the original was: importing is not
+  // a way to gain access to somebody's group.
+  const keyed = { userId: ctx.userId, keyGroupId: null };
   getDb()
     .insert(databases)
     .values({
       id,
       userId: ctx.userId,
-      nameCt: sealField(ctx.dek, ctx.userId, "db.name", source.name),
+      nameCt: sealRowField(ctx, keyed, "db.name", source.name),
     })
     .run();
 

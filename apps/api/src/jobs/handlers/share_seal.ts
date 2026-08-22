@@ -1,5 +1,7 @@
 import { aeadEncrypt, deriveShareKey } from "@awesome-bookmarks/crypto";
 import { and, eq, isNull } from "drizzle-orm";
+import type { AuthedContext } from "../../auth/session.js";
+import { openRowField } from "../../groups/scope.js";
 import { openField } from "../../auth/encryption.js";
 import { getDb } from "../../db/client.js";
 import {
@@ -78,8 +80,8 @@ function buildBookmarkPayload(
   return {
     type: "bookmark",
     id: row.id,
-    title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
-    url: openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt)),
+    title: openRowField({ userId, dek } as AuthedContext, row, "bookmark.title", Buffer.from(row.titleCt)),
+    url: openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt)),
     description: row.descriptionCt
       ? openField(
           dek,
@@ -136,7 +138,7 @@ function buildFolderPayload(
   return {
     type: "folder",
     id: row.id,
-    name: openField(dek, userId, "folder.name", Buffer.from(row.nameCt)),
+    name: openRowField({ userId, dek } as AuthedContext, row, "folder.name", Buffer.from(row.nameCt)),
     description: row.descriptionCt
       ? openField(
           dek,

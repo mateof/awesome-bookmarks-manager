@@ -1,5 +1,7 @@
 import { aeadEncrypt } from "@awesome-bookmarks/crypto";
 import { and, eq, isNull } from "drizzle-orm";
+import type { AuthedContext } from "../../auth/session.js";
+import { openRowField } from "../../groups/scope.js";
 import { parse as parseHtml } from "node-html-parser";
 import { join } from "node:path";
 import { openField } from "../../auth/encryption.js";
@@ -37,7 +39,7 @@ export async function runFaviconJob(
     .get();
   if (!row) throw NotFound("Bookmark not found");
   if (row.iconBlobPath && row.iconBlobPath.endsWith("/user-icon.bin")) return;
-  const url = openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt));
+  const url = openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt));
 
   const result = await fetchFaviconBytes(url);
   if (!result) return;

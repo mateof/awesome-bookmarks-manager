@@ -1,7 +1,14 @@
 import type { Bookmark, SnapshotStatus } from "@awesome-bookmarks/shared";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { openField, sealField } from "../auth/encryption.js";
+import { groupOfFolder } from "../folders/service.js";
+import {
+  assertCanWrite,
+  canWriteRow,
+  openRowField,
+  sealRowField,
+  visibleTo,
+} from "../groups/scope.js";
 import { getAutoSnapshots } from "../auth/service.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb, getSqlite } from "../db/client.js";
@@ -31,6 +38,9 @@ function bookmarkSnapshot(b: Bookmark): BookmarkSnapshot {
 
 interface BookmarkRow {
   id: string;
+  userId: string;
+  /** Null when sealed with the owner's DEK; a group id when the group owns it. */
+  keyGroupId: string | null;
   folderId: string | null;
   titleCt: Buffer;
   urlCt: Buffer;
@@ -58,11 +68,14 @@ function decode(
 ): Bookmark {
   return {
     id: row.id,
+    keyGroupId: row.keyGroupId,
+    canWrite: canWriteRow(ctx, row),
+    mine: row.userId === ctx.userId,
     folderId: row.folderId,
-    title: openField(ctx.dek, ctx.userId, "bookmark.title", row.titleCt),
-    url: openField(ctx.dek, ctx.userId, "bookmark.url", row.urlCt),
+    title: openRowField(ctx, row, "bookmark.title", row.titleCt),
+    url: openRowField(ctx, row, "bookmark.url", row.urlCt),
     description: row.descriptionCt
-      ? openField(ctx.dek, ctx.userId, "bookmark.description", row.descriptionCt)
+      ? openRowField(ctx, row, "bookmark.description", row.descriptionCt)
       : null,
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
@@ -106,7 +119,9 @@ function ensureFolderExists(ctx: AuthedContext, folderId: string | null) {
     .where(
       and(
         eq(folders.id, folderId),
-        eq(folders.userId, ctx.userId),
+        // A folder the group owns counts: putting a bookmark into a shared
+        // folder is the ordinary thing an editor does.
+        visibleTo(ctx, folders),
         isNull(folders.deletedAt),
       ),
     )
@@ -132,7 +147,7 @@ function nextPosition(ctx: AuthedContext, folderId: string | null): number {
     .from(bookmarks)
     .where(
       and(
-        eq(bookmarks.userId, ctx.userId),
+        visibleTo(ctx, bookmarks),
         folderId === null
           ? isNull(bookmarks.folderId)
           : eq(bookmarks.folderId, folderId),
@@ -205,7 +220,7 @@ function decodeAllBookmarks(ctx: AuthedContext): Bookmark[] {
     .select()
     .from(bookmarks)
     .where(
-      and(eq(bookmarks.userId, ctx.userId), isNull(bookmarks.deletedAt)),
+      and(visibleTo(ctx, bookmarks), isNull(bookmarks.deletedAt)),
     )
     .orderBy(asc(bookmarks.position), desc(bookmarks.createdAt))
     .all();
@@ -221,6 +236,8 @@ function decodeAllBookmarks(ctx: AuthedContext): Bookmark[] {
           ctx,
           {
             id: r.id,
+            userId: r.userId,
+            keyGroupId: r.keyGroupId ?? null,
             folderId: r.folderId,
             titleCt: Buffer.from(r.titleCt),
             urlCt: Buffer.from(r.urlCt),
@@ -300,7 +317,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
     .where(
       and(
         eq(bookmarks.id, id),
-        eq(bookmarks.userId, ctx.userId),
+        visibleTo(ctx, bookmarks),
         isNull(bookmarks.deletedAt),
       ),
     )
@@ -311,6 +328,8 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
     ctx,
     {
       id: row.id,
+      userId: row.userId,
+      keyGroupId: row.keyGroupId ?? null,
       folderId: row.folderId,
       titleCt: Buffer.from(row.titleCt),
       urlCt: Buffer.from(row.urlCt),
@@ -367,20 +386,21 @@ export function createBookmark(
 
   const db = getDb();
   const cleanDescription = sanitizeRichText(input.description ?? null);
+  // Inherits the folder's key, so a bookmark created inside a shared folder is
+  // readable by the group from the moment it exists.
+  const keyGroupId = folderId ? groupOfFolder(ctx, folderId) : null;
+  const keyed = { userId: ctx.userId, keyGroupId };
+  if (keyGroupId) assertCanWrite(ctx, keyed);
   db.insert(bookmarks)
     .values({
       id,
       userId: ctx.userId,
+      keyGroupId,
       folderId,
-      titleCt: sealField(ctx.dek, ctx.userId, "bookmark.title", title),
-      urlCt: sealField(ctx.dek, ctx.userId, "bookmark.url", input.url),
+      titleCt: sealRowField(ctx, keyed, "bookmark.title", title),
+      urlCt: sealRowField(ctx, keyed, "bookmark.url", input.url),
       descriptionCt: cleanDescription
-        ? sealField(
-            ctx.dek,
-            ctx.userId,
-            "bookmark.description",
-            cleanDescription,
-          )
+        ? sealRowField(ctx, keyed, "bookmark.description", cleanDescription)
         : null,
       urlHash: urlHash(input.url, ctx.userId),
       bgColor: input.bgColor ?? null,
@@ -441,6 +461,8 @@ export function updateBookmark(
 ): Bookmark {
   const existing = getBookmark(ctx, id);
   if (input.folderId !== undefined) ensureFolderExists(ctx, input.folderId);
+  const keyed = { userId: ctx.userId, keyGroupId: existing.keyGroupId ?? null };
+  assertCanWrite(ctx, keyed);
   if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
 
   const update: Record<string, unknown> = {
@@ -449,16 +471,11 @@ export function updateBookmark(
   };
   if (input.folderId !== undefined) update.folderId = input.folderId;
   if (input.title !== undefined) {
-    update.titleCt = sealField(
-      ctx.dek,
-      ctx.userId,
-      "bookmark.title",
-      input.title,
-    );
+    update.titleCt = sealRowField(ctx, keyed, "bookmark.title", input.title);
   }
   let urlChanged = false;
   if (input.url !== undefined && input.url !== existing.url) {
-    update.urlCt = sealField(ctx.dek, ctx.userId, "bookmark.url", input.url);
+    update.urlCt = sealRowField(ctx, keyed, "bookmark.url", input.url);
     update.urlHash = urlHash(input.url, ctx.userId);
     // Only flag the bookmark as "pending" if we're actually going to enqueue
     // a job. Otherwise it would sit in pending forever.
@@ -468,7 +485,7 @@ export function updateBookmark(
   if (input.description !== undefined) {
     const clean = sanitizeRichText(input.description);
     update.descriptionCt = clean
-      ? sealField(ctx.dek, ctx.userId, "bookmark.description", clean)
+      ? sealRowField(ctx, keyed, "bookmark.description", clean)
       : null;
   }
   if (input.textTone !== undefined) {
@@ -545,7 +562,7 @@ function assertBookmarkOwnedAndAlive(ctx: AuthedContext, id: string) {
     .where(
       and(
         eq(bookmarks.id, id),
-        eq(bookmarks.userId, ctx.userId),
+        visibleTo(ctx, bookmarks),
         isNull(bookmarks.deletedAt),
       ),
     )

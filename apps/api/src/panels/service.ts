@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from "uuid";
 import { masterUnwrap, masterWrap, openField } from "../auth/encryption.js";
 import { flattenDatabases } from "../databases/flatten.js";
 import type { AuthedContext } from "../auth/session.js";
+import { openRowField } from "../groups/scope.js";
 import { getDb } from "../db/client.js";
 import {
   bookmarkTags,
@@ -81,14 +82,14 @@ function buildBookmark(
   }
   return {
     id: row.id,
-    title: openField(dek, userId, "bookmark.title", Buffer.from(row.titleCt)),
-    url: openField(dek, userId, "bookmark.url", Buffer.from(row.urlCt)),
+    title: openRowField({ userId, dek } as AuthedContext, row, "bookmark.title", Buffer.from(row.titleCt)),
+    url: openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt)),
     // Flattened: a published panel is a materialised copy read without a
     // session, so a live database block would render as an empty box.
     description: row.descriptionCt
       ? flattenDatabases(
           { userId, dek },
-          openField(dek, userId, "bookmark.description", Buffer.from(row.descriptionCt)),
+          openRowField({ userId, dek } as AuthedContext, row, "bookmark.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     tags: bookmarkTagList(row.id),
@@ -161,13 +162,13 @@ function buildFolder(
     .all();
   return {
     id: row.id,
-    name: openField(dek, userId, "folder.name", Buffer.from(row.nameCt)),
+    name: openRowField({ userId, dek } as AuthedContext, row, "folder.name", Buffer.from(row.nameCt)),
     // Flattened: a published panel is a materialised copy read without a
     // session, so a live database block would render as an empty box.
     description: row.descriptionCt
       ? flattenDatabases(
           { userId, dek },
-          openField(dek, userId, "folder.description", Buffer.from(row.descriptionCt)),
+          openRowField({ userId, dek } as AuthedContext, row, "folder.description", Buffer.from(row.descriptionCt)),
         )
       : null,
     bookmarks: childBookmarks.map((b) => buildBookmark(userId, dek, b)),

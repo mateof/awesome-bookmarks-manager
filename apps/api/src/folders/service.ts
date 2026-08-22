@@ -2,7 +2,13 @@ import type { Folder } from "@awesome-bookmarks/shared";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import type { AuthedContext } from "../auth/session.js";
-import { openField, sealField } from "../auth/encryption.js";
+import {
+  assertCanWrite,
+  canWriteRow,
+  openRowField,
+  sealRowField,
+  visibleTo,
+} from "../groups/scope.js";
 import { getDb, getSqlite } from "../db/client.js";
 import { cachedFolders, invalidate } from "../db/decoded-cache.js";
 import { bookmarks, folderTags, folders, tags } from "../db/schema.js";
@@ -23,6 +29,9 @@ function folderSnapshot(f: Folder): FolderSnapshot {
 
 interface FolderRow {
   id: string;
+  userId: string;
+  /** Null when sealed with the owner's DEK; a group id when the group owns it. */
+  keyGroupId: string | null;
   parentId: string | null;
   nameCt: Buffer;
   descriptionCt: Buffer | null;
@@ -44,9 +53,12 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
   return {
     id: row.id,
     parentId: row.parentId,
-    name: openField(ctx.dek, ctx.userId, "folder.name", row.nameCt),
+    keyGroupId: row.keyGroupId,
+    canWrite: canWriteRow(ctx, row),
+    mine: row.userId === ctx.userId,
+    name: openRowField(ctx, row, "folder.name", row.nameCt),
     description: row.descriptionCt
-      ? openField(ctx.dek, ctx.userId, "folder.description", row.descriptionCt)
+      ? openRowField(ctx, row, "folder.description", row.descriptionCt)
       : null,
     iconBlobPath: row.iconBlobPath,
     imageBlobPath: row.imageBlobPath,
@@ -91,7 +103,7 @@ function decodeAllFolders(ctx: AuthedContext): Folder[] {
   const rows = getDb()
     .select()
     .from(folders)
-    .where(and(eq(folders.userId, ctx.userId), isNull(folders.deletedAt)))
+    .where(and(visibleTo(ctx, folders), isNull(folders.deletedAt)))
     .orderBy(asc(folders.position), asc(folders.createdAt))
     .all();
   const tagMap = loadTagIdsForFolders(rows.map((r) => r.id));
@@ -103,6 +115,8 @@ function decodeAllFolders(ctx: AuthedContext): Folder[] {
           ctx,
           {
             id: r.id,
+            userId: r.userId,
+            keyGroupId: r.keyGroupId ?? null,
             parentId: r.parentId,
             nameCt: Buffer.from(r.nameCt),
             descriptionCt: r.descriptionCt ? Buffer.from(r.descriptionCt) : null,
@@ -163,7 +177,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
     .where(
       and(
         eq(folders.id, id),
-        eq(folders.userId, ctx.userId),
+        visibleTo(ctx, folders),
         isNull(folders.deletedAt),
       ),
     )
@@ -174,6 +188,8 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
     ctx,
     {
       id: row.id,
+      userId: row.userId,
+      keyGroupId: row.keyGroupId ?? null,
       parentId: row.parentId,
       nameCt: Buffer.from(row.nameCt),
       descriptionCt: row.descriptionCt ? Buffer.from(row.descriptionCt) : null,
@@ -202,7 +218,7 @@ function ensureParentExists(ctx: AuthedContext, parentId: string | null) {
     .where(
       and(
         eq(folders.id, parentId),
-        eq(folders.userId, ctx.userId),
+        visibleTo(ctx, folders),
         isNull(folders.deletedAt),
       ),
     )
@@ -228,7 +244,7 @@ function nextPosition(ctx: AuthedContext, parentId: string | null): number {
     .from(folders)
     .where(
       and(
-        eq(folders.userId, ctx.userId),
+        visibleTo(ctx, folders),
         parentId === null
           ? isNull(folders.parentId)
           : eq(folders.parentId, parentId),
@@ -237,6 +253,26 @@ function nextPosition(ctx: AuthedContext, parentId: string | null): number {
     )
     .all();
   return rows.reduce((max, r) => Math.max(max, r.position), -1) + 1;
+}
+
+/**
+ * The group a folder belongs to, or null when it is the user's own.
+ *
+ * Read straight from the row rather than inferred from the tree: a subtree is
+ * marked in full when it is shared, so every row already carries the answer
+ * and walking parents would only be a slower way to get it wrong.
+ */
+export function groupOfFolder(
+  ctx: AuthedContext,
+  folderId: string,
+): string | null {
+  const row = getDb()
+    .select({ keyGroupId: folders.keyGroupId })
+    .from(folders)
+    .where(eq(folders.id, folderId))
+    .get();
+  void ctx;
+  return row?.keyGroupId ?? null;
 }
 
 export function createFolder(
@@ -264,14 +300,22 @@ export function createFolder(
   const id = input.id ?? uuidv4();
   const db = getDb();
   const cleanDescription = sanitizeRichText(input.description ?? null);
+  // A child inherits the key of its parent. Creating a folder inside a shared
+  // one has to produce something the whole group can read, and inheriting is
+  // the only rule that keeps a subtree consistently sealed without asking the
+  // user which key they meant.
+  const keyGroupId = parentId ? groupOfFolder(ctx, parentId) : null;
+  const keyed = { userId: ctx.userId, keyGroupId };
+  if (keyGroupId) assertCanWrite(ctx, keyed);
   db.insert(folders)
     .values({
       id,
       userId: ctx.userId,
+      keyGroupId,
       parentId,
-      nameCt: sealField(ctx.dek, ctx.userId, "folder.name", input.name),
+      nameCt: sealRowField(ctx, keyed, "folder.name", input.name),
       descriptionCt: cleanDescription
-        ? sealField(ctx.dek, ctx.userId, "folder.description", cleanDescription)
+        ? sealRowField(ctx, keyed, "folder.description", cleanDescription)
         : null,
       bgColor: input.bgColor ?? null,
       textTone: input.textTone ?? null,
@@ -311,6 +355,12 @@ export function updateFolder(
   },
 ): Folder {
   const existing = getFolder(ctx, id);
+  // Sealed with whatever key the row already uses, and refused outright when
+  // this user may read the group's content but not change it.
+  // `userId` only matters for personal rows, and getFolder has already
+  // established this caller may see it; for group rows the check is the role.
+  const keyed = { userId: ctx.userId, keyGroupId: existing.keyGroupId ?? null };
+  assertCanWrite(ctx, keyed);
   if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
 
   const update: Record<string, unknown> = {
@@ -318,12 +368,12 @@ export function updateFolder(
     rev: existing.rev + 1,
   };
   if (input.name !== undefined) {
-    update.nameCt = sealField(ctx.dek, ctx.userId, "folder.name", input.name);
+    update.nameCt = sealRowField(ctx, keyed, "folder.name", input.name);
   }
   if (input.description !== undefined) {
     const clean = sanitizeRichText(input.description);
     update.descriptionCt = clean
-      ? sealField(ctx.dek, ctx.userId, "folder.description", clean)
+      ? sealRowField(ctx, keyed, "folder.description", clean)
       : null;
   }
   if (input.textTone !== undefined) {
@@ -386,7 +436,7 @@ function assertFolderOwnedAndAlive(ctx: AuthedContext, id: string) {
     .where(
       and(
         eq(folders.id, id),
-        eq(folders.userId, ctx.userId),
+        visibleTo(ctx, folders),
         isNull(folders.deletedAt),
       ),
     )

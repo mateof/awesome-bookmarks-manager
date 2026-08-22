@@ -8,6 +8,16 @@ const BgColor = z
   .regex(/^(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))$/, "Invalid color");
 
 export const FolderSchema = z.object({
+  /**
+   * The group that owns this row, when it is shared content rather than the
+   * caller's own. Present so the client can tell "mine" from "the group's"
+   * without a second request, and so an editor knows a row is theirs to change.
+   */
+  keyGroupId: z.string().nullable().default(null),
+  /** True when this row is the caller's own rather than a group's. */
+  mine: z.boolean().default(true),
+  /** Whether the caller may change it. False for a viewer inside a group. */
+  canWrite: z.boolean().default(true),
   id: z.string().uuid(),
   parentId: z.string().uuid().nullable(),
   name: z.string(),

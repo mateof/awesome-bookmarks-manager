@@ -39,6 +39,9 @@ export function asFolder(
 ): Folder {
   return {
     id: node.id,
+    keyGroupId: null,
+    mine: false,
+    canWrite: true,
     parentId,
     name: node.name,
     description: node.description,
@@ -67,6 +70,9 @@ export function asBookmark(
 ): Bookmark {
   return {
     id: node.id,
+    keyGroupId: null,
+    mine: false,
+    canWrite: true,
     folderId,
     title: node.title,
     url: node.url,

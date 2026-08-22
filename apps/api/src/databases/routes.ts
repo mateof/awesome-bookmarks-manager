@@ -11,6 +11,8 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { adoptDatabaseIntoGroup } from "../groups/adopt.js";
+import { requireRole } from "../groups/roles.js";
 import {
   addColumn,
   addRow,
@@ -60,6 +62,28 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     deleteDatabase(ctx, IdParam.parse(req.params).id);
     reply.code(204);
+  });
+
+  /**
+   * Share a database with a group, on its own.
+   *
+   * Separate from sharing a folder because a database is its own entity: the
+   * same table can be embedded in several folders and bookmarks, and those are
+   * not necessarily shared with the same people. Sharing the table is what
+   * gives the group access to it, not sharing a note that happens to mention
+   * it.
+   */
+  app.post("/databases/:id/share", async (req) => {
+    const ctx = requireAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const { groupId } = z
+      .object({ groupId: z.string().uuid() })
+      .parse(req.body);
+    // Membership is what entitles you to hand something to a group; the role
+    // check for *writing* the table happens on every write afterwards.
+    requireRole(ctx, groupId, "editor");
+    const moved = adoptDatabaseIntoGroup(ctx, id, groupId);
+    return { shared: moved, groupId };
   });
 
   // --- columns -------------------------------------------------------------
