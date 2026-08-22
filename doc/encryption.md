@@ -72,6 +72,28 @@ A group may opt into `recoverable`, which additionally keeps a
 There is no third option, and pretending otherwise would be dishonest: a key
 the server can use to rescue you is a key the server can use.
 
+### Reading what an older release wrote
+
+The master-wrapped copy exists in two shapes, because its meaning changed:
+
+| AAD | Written by | Meaning then |
+|---|---|---|
+| `group\|<id>` | up to v0.77 | the *only* copy of the key |
+| `master\|<id>` | v0.78 onwards | the recoverable extra copy |
+
+Both are opened on read, oldest first, since the old shape is the one an
+upgraded instance is full of. Reading only the current shape made every group
+created before v0.78 unopenable, which surfaced as "Unsupported state or unable
+to authenticate data" the moment anybody shared into one. Writes use one shape.
+
+The general form of that mistake is worth naming, because it has now caused two
+production incidents: **a fresh install never exercises the upgrade path.** The
+end-to-end suite starts from an empty data directory, so it only ever handles
+rows sealed the way the current version seals them. Tests that seed the *old*
+shape and then operate on it are the only ones that cover the case anybody with
+existing data actually hits (`groups/__tests__/legacyShare.test.ts`,
+`db/__tests__/bootstrap.migration.test.ts`).
+
 ## Key scopes: content shared with more than one group
 
 Sealing shared content with the *group's* key works until the same item is
