@@ -408,7 +408,6 @@ export function ensureSchema() {
       ON group_member_keys(user_id);
   `);
   tryAddColumn("database_views", "block_id", "TEXT");
-  relaxGroupDekNotNull();
   tryAddColumn("folders", "key_group_id", "TEXT");
   tryAddColumn("bookmarks", "key_group_id", "TEXT");
   tryAddColumn("databases", "key_group_id", "TEXT");
@@ -419,6 +418,10 @@ export function ensureSchema() {
   `);
   tryAddColumn("groups", "key_version", "INTEGER NOT NULL DEFAULT 1");
   tryAddColumn("groups", "recoverable", "INTEGER NOT NULL DEFAULT 0");
+  // After the two ALTERs above, never before: the rebuild copies those columns
+  // across, so running it first fails with "no such column: key_version" on
+  // every database that predates them. Which is every existing install.
+  relaxGroupDekNotNull();
   tryAddColumn("users", "kx_public", "BLOB");
   tryAddColumn("users", "kx_private_ct", "BLOB");
   tryAddColumn("attachments", "description_ct", "BLOB");
@@ -542,6 +545,13 @@ function relaxGroupDekNotNull() {
   const col = cols.find((c) => c.name === "group_dek_wrapped");
   if (!col || col.notnull === 0) return;
 
+  // Read what the old table actually has instead of assuming. A column added
+  // by a later migration step may not be there yet, and referencing it in the
+  // SELECT is what turns this into a crash loop on somebody's server.
+  const have = new Set(cols.map((c) => c.name));
+  const copied = (name: string, fallback: string) =>
+    have.has(name) ? name : fallback;
+
   sql.pragma("foreign_keys = OFF");
   try {
     sql.exec(`
@@ -559,7 +569,9 @@ function relaxGroupDekNotNull() {
       INSERT INTO groups_migrated
         (id, owner_id, name, description, group_dek_wrapped, key_version, recoverable, created_at)
       SELECT id, owner_id, name, description, group_dek_wrapped,
-             COALESCE(key_version, 1), COALESCE(recoverable, 0), created_at
+             COALESCE(${copied("key_version", "1")}, 1),
+             COALESCE(${copied("recoverable", "0")}, 0),
+             created_at
       FROM groups;
       DROP TABLE groups;
       ALTER TABLE groups_migrated RENAME TO groups;

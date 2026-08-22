@@ -15,8 +15,41 @@ permissions:
   packages: write
 
 jobs:
+  # Typecheck and unit tests before anything is published.
+  #
+  # This job exists because a migration bug shipped: the image built fine, the
+  # workflow went green, and every server with existing data failed to boot.
+  # "CI passed" meant "the image built" and nothing else.
+  check:
+    name: typecheck and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm exec tsc -b packages/crypto packages/shared apps/api apps/web
+
+      - name: Unit tests
+        run: pnpm -r --filter "./packages/**" --filter "./apps/api" test
+
   build:
     name: build single image
+    needs: check
     runs-on: ubuntu-latest
 
     steps:
