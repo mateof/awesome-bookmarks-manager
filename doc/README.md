@@ -1,7 +1,8 @@
 # AwesomeBookmarks — Documentation
 
-Programmatic access to a self-hosted AwesomeBookmarks instance, for native
-apps, scripts and AI assistants.
+How a self-hosted AwesomeBookmarks instance works from the outside: the end-user
+walkthrough, the security and encryption model, and programmatic access for
+native apps, scripts and AI assistants.
 
 ## Contents
 
@@ -12,6 +13,9 @@ apps, scripts and AI assistants.
   Opera and Firefox, configure it, and use the folder picker. In Spanish.
 - [authentication.md](./authentication.md) — API tokens, the security model
   behind headless access, and how encryption still applies.
+- [encryption.md](./encryption.md) — which key protects what, how a group's key
+  reaches its members, the five permission levels, and what rotating a key does
+  and does not achieve.
 - [api.md](./api.md) — the public REST API (`/api/v1`): every endpoint,
   request/response shapes and `curl` examples.
 - [mcp.md](./mcp.md) — the Model Context Protocol server that lets an AI

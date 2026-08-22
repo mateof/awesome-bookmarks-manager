@@ -80,6 +80,11 @@ one port.
   shared **in its own right**: the same table can be embedded in several notes
   that are not shared with the same people, so it carries its own
   `key_group_id` rather than inheriting whichever note mentions it.
+- **Embed a table that already exists**, not only a new one: the same database
+  can appear in several notes and stay one table. Each embed has its own id, so
+  it can be pinned to a single view (rendered without the tab strip) and can own
+  views that exist only in that note, which is what lets one place show a board
+  grouped by status while another shows a filtered table.
 - **Mobile editor bar** — on a narrow screen the toolbar detaches and pins
   itself directly above the on-screen keyboard, tracking its height through
   `visualViewport`, with a `+` that opens the rest of the actions as a grid.
@@ -163,8 +168,12 @@ one port.
 - **Light / dark / system** switch, with persisted preference.
 - **Multilingual UI**: Spanish, English, Galician (Galician in RAG
   normative). Detection via browser language + manual toggle.
-- **Server-side encryption at rest** with two-tier key wrapping (master key
-  in env + per-user key derived from password via Argon2id).
+- **Server-side encryption at rest.** Master key in env wrapping a per-user key
+  derived from the password (Argon2id), plus an X25519 keypair per account so a
+  group key can be sealed to somebody who is offline. Group content is sealed
+  with a key held by the members, not by the server. See
+  [doc/encryption.md](doc/encryption.md) for the whole picture, including what
+  it does *not* protect against.
 - **Multi-user** with email/password accounts. The first registered user
   becomes the **admin** and can manage other users (including deletion).
 - **Storage quotas & usage** — Settings → Almacenamiento shows what your data
