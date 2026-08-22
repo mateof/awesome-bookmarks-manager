@@ -69,6 +69,16 @@ const en = {
     mismatch: "Passwords don't match",
     submit: "Save and continue",
   },
+  boot: {
+    title: "Loading your content",
+    decrypting: "Decrypting your content…",
+    session: "Checking the session",
+    folders: "Folders",
+    bookmarks: "Bookmarks",
+    smart: "Smart folders",
+    trash: "Trash",
+    invitations: "Invitations",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menu",

@@ -69,6 +69,16 @@ const gl = {
     mismatch: "Os contrasinais non coinciden",
     submit: "Gardar e continuar",
   },
+  boot: {
+    title: "Cargando o teu contido",
+    decrypting: "Descifrando o teu contido…",
+    session: "Comprobando a sesión",
+    folders: "Cartafoles",
+    bookmarks: "Marcadores",
+    smart: "Cartafoles intelixentes",
+    trash: "Papeleira",
+    invitations: "Convites",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

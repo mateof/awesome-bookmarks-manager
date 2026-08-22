@@ -82,7 +82,7 @@ function indexOfSibling(
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { user, refresh } = useAuth();
+  const { user, refresh, signOut } = useAuth();
   const qc = useQueryClient();
   const nav = useNavigate();
   const loc = useLocation();
@@ -438,11 +438,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Settings className="h-4 w-4" />
             </Link>
             <button
-              onClick={async () => {
-                await api.logout();
-                refresh();
-                nav("/login");
-              }}
+              onClick={() => void signOut()}
               className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
               title={user?.email ?? t("auth.logout")}
             >
@@ -482,11 +478,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Settings className="h-5 w-5" />
               </Link>
               <button
-                onClick={async () => {
-                  await api.logout();
-                  refresh();
-                  nav("/login");
-                }}
+                onClick={() => void signOut()}
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                 title={user?.email ?? t("auth.logout")}
               >

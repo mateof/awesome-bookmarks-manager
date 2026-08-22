@@ -9,7 +9,7 @@ import { loginWithPasskey, passkeysSupported } from "../webauthn.js";
 
 export function LoginPage() {
   const { t } = useTranslation();
-  const { user, refresh } = useAuth();
+  const { user, signIn } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   // RequireAuth parks the route the user actually wanted here. It matters most
@@ -35,7 +35,7 @@ export function LoginPage() {
     setErr(null);
     try {
       await loginWithPasskey();
-      refresh();
+      signIn();
       nav(target, { replace: true });
     } catch (e) {
       setErr(
@@ -72,7 +72,7 @@ export function LoginPage() {
               setBusy(false);
               return;
             }
-            refresh();
+            signIn();
             nav(target, { replace: true });
           } catch (e) {
             setErr(e instanceof ApiError ? e.message : t("common.error"));

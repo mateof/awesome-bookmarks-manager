@@ -58,6 +58,17 @@ vacío:
 
 ![Inicio vacío tras el registro](images/03-home-empty.png)
 
+**Al entrar verás una barra de progreso** mientras se descifra tu contenido.
+Descifrar es trabajo real, y cuanto más tengas guardado más tarda la primera
+carga de la sesión; después ya está en memoria y no vuelve a salir hasta que
+cierres sesión. La barra avanza por pasos terminados de verdad (carpetas,
+marcadores, papelera…), no con una animación, así que si se queda parada en un
+punto es que ahí hay algo esperando.
+
+Lo que ves siempre es de la sesión abierta: al cerrar sesión se descarta todo
+lo cargado, de modo que si entra otra persona en el mismo navegador no llega a
+ver nada de la anterior.
+
 ---
 
 ## 2. Organizar con carpetas

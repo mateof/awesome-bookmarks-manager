@@ -69,6 +69,16 @@ const es = {
     mismatch: "Las contraseñas no coinciden",
     submit: "Guardar y continuar",
   },
+  boot: {
+    title: "Cargando tu contenido",
+    decrypting: "Descifrando tu contenido…",
+    session: "Comprobando la sesión",
+    folders: "Carpetas",
+    bookmarks: "Marcadores",
+    smart: "Carpetas inteligentes",
+    trash: "Papelera",
+    invitations: "Invitaciones",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

@@ -7,7 +7,7 @@ import { useAuth } from "../auth.js";
 
 export function SignupPage() {
   const { t } = useTranslation();
-  const { user, refresh } = useAuth();
+  const { user, signIn } = useAuth();
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
@@ -47,7 +47,7 @@ export function SignupPage() {
           setErr(null);
           try {
             await api.signup(email, nickname, password);
-            refresh();
+            signIn();
             nav("/", { replace: true });
           } catch (e) {
             setErr(e instanceof ApiError ? e.message : t("common.error"));

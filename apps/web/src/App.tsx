@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { AuthProvider, RequireAuth } from "./auth.js";
 import { DialogProvider } from "./components/dialogs.js";
 import { Layout } from "./components/Layout.js";
+import { SessionBoot } from "./components/SessionBoot.js";
 import { useSelectAllOnFirstClick } from "./lib/selectAllOnFirstClick.js";
 import { BookmarkDetailPage } from "./pages/BookmarkDetailPage.js";
 import { DuplicatesPage } from "./pages/DuplicatesPage.js";
@@ -43,6 +44,7 @@ export default function App() {
           path="*"
           element={
             <RequireAuth>
+              <SessionBoot>
               <Layout>
                 <Routes>
                   <Route path="/" element={<FolderPage />} />
@@ -72,6 +74,7 @@ export default function App() {
                   <Route path="/settings/*" element={<SettingsPage />} />
                 </Routes>
               </Layout>
+              </SessionBoot>
             </RequireAuth>
           }
         />

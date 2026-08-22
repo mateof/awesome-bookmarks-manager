@@ -222,6 +222,26 @@ because the reader has no session to query with. Hidden columns stay hidden and
 reference columns are omitted, since they point at content the reader cannot
 open anyway.
 
+## The browser holds plaintext too
+
+The server decrypts to answer a request, so what reaches the browser is
+plaintext, and the query cache keeps it for as long as the tab lives. That is
+what makes the app usable; the rule it imposes is that **the cache belongs to
+the session, not to the tab**.
+
+Concretely: signing in or out drops every cached answer, and the identity is
+watched so a session that changes any other way is caught too. Without that,
+logging out and back in as somebody else showed the previous account's folder
+names, because a cache keyed by query has no idea the account changed.
+
+The clearing is deliberately total rather than a list of user-scoped keys. Such
+a list is wrong the first time a query is added without reading this page, and
+the cost of over-clearing is refetching a couple of public config calls.
+
+One thing it does not do: a 401 on its own clears nothing. That fires for
+visitors with no session at all, on every public panel, and clearing there would
+cancel the request the page is waiting on.
+
 ## Where to look in the code
 
 | Concern | File |
@@ -234,6 +254,7 @@ open anyway.
 | Handing content to a group | `apps/api/src/groups/adopt.ts` |
 | Which key opens a row | `apps/api/src/groups/scope.ts` |
 | Permission levels | `apps/api/src/groups/roles.ts` |
+| Session-scoped browser cache | `apps/web/src/auth.tsx` |
 
 See also [authentication.md](./authentication.md) for how API tokens and
 passkeys get a copy of the user's DEK without a password.
