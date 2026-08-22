@@ -30,8 +30,10 @@ function folderSnapshot(f: Folder): FolderSnapshot {
 interface FolderRow {
   id: string;
   userId: string;
-  /** Null when sealed with the owner's DEK; a group id when the group owns it. */
+  /** Legacy: sealed with a group's own key. */
   keyGroupId: string | null;
+  /** Sealed with a scope key, which any number of groups may hold. */
+  keyScopeId: string | null;
   parentId: string | null;
   nameCt: Buffer;
   descriptionCt: Buffer | null;
@@ -54,6 +56,8 @@ function decode(ctx: AuthedContext, row: FolderRow, tagIds: string[]): Folder {
     id: row.id,
     parentId: row.parentId,
     keyGroupId: row.keyGroupId,
+    keyScopeId: row.keyScopeId,
+    shared: !!(row.keyGroupId || row.keyScopeId),
     canWrite: canWriteRow(ctx, row),
     mine: row.userId === ctx.userId,
     name: openRowField(ctx, row, "folder.name", row.nameCt),
@@ -117,6 +121,7 @@ function decodeAllFolders(ctx: AuthedContext): Folder[] {
             id: r.id,
             userId: r.userId,
             keyGroupId: r.keyGroupId ?? null,
+            keyScopeId: r.keyScopeId ?? null,
             parentId: r.parentId,
             nameCt: Buffer.from(r.nameCt),
             descriptionCt: r.descriptionCt ? Buffer.from(r.descriptionCt) : null,
@@ -190,6 +195,7 @@ export function getFolder(ctx: AuthedContext, id: string): Folder {
       id: row.id,
       userId: row.userId,
       keyGroupId: row.keyGroupId ?? null,
+      keyScopeId: row.keyScopeId ?? null,
       parentId: row.parentId,
       nameCt: Buffer.from(row.nameCt),
       descriptionCt: row.descriptionCt ? Buffer.from(row.descriptionCt) : null,
@@ -265,14 +271,20 @@ function nextPosition(ctx: AuthedContext, parentId: string | null): number {
 export function groupOfFolder(
   ctx: AuthedContext,
   folderId: string,
-): string | null {
+): { keyGroupId: string | null; keyScopeId: string | null } {
   const row = getDb()
-    .select({ keyGroupId: folders.keyGroupId })
+    .select({
+      keyGroupId: folders.keyGroupId,
+      keyScopeId: folders.keyScopeId,
+    })
     .from(folders)
     .where(eq(folders.id, folderId))
     .get();
   void ctx;
-  return row?.keyGroupId ?? null;
+  return {
+    keyGroupId: row?.keyGroupId ?? null,
+    keyScopeId: row?.keyScopeId ?? null,
+  };
 }
 
 export function createFolder(
@@ -304,14 +316,17 @@ export function createFolder(
   // one has to produce something the whole group can read, and inheriting is
   // the only rule that keeps a subtree consistently sealed without asking the
   // user which key they meant.
-  const keyGroupId = parentId ? groupOfFolder(ctx, parentId) : null;
-  const keyed = { userId: ctx.userId, keyGroupId };
-  if (keyGroupId) assertCanWrite(ctx, keyed);
+  const inherited = parentId
+    ? groupOfFolder(ctx, parentId)
+    : { keyGroupId: null, keyScopeId: null };
+  const keyed = { userId: ctx.userId, ...inherited };
+  if (inherited.keyGroupId || inherited.keyScopeId) assertCanWrite(ctx, keyed);
   db.insert(folders)
     .values({
       id,
       userId: ctx.userId,
-      keyGroupId,
+      keyGroupId: inherited.keyGroupId,
+      keyScopeId: inherited.keyScopeId,
       parentId,
       nameCt: sealRowField(ctx, keyed, "folder.name", input.name),
       descriptionCt: cleanDescription
@@ -359,7 +374,11 @@ export function updateFolder(
   // this user may read the group's content but not change it.
   // `userId` only matters for personal rows, and getFolder has already
   // established this caller may see it; for group rows the check is the role.
-  const keyed = { userId: ctx.userId, keyGroupId: existing.keyGroupId ?? null };
+  const keyed = {
+    userId: ctx.userId,
+    keyGroupId: existing.keyGroupId ?? null,
+    keyScopeId: existing.keyScopeId ?? null,
+  };
   assertCanWrite(ctx, keyed);
   if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
 

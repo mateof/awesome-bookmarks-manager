@@ -666,6 +666,14 @@ const en = {
     back: "Back",
   },
   groups: {
+    roleOf: "Level for {{email}}",
+    role: {
+      viewer: "Viewer",
+      editor: "Editor",
+      admin: "Admin",
+      super: "Super",
+      owner: "Owner",
+    },
     listTitle: "Groups",
     newGroup: "New group",
     pendingInvitations: "Pending invitations",
@@ -781,6 +789,12 @@ const en = {
     syncHint: "The group sees it at once; it reaches the original folder when its owner next signs in.",
   },
   shareToGroup: {
+    titleDatabase: "Share the table with a group",
+    noEditorGroups: "You need editor or higher in a group to share into it.",
+    shareCount_zero: "Pick at least one group",
+    shareCount_one: "Share with 1 group",
+    shareCount_other: "Share with {{count}} groups",
+    rolesNote: "Each person reads or edits according to the level they already have in the group.",
     titleFolder: "Share folder with group",
     titleBookmark: "Share bookmark with group",
     noGroups: "You don't have any groups yet. Create one from the Groups section.",
@@ -1023,6 +1037,8 @@ const en = {
     tooLarge: "“{{name}}” is over the {{max}} per-file limit.",
   },
   db: {
+    shareWithGroups: "Share with groups",
+    sharedAlready: "Already shared with a group",
     moveBlock: "Drag to move the table",
     moveUp: "Move the table up",
     moveDown: "Move the table down",

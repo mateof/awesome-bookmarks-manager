@@ -667,6 +667,14 @@ const gl = {
     back: "Volver",
   },
   groups: {
+    roleOf: "Permiso de {{email}}",
+    role: {
+      viewer: "Ver",
+      editor: "Editor",
+      admin: "Admin",
+      super: "Super",
+      owner: "Propietario",
+    },
     listTitle: "Grupos",
     newGroup: "Novo grupo",
     pendingInvitations: "Invitacións pendentes",
@@ -782,6 +790,12 @@ const gl = {
     syncHint: "O grupo veo ao momento; chega ao cartafol orixinal cando o seu dono volva entrar.",
   },
   shareToGroup: {
+    titleDatabase: "Compartir a táboa cun grupo",
+    noEditorGroups: "Necesitas permiso de editor ou superior nalgún grupo para compartir alí.",
+    shareCount_zero: "Escolle polo menos un grupo",
+    shareCount_one: "Compartir con 1 grupo",
+    shareCount_other: "Compartir con {{count}} grupos",
+    rolesNote: "Cada persoa poderá ver ou editar segundo o permiso que xa teña no grupo.",
     titleFolder: "Compartir cartafol con grupo",
     titleBookmark: "Compartir marcador con grupo",
     noGroups:
@@ -1026,6 +1040,8 @@ const gl = {
     tooLarge: "«{{name}}» supera o máximo de {{max}} por ficheiro.",
   },
   db: {
+    shareWithGroups: "Compartir con grupos",
+    sharedAlready: "Xa compartida cun grupo",
     moveBlock: "Arrastrar para mover a táboa",
     moveUp: "Subir a táboa",
     moveDown: "Baixar a táboa",

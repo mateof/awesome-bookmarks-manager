@@ -1,9 +1,39 @@
 import { z } from "zod";
 
-export const GroupRoleSchema = z.enum(["owner", "admin", "member"]);
+/**
+ * The five levels, lowest first. Each contains the one below it.
+ *
+ * "member" from before this vocabulary existed is normalised to "editor" on
+ * the way out of the server: it could edit, and silently demoting people on an
+ * upgrade would be the worse surprise.
+ */
+export const GroupRoleSchema = z.enum([
+  "viewer",
+  "editor",
+  "admin",
+  "super",
+  "owner",
+]);
+
+/** Order used to decide who may act on whom. */
+export const GROUP_ROLE_RANK: Record<GroupRole, number> = {
+  viewer: 1,
+  editor: 2,
+  admin: 3,
+  super: 4,
+  owner: 5,
+};
+
+/** Levels one may grant: strictly below your own, and never `owner`. */
+export function assignableRoles(mine: GroupRole): GroupRole[] {
+  return (["viewer", "editor", "admin", "super"] as GroupRole[]).filter(
+    (r) => GROUP_ROLE_RANK[r] < GROUP_ROLE_RANK[mine],
+  );
+}
 export type GroupRole = z.infer<typeof GroupRoleSchema>;
 
-export const ShareSourceTypeSchema = z.enum(["folder", "bookmark"]);
+/** A database is shareable in its own right, not only as part of a note. */
+export const ShareSourceTypeSchema = z.enum(["folder", "bookmark", "database"]);
 export type ShareSourceType = z.infer<typeof ShareSourceTypeSchema>;
 
 export const GroupSchema = z.object({
@@ -60,11 +90,32 @@ export type InviteMemberBody = z.infer<typeof InviteMemberBodySchema>;
 export const AccessLevelSchema = z.enum(["viewer", "editor"]);
 export type AccessLevel = z.infer<typeof AccessLevelSchema>;
 
+/**
+ * Share something with one or more groups.
+ *
+ * No access level: what a member may do is their **role in the group**, and
+ * asking again per share meant two answers to the same question. `groupIds`
+ * replaces one-group-at-a-time; the single-group route still exists for
+ * clients that predate it.
+ */
 export const ShareToGroupBodySchema = z.object({
   sourceType: ShareSourceTypeSchema,
   sourceId: z.string().uuid(),
-  access: AccessLevelSchema.default("viewer"),
 });
+export const ShareToGroupsBodySchema = z.object({
+  sourceType: ShareSourceTypeSchema,
+  sourceId: z.string().uuid(),
+  groupIds: z.array(z.string().uuid()).min(1).max(50),
+});
+export type ShareToGroupsBody = z.infer<typeof ShareToGroupsBodySchema>;
+
+export const ShareResultSchema = z.object({
+  groupId: z.string().uuid(),
+  id: z.string().uuid().optional(),
+  /** Present when that one group failed; the rest still went through. */
+  error: z.string().optional(),
+});
+export type ShareResult = z.infer<typeof ShareResultSchema>;
 export type ShareToGroupBody = z.infer<typeof ShareToGroupBodySchema>;
 
 /** Edit a single node inside an editable ("editor") group share. */

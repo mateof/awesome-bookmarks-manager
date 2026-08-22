@@ -6,12 +6,17 @@ import type { AuthedContext } from "../auth/session.js";
 import { ensureUserKeys } from "../auth/userKeys.js";
 import {
   adoptBookmarkIntoGroup,
+  adoptDatabaseIntoGroup,
   adoptFolderIntoGroup,
 } from "./adopt.js";
 import { groupKeyVersion, resealGroupContent } from "./reseal.js";
+import { rewrapGrantsForGroup } from "./scopes.js";
 import {
   assertCanAssign,
   assertCanRemove,
+  canEdit,
+  normaliseRole,
+  requireRole,
   roleOf,
   roleOfUser,
   type GroupRole,
@@ -67,7 +72,7 @@ export function listMyGroups(ctx: AuthedContext): Group[] {
     name: g.name,
     description: g.description,
     ownerId: g.ownerId,
-    myRole: (roleByGroup.get(g.id) ?? "member") as Group["myRole"],
+    myRole: normaliseRole(roleByGroup.get(g.id)),
     memberCount: memberCounts.get(g.id) ?? 1,
     createdAt: g.createdAt,
   }));
@@ -206,7 +211,9 @@ export function listMembers(ctx: AuthedContext, groupId: string): GroupMember[] 
   return rows.map((r) => ({
     userId: r.userId,
     email: r.email,
-    role: r.role as GroupMember["role"],
+    // Normalised so a row written as "member" does not leak an unknown
+    // level into the API.
+    role: normaliseRole(r.role),
     joinedAt: r.joinedAt,
   }));
 }
@@ -239,6 +246,10 @@ export function removeMember(
   // saw. Rotation protects the future only.
   const rotated = rotateGroupKey(ctx, groupId);
   resealGroupContent(ctx, groupId, rotated.previous, rotated.current);
+  // Scopes this group can reach are sealed with its key. Without this the
+  // rotation would quietly cut the remaining members off from everything
+  // shared with them through a scope, which is the opposite of the intent.
+  rewrapGrantsForGroup(groupId, rotated.previous, rotated.current);
 }
 
 /**
@@ -567,16 +578,29 @@ export function acceptInvitation(ctx: AuthedContext, token: string) {
   return { groupId: inv.groupId };
 }
 
+/**
+ * Share something with one group.
+ *
+ * `access` is no longer asked for. What a member may do with shared content is
+ * their **role in the group**, and having a second per-share level meant two
+ * answers to the same question: an "editor" of the group looking at a share
+ * marked "viewer". The column stays for shares created before this, and is
+ * written as "editor" so the role is what decides.
+ *
+ * The trade this makes, stated plainly: a group is now the unit of access. To
+ * give the same people read-only access to one folder and write access to
+ * another, use two groups. That is how the roles were designed to work, and it
+ * is one concept instead of two that contradict each other.
+ */
 export function shareToGroup(
   ctx: AuthedContext,
   groupId: string,
   input: {
-    sourceType: "folder" | "bookmark";
+    sourceType: "folder" | "bookmark" | "database";
     sourceId: string;
-    access?: "viewer" | "editor";
   },
 ) {
-  ensureMember(ctx, groupId);
+  requireRole(ctx, groupId, "editor");
   const id = uuidv4();
   getDb()
     .insert(groupShares)
@@ -586,7 +610,7 @@ export function shareToGroup(
       sharedBy: ctx.userId,
       sourceType: input.sourceType,
       sourceId: input.sourceId,
-      access: input.access ?? "viewer",
+      access: "editor",
       payloadStatus: "pending",
     })
     .run();
@@ -596,19 +620,56 @@ export function shareToGroup(
   // what makes an editor's capabilities identical rather than imitated.
   if (input.sourceType === "folder") {
     adoptFolderIntoGroup(ctx, input.sourceId, groupId);
+  } else if (input.sourceType === "database") {
+    adoptDatabaseIntoGroup(ctx, input.sourceId, groupId);
   } else {
     adoptBookmarkIntoGroup(ctx, input.sourceId, groupId);
   }
 
   // The materialised payload is still built, because the read-only share views
   // and the panels are fed from it and older clients expect it. It is now a
-  // convenience copy, not the source of truth.
-  enqueue({
-    userId: ctx.userId,
-    type: "group_share_seal",
-    payload: { groupShareId: id },
-  });
+  // convenience copy, not the source of truth. A database has no payload of
+  // that shape: it is reached through its own endpoints.
+  if (input.sourceType !== "database") {
+    enqueue({
+      userId: ctx.userId,
+      type: "group_share_seal",
+      payload: { groupShareId: id },
+    });
+  }
   return { id };
+}
+
+/**
+ * Share the same thing with several groups at once.
+ *
+ * One call rather than one per group, because the first group's adoption
+ * re-seals the rows with *its* key: doing the rest afterwards from a client
+ * that has already moved on would find content it can no longer read with the
+ * owner's key. Keeping it in one place also makes the answer about what
+ * happened a single, honest list.
+ *
+ * The first group to take a row owns it. A row already belonging to a group is
+ * left alone rather than moved, so sharing with a second group gives that
+ * group the *share* without stealing the content from the first.
+ */
+export function shareToGroups(
+  ctx: AuthedContext,
+  groupIds: string[],
+  input: { sourceType: "folder" | "bookmark" | "database"; sourceId: string },
+): { groupId: string; id?: string; error?: string }[] {
+  return groupIds.map((groupId) => {
+    try {
+      return { groupId, ...shareToGroup(ctx, groupId, input) };
+    } catch (err) {
+      // One group failing (no longer a member, not enough permission) must not
+      // silently drop the others.
+      return {
+        groupId,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  });
 }
 
 export function listGroupShares(
@@ -642,6 +703,14 @@ export function listAllSharedWithMe(ctx: AuthedContext): SharedItem[] {
 }
 
 function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
+  const roleByGroup = new Map(
+    getDb()
+      .select({ groupId: groupMembers.groupId, role: groupMembers.role })
+      .from(groupMembers)
+      .where(eq(groupMembers.userId, ctx.userId))
+      .all()
+      .map((r) => [r.groupId, normaliseRole(r.role)]),
+  );
   const rows = getDb()
     .select({
       id: groupShares.id,
@@ -681,7 +750,16 @@ function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
       }
     }
     const { payloadCt: _p, groupDekWrapped: _g, ...rest } = r;
-    return { ...rest, label } as SharedItem;
+    // `access` is no longer the share's stored level; it is what *this* caller
+    // may do with it, derived from their role in the group. The clients use it
+    // to decide whether to show edit controls, and a stored level would tell
+    // them the wrong thing now that the role is the authority.
+    const mine = roleByGroup.get(r.groupId);
+    return {
+      ...rest,
+      access: mine && canEdit(mine) ? "editor" : "viewer",
+      label,
+    } as SharedItem;
   });
 }
 

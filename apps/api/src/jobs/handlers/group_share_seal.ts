@@ -92,20 +92,32 @@ export async function runGroupShareSealJob(
       ? readPayload(groupDek, row.group.id, Buffer.from(row.share.payloadCt))
       : null;
 
-  // Editor shares can carry the group's in-place field edits. Rebuilding from
-  // the owner's originals gives us the current structure; overlay the group's
-  // edits on surviving nodes so a re-seal never wipes collaborative work.
+  /**
+   * Overlay edits that exist only in the payload, and *only* when there are
+   * any.
+   *
+   * This merge belongs to the old model, where a member's edit lived in the
+   * group's copy until the owner logged in and it could be replayed. Shared
+   * content is now rows the group owns, so `content` rebuilt from those rows
+   * is already current and merging the previous payload over it would put
+   * stale values back: it did exactly that to the owner's renames, because
+   * every share now counts as editable and the merge stopped being skipped.
+   *
+   * So it runs when there is genuinely something waiting, which means a share
+   * created before this change with operations still queued.
+   */
+  const pendingIds = pendingNodeIds(row.share.id, row.group.id, groupDek);
+  const pendingFields = pendingFieldsByNode(row.share.id, row.group.id, groupDek);
+  const hasPending =
+    pendingIds.size > 0 || pendingFields.size > 0;
+
   let finalContent: SharedContent = content;
-  if (row.share.access === "editor" && previousPayload) {
+  if (previousPayload && hasPending) {
     finalContent = mergeEditorFieldEdits(
       content,
       previousPayload,
-      // What a member added and the owner has not received yet: rebuilding
-      // from the owner's rows alone would drop it.
-      pendingNodeIds(row.share.id, row.group.id, groupDek),
-      // Tags, colours, stars and pictures a member set that have not reached
-      // the owner's rows yet. Rebuilding from those rows would drop them.
-      pendingFieldsByNode(row.share.id, row.group.id, groupDek),
+      pendingIds,
+      pendingFields,
     );
   }
 

@@ -76,7 +76,7 @@ test("cambios del propietario en una carpeta compartida llegan a los miembros", 
     },
   });
 
-  // Owner: group + invite member; member accepts; owner shares (viewer).
+  // Owner: group + invite member; member accepts; owner shares.
   const group = await (
     await oreq.post("/api/groups", { data: { name: "Radio Team" } })
   ).json();
@@ -89,7 +89,7 @@ test("cambios del propietario en una carpeta compartida llegan a los miembros", 
     (await mreq.post(`/api/invitations/${inv.token}/accept`)).ok(),
   ).toBeTruthy();
   await oreq.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: proyecto.id, access: "viewer" },
+    data: { sourceType: "folder", sourceId: proyecto.id },
   });
 
   // Member sees the share sealed with the initial bookmark.

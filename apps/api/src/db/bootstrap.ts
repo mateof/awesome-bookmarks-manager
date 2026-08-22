@@ -407,6 +407,31 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS group_member_keys_user_idx
       ON group_member_keys(user_id);
   `);
+  getSqlite().exec(`
+    CREATE TABLE IF NOT EXISTS key_scopes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE TABLE IF NOT EXISTS key_scope_grants (
+      scope_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      wrapped_key BLOB NOT NULL,
+      group_key_version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp),
+      PRIMARY KEY (scope_id, group_id)
+    );
+    CREATE INDEX IF NOT EXISTS key_scope_grants_group_idx
+      ON key_scope_grants(group_id);
+  `);
+  tryAddColumn("folders", "key_scope_id", "TEXT");
+  tryAddColumn("bookmarks", "key_scope_id", "TEXT");
+  tryAddColumn("databases", "key_scope_id", "TEXT");
+  getSqlite().exec(`
+    CREATE INDEX IF NOT EXISTS folders_scope_idx ON folders(key_scope_id);
+    CREATE INDEX IF NOT EXISTS bookmarks_scope_idx ON bookmarks(key_scope_id);
+    CREATE INDEX IF NOT EXISTS databases_scope_idx ON databases(key_scope_id);
+  `);
   tryAddColumn("database_views", "block_id", "TEXT");
   tryAddColumn("folders", "key_group_id", "TEXT");
   tryAddColumn("bookmarks", "key_group_id", "TEXT");

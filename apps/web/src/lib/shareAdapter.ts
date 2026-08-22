@@ -40,6 +40,8 @@ export function asFolder(
   return {
     id: node.id,
     keyGroupId: null,
+    keyScopeId: null,
+    shared: true,
     mine: false,
     canWrite: true,
     parentId,
@@ -71,6 +73,8 @@ export function asBookmark(
   return {
     id: node.id,
     keyGroupId: null,
+    keyScopeId: null,
+    shared: true,
     mine: false,
     canWrite: true,
     folderId,

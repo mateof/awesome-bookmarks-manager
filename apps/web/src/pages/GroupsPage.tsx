@@ -1,3 +1,8 @@
+import {
+  assignableRoles,
+  GROUP_ROLE_RANK,
+  type GroupRole,
+} from "@awesome-bookmarks/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Group } from "@awesome-bookmarks/shared";
 import {
@@ -218,7 +223,8 @@ function GroupDetail({ id }: { id: string }) {
     queryFn: () => api.listGroupShares(id),
   });
   const canManageRole =
-    group.data?.myRole === "owner" || group.data?.myRole === "admin";
+    !!group.data &&
+    GROUP_ROLE_RANK[group.data.myRole] >= GROUP_ROLE_RANK.admin;
   const invites = useQuery({
     queryKey: ["group-invitations", id],
     queryFn: () => api.listGroupInvitations(id),
@@ -234,7 +240,9 @@ function GroupDetail({ id }: { id: string }) {
 
   if (!group.data) return <div className="text-slate-400">{t("common.loading")}</div>;
   const g = group.data;
-  const canManage = g.myRole === "owner" || g.myRole === "admin";
+  const myRole = g.myRole;
+  const canManage = GROUP_ROLE_RANK[myRole] >= GROUP_ROLE_RANK.admin;
+  const assignable = assignableRoles(myRole);
 
   return (
     <div className="space-y-4">
@@ -303,7 +311,40 @@ function GroupDetail({ id }: { id: string }) {
                   {t("groups.memberSince", { date: fmtDate(m.joinedAt) })}
                 </div>
               </div>
-              <span className="text-xs text-slate-500">{m.role}</span>
+              {/* The level is changed here rather than in a dialog: it is one
+                  choice and the list is where you are already looking. Only
+                  levels strictly below your own are offered, which is the same
+                  rule the server enforces, so the UI cannot suggest something
+                  that will be refused. */}
+              {canManage && m.role !== "owner" && assignable.length > 0 ? (
+                <select
+                  value={m.role}
+                  aria-label={t("groups.roleOf", { email: m.email })}
+                  disabled={GROUP_ROLE_RANK[m.role] >= GROUP_ROLE_RANK[myRole]}
+                  onChange={async (e) => {
+                    await api.setMemberRole(
+                      id,
+                      m.userId,
+                      e.target.value as GroupRole,
+                    );
+                    qc.invalidateQueries({ queryKey: ["group-members", id] });
+                  }}
+                  className="rounded border border-slate-300 bg-white px-1 py-0.5 text-xs disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800"
+                >
+                  {/* The member's current level is always listed, even when it
+                      is one you could not grant, or the select would silently
+                      show something they are not. */}
+                  {[...new Set([...assignable, m.role])].map((r) => (
+                    <option key={r} value={r}>
+                      {t(`groups.role.${r}` as "groups.role.viewer")}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs text-slate-500">
+                  {t(`groups.role.${m.role}` as "groups.role.viewer")}
+                </span>
+              )}
               {canManage && m.role !== "owner" && (
                 <button
                   onClick={async () => {

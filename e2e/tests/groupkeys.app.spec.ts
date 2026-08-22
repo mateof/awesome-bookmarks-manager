@@ -93,7 +93,10 @@ test("un editor trabaja sobre las mismas filas que el dueño", async ({
     expect(shared).toBeTruthy();
     // Marked as the group's, not theirs, and writable.
     expect(shared.mine).toBe(false);
-    expect(shared.keyGroupId).toBe(group.id);
+    // Sealed with a key scope the group holds, rather than with the group's
+    // own key: that is what lets the same folder reach a second group later.
+    expect(shared.shared).toBe(true);
+    expect(shared.keyScopeId).toBeTruthy();
     expect(shared.canWrite).toBe(true);
     expect(shared.name).toBe("Cartera");
     expect(shared.description).toContain("del dueño");
@@ -136,7 +139,7 @@ test("un editor trabaja sobre las mismas filas que el dueño", async ({
   const theirs = ownerBookmarks.find(
     (b: { title: string }) => b.title === "Puesto por el editor",
   );
-  expect(theirs.keyGroupId).toBe(group.id);
+  expect(theirs.keyScopeId).toBeTruthy();
 
   await o.ctx.close();
   await e.ctx.close();

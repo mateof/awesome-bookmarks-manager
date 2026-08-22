@@ -39,8 +39,10 @@ function bookmarkSnapshot(b: Bookmark): BookmarkSnapshot {
 interface BookmarkRow {
   id: string;
   userId: string;
-  /** Null when sealed with the owner's DEK; a group id when the group owns it. */
+  /** Legacy: sealed with a group's own key. */
   keyGroupId: string | null;
+  /** Sealed with a scope key, which any number of groups may hold. */
+  keyScopeId: string | null;
   folderId: string | null;
   titleCt: Buffer;
   urlCt: Buffer;
@@ -69,6 +71,8 @@ function decode(
   return {
     id: row.id,
     keyGroupId: row.keyGroupId,
+    keyScopeId: row.keyScopeId,
+    shared: !!(row.keyGroupId || row.keyScopeId),
     canWrite: canWriteRow(ctx, row),
     mine: row.userId === ctx.userId,
     folderId: row.folderId,
@@ -238,6 +242,7 @@ function decodeAllBookmarks(ctx: AuthedContext): Bookmark[] {
             id: r.id,
             userId: r.userId,
             keyGroupId: r.keyGroupId ?? null,
+            keyScopeId: r.keyScopeId ?? null,
             folderId: r.folderId,
             titleCt: Buffer.from(r.titleCt),
             urlCt: Buffer.from(r.urlCt),
@@ -330,6 +335,7 @@ export function getBookmark(ctx: AuthedContext, id: string): Bookmark {
       id: row.id,
       userId: row.userId,
       keyGroupId: row.keyGroupId ?? null,
+      keyScopeId: row.keyScopeId ?? null,
       folderId: row.folderId,
       titleCt: Buffer.from(row.titleCt),
       urlCt: Buffer.from(row.urlCt),
@@ -388,14 +394,17 @@ export function createBookmark(
   const cleanDescription = sanitizeRichText(input.description ?? null);
   // Inherits the folder's key, so a bookmark created inside a shared folder is
   // readable by the group from the moment it exists.
-  const keyGroupId = folderId ? groupOfFolder(ctx, folderId) : null;
-  const keyed = { userId: ctx.userId, keyGroupId };
-  if (keyGroupId) assertCanWrite(ctx, keyed);
+  const inherited = folderId
+    ? groupOfFolder(ctx, folderId)
+    : { keyGroupId: null, keyScopeId: null };
+  const keyed = { userId: ctx.userId, ...inherited };
+  if (inherited.keyGroupId || inherited.keyScopeId) assertCanWrite(ctx, keyed);
   db.insert(bookmarks)
     .values({
       id,
       userId: ctx.userId,
-      keyGroupId,
+      keyGroupId: inherited.keyGroupId,
+      keyScopeId: inherited.keyScopeId,
       folderId,
       titleCt: sealRowField(ctx, keyed, "bookmark.title", title),
       urlCt: sealRowField(ctx, keyed, "bookmark.url", input.url),
@@ -461,7 +470,11 @@ export function updateBookmark(
 ): Bookmark {
   const existing = getBookmark(ctx, id);
   if (input.folderId !== undefined) ensureFolderExists(ctx, input.folderId);
-  const keyed = { userId: ctx.userId, keyGroupId: existing.keyGroupId ?? null };
+  const keyed = {
+    userId: ctx.userId,
+    keyGroupId: existing.keyGroupId ?? null,
+    keyScopeId: existing.keyScopeId ?? null,
+  };
   assertCanWrite(ctx, keyed);
   if (input.tagIds) ensureTagsExist(ctx, input.tagIds);
 

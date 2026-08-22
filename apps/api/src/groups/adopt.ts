@@ -12,6 +12,13 @@ import {
 } from "../db/schema.js";
 import { databaseIdsIn } from "../databases/service.js";
 import { groupKeyFor } from "./keys.js";
+import {
+  canReachScope,
+  createScope,
+  grantScopeTo,
+  scopeKeyFor,
+} from "./scopes.js";
+import { myGroupIds } from "./scope.js";
 
 /**
  * Hand a subtree over to a group: re-seal every row with the group's key and
@@ -38,6 +45,56 @@ function reseal(
   if (!sealed) return null;
   const plain = aeadDecrypt(from, sealed, `${fromScope}|${field}`);
   return aeadEncrypt(to, plain, `${toScope}|${field}`);
+}
+
+export interface Destination {
+  scopeId: string;
+  key: Buffer;
+  /** False when the content is already under this scope: nothing to re-seal. */
+  fresh: boolean;
+}
+
+/**
+ * Where a piece of content should end up when shared with `groupId`.
+ *
+ * Three cases, and only the first costs anything:
+ *
+ * - **Personal.** A new scope is created and the content is re-sealed into it.
+ * - **Already in a scope.** The group is granted that scope's key. The content
+ *   is untouched, which is the whole reason scopes exist: widening the
+ *   audience must not mean re-encrypting everything again.
+ * - **Legacy, sealed with a group's own key.** Promoted to a scope on the way
+ *   past, so it stops being reachable by exactly one group.
+ */
+export function destinationFor(
+  ctx: AuthedContext,
+  row: { keyScopeId?: string | null; keyGroupId?: string | null },
+  groupId: string,
+): Destination {
+  if (row.keyScopeId) {
+    if (canReachScope([groupId], row.keyScopeId)) {
+      return { scopeId: row.keyScopeId, key: scopeKeyFor(ctx, row.keyScopeId), fresh: false };
+    }
+    const key = scopeKeyFor(ctx, row.keyScopeId);
+    grantScopeTo(ctx, row.keyScopeId, groupId, key);
+    return { scopeId: row.keyScopeId, key, fresh: false };
+  }
+  const made = createScope(ctx, groupId);
+  return { scopeId: made.scopeId, key: made.key, fresh: true };
+}
+
+/** The key a row is currently sealed with, whatever mechanism it uses. */
+function currentKeyOf(
+  ctx: AuthedContext,
+  row: { keyScopeId?: string | null; keyGroupId?: string | null },
+): { key: Buffer; scope: string } {
+  if (row.keyScopeId) {
+    return { key: scopeKeyFor(ctx, row.keyScopeId), scope: row.keyScopeId };
+  }
+  if (row.keyGroupId) {
+    return { key: groupKeyFor(ctx, row.keyGroupId), scope: row.keyGroupId };
+  }
+  return { key: ctx.dek, scope: ctx.userId };
 }
 
 /** Every folder id in the subtree rooted at `rootId`, the root included. */
@@ -70,43 +127,100 @@ export function folderSubtree(ownerId: string, rootId: string): string[] {
  * itself, which is what lets one be shared while another in the same folder is
  * not.
  */
+/**
+ * The content is already in a scope this group now holds. Nothing to re-seal;
+ * only the databases the notes embed need a grant of their own, because they
+ * carry their own scope rather than the folder's.
+ */
+function grantOnly(
+  ctx: AuthedContext,
+  folderIds: string[],
+  groupId: string,
+): { folders: number; bookmarks: number; databases: number } {
+  const db = getDb();
+  const dbIds = new Set<string>();
+  const collect = (
+    sealed: Buffer | null,
+    row: { keyScopeId?: string | null; keyGroupId?: string | null },
+    field: string,
+  ) => {
+    if (!sealed) return;
+    try {
+      const from = currentKeyOf(ctx, row);
+      for (const d of databaseIdsIn(
+        aeadDecrypt(from.key, sealed, `${from.scope}|${field}`).toString("utf8"),
+      )) {
+        dbIds.add(d);
+      }
+    } catch {
+      /* unreadable here; the grant for its own scope will come from elsewhere */
+    }
+  };
+
+  for (const id of folderIds) {
+    const f = db.select().from(folders).where(eq(folders.id, id)).get();
+    if (f) collect(f.descriptionCt ? Buffer.from(f.descriptionCt) : null, f, "folder.description");
+  }
+  for (const b of db
+    .select()
+    .from(bookmarks)
+    .where(and(inArray(bookmarks.folderId, folderIds), isNull(bookmarks.deletedAt)))
+    .all()) {
+    collect(b.descriptionCt ? Buffer.from(b.descriptionCt) : null, b, "bookmark.description");
+  }
+
+  let databases = 0;
+  for (const id of dbIds) if (adoptDatabaseIntoGroup(ctx, id, groupId)) databases++;
+  return { folders: 0, bookmarks: 0, databases };
+}
+
 export function adoptFolderIntoGroup(
   ctx: AuthedContext,
   rootFolderId: string,
   groupId: string,
 ): { folders: number; bookmarks: number; databases: number } {
-  const key = groupKeyFor(ctx, groupId);
   const db = getDb();
   const ids = folderSubtree(ctx.userId, rootFolderId);
+  // Decided from the root: a subtree moves as one, so its children inherit
+  // whatever the root ends up in rather than each opening its own scope.
+  const root = db.select().from(folders).where(eq(folders.id, rootFolderId)).get();
+  if (!root) return { folders: 0, bookmarks: 0, databases: 0 };
+  const dest = destinationFor(ctx, root, groupId);
+  const key = dest.key;
+  if (!dest.fresh) {
+    // Already shared: the new group now holds the key and there is nothing to
+    // re-seal. Databases embedded in the notes still need their own grant.
+    return grantOnly(ctx, ids, groupId);
+  }
   let folderCount = 0;
   let bookmarkCount = 0;
   const dbIds = new Set<string>();
 
   for (const id of ids) {
     const f = db.select().from(folders).where(eq(folders.id, id)).get();
-    if (!f || f.keyGroupId === groupId) continue;
-    // Only the owner's own rows can be handed over. A subtree that already
-    // belongs to a different group is left alone rather than quietly moved.
-    if (f.userId !== ctx.userId || f.keyGroupId) continue;
+    if (!f || f.keyScopeId === dest.scopeId) continue;
+    if (f.userId !== ctx.userId) continue;
 
+    const from = currentKeyOf(ctx, f);
     const description = f.descriptionCt
       ? aeadDecrypt(
-          ctx.dek,
+          from.key,
           Buffer.from(f.descriptionCt),
-          `${ctx.userId}|folder.description`,
+          `${from.scope}|folder.description`,
         ).toString("utf8")
       : null;
     for (const d of databaseIdsIn(description)) dbIds.add(d);
 
     db.update(folders)
       .set({
-        keyGroupId: groupId,
-        nameCt: reseal(ctx.dek, ctx.userId, key, groupId, "folder.name", Buffer.from(f.nameCt))!,
+        keyGroupId: null,
+        keyScopeId: dest.scopeId,
+        nameCt: reseal(from.key, from.scope, key, dest.scopeId, "folder.name", Buffer.from(f.nameCt))!,
         descriptionCt: reseal(
-          ctx.dek,
-          ctx.userId,
+          from.key,
+          from.scope,
           key,
-          groupId,
+          dest.scopeId,
           "folder.description",
           f.descriptionCt ? Buffer.from(f.descriptionCt) : null,
         ),
@@ -127,26 +241,28 @@ export function adoptFolderIntoGroup(
       ),
     )
     .all()) {
-    if (b.keyGroupId) continue;
+    if (b.keyScopeId === dest.scopeId) continue;
+    const from = currentKeyOf(ctx, b);
     const description = b.descriptionCt
       ? aeadDecrypt(
-          ctx.dek,
+          from.key,
           Buffer.from(b.descriptionCt),
-          `${ctx.userId}|bookmark.description`,
+          `${from.scope}|bookmark.description`,
         ).toString("utf8")
       : null;
     for (const d of databaseIdsIn(description)) dbIds.add(d);
 
     db.update(bookmarks)
       .set({
-        keyGroupId: groupId,
-        titleCt: reseal(ctx.dek, ctx.userId, key, groupId, "bookmark.title", Buffer.from(b.titleCt))!,
-        urlCt: reseal(ctx.dek, ctx.userId, key, groupId, "bookmark.url", Buffer.from(b.urlCt))!,
+        keyGroupId: null,
+        keyScopeId: dest.scopeId,
+        titleCt: reseal(from.key, from.scope, key, dest.scopeId, "bookmark.title", Buffer.from(b.titleCt))!,
+        urlCt: reseal(from.key, from.scope, key, dest.scopeId, "bookmark.url", Buffer.from(b.urlCt))!,
         descriptionCt: reseal(
-          ctx.dek,
-          ctx.userId,
+          from.key,
+          from.scope,
           key,
-          groupId,
+          dest.scopeId,
           "bookmark.description",
           b.descriptionCt ? Buffer.from(b.descriptionCt) : null,
         ),
@@ -181,18 +297,25 @@ export function adoptDatabaseIntoGroup(
 ): boolean {
   const db = getDb();
   const row = db.select().from(databases).where(eq(databases.id, databaseId)).get();
-  if (!row || row.keyGroupId === groupId) return false;
-  if (row.userId !== ctx.userId || row.keyGroupId) return false;
+  if (!row) return false;
+  // Sharing somebody else's table is not a thing you can do by embedding it.
+  if (row.userId !== ctx.userId && !row.keyScopeId) return false;
 
-  const key = groupKeyFor(ctx, groupId);
-  const move = <T>(
-    field: string,
-    sealed: Buffer | null,
-  ): Buffer | null => reseal(ctx.dek, ctx.userId, key, groupId, field, sealed);
+  const dest = destinationFor(ctx, row, groupId);
+  if (!dest.fresh) {
+    // Already in a scope the group now holds: the grant is the whole job.
+    return row.keyScopeId !== dest.scopeId;
+  }
+
+  const from = currentKeyOf(ctx, row);
+  const key = dest.key;
+  const move = (field: string, sealed: Buffer | null): Buffer | null =>
+    reseal(from.key, from.scope, key, dest.scopeId, field, sealed);
 
   db.update(databases)
     .set({
-      keyGroupId: groupId,
+      keyGroupId: null,
+      keyScopeId: dest.scopeId,
       nameCt: move("db.name", Buffer.from(row.nameCt))!,
     })
     .where(eq(databases.id, databaseId))
@@ -245,28 +368,38 @@ export function adoptBookmarkIntoGroup(
 ): boolean {
   const db = getDb();
   const b = db.select().from(bookmarks).where(eq(bookmarks.id, bookmarkId)).get();
-  if (!b || b.keyGroupId === groupId) return false;
-  if (b.userId !== ctx.userId || b.keyGroupId) return false;
+  if (!b) return false;
+  if (b.userId !== ctx.userId && !b.keyScopeId) return false;
 
-  const key = groupKeyFor(ctx, groupId);
+  const dest = destinationFor(ctx, b, groupId);
+  const from = currentKeyOf(ctx, b);
+  const key = dest.key;
   const description = b.descriptionCt
     ? aeadDecrypt(
-        ctx.dek,
+        from.key,
         Buffer.from(b.descriptionCt),
-        `${ctx.userId}|bookmark.description`,
+        `${from.scope}|bookmark.description`,
       ).toString("utf8")
     : null;
 
+  if (!dest.fresh && b.keyScopeId === dest.scopeId) {
+    for (const d of databaseIdsIn(description)) {
+      adoptDatabaseIntoGroup(ctx, d, groupId);
+    }
+    return true;
+  }
+
   db.update(bookmarks)
     .set({
-      keyGroupId: groupId,
-      titleCt: reseal(ctx.dek, ctx.userId, key, groupId, "bookmark.title", Buffer.from(b.titleCt))!,
-      urlCt: reseal(ctx.dek, ctx.userId, key, groupId, "bookmark.url", Buffer.from(b.urlCt))!,
+      keyGroupId: null,
+      keyScopeId: dest.scopeId,
+      titleCt: reseal(from.key, from.scope, key, dest.scopeId, "bookmark.title", Buffer.from(b.titleCt))!,
+      urlCt: reseal(from.key, from.scope, key, dest.scopeId, "bookmark.url", Buffer.from(b.urlCt))!,
       descriptionCt: reseal(
-        ctx.dek,
-        ctx.userId,
+        from.key,
+        from.scope,
         key,
-        groupId,
+        dest.scopeId,
         "bookmark.description",
         b.descriptionCt ? Buffer.from(b.descriptionCt) : null,
       ),

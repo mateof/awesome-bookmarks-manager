@@ -13,14 +13,15 @@ without keys derived from somebody's password, is not readable.
 
 ## The keys
 
-Four kinds, each solving a different problem.
+Five kinds, each solving a different problem.
 
 | Key | Where it lives | Protects |
 |---|---|---|
 | `MASTER_KEY` | environment variable | wraps envelopes so a stolen database alone is useless |
 | User **DEK** | derived from the password (Argon2id), cached in memory | everything personal |
 | User **keypair** (X25519) | public in the clear, private sealed with the DEK | receiving a group key while offline |
-| **Group key** | sealed to each member's public key | everything a group shares |
+| **Group key** | sealed to each member's public key | the group's own membership, and the scopes it holds |
+| **Scope key** | sealed with the key of each group that may read it | one shared item, across any number of groups |
 
 Personal content is sealed field by field with the owner's DEK, with the AAD
 bound to `<userId>|<field>` so a blob cannot be moved between fields or between
@@ -71,12 +72,44 @@ A group may opt into `recoverable`, which additionally keeps a
 There is no third option, and pretending otherwise would be dishonest: a key
 the server can use to rescue you is a key the server can use.
 
+## Key scopes: content shared with more than one group
+
+Sealing shared content with the *group's* key works until the same item is
+shared with a second group. A key cannot be narrowed to a subset, so handing
+group B the key of group A would hand B everything A owns.
+
+So a shared item gets a **key of its own**, and every group that may read it
+holds that key wrapped with theirs:
+
+    key_scopes(id)
+    key_scope_grants(scope_id, group_id, wrapped_key, group_key_version)
+    folders/bookmarks/databases.key_scope_id
+
+Two consequences worth knowing:
+
+- **Widening the audience is cheap.** Adding a group is one small row. The
+  content's key does not change, so nothing is re-encrypted however large the
+  folder is.
+- **Rotating a group's key re-wraps its grants** rather than re-encrypting the
+  content. Without that step, rotation would quietly cut the remaining members
+  off from everything shared with them through a scope.
+
+When somebody can reach a scope through several groups, the level that applies
+is the **best** one they hold. Taking the worst would mean joining a read-only
+group silently removed write access they already had elsewhere.
+
+`key_group_id` is the older mechanism, kept for content shared before scopes
+existed. It is promoted to a scope the first time that content is shared again.
+
 ## Shared content belongs to the group
 
-Every folder, bookmark and database row carries `key_group_id`:
+Every folder, bookmark and database row says which key seals it:
 
-- **null** — sealed with its owner's DEK. The normal case.
-- **set** — sealed with that group's key. The group owns the row.
+- **neither column set** — sealed with its owner's DEK. The normal case.
+- **`key_scope_id`** — sealed with a scope key, which any number of groups may
+  hold. This is what sharing does today.
+- **`key_group_id`** — sealed with one group's own key. The older mechanism,
+  described above.
 
 A member with the key reads and writes those rows through the ordinary
 endpoints. That is the whole point: an editor is not given an imitation of the
@@ -89,7 +122,7 @@ were sealed with different keys.
 
 ### Databases are shared on their own
 
-A database carries its own `key_group_id` rather than inheriting it from a note.
+A database carries its own key scope rather than inheriting one from a note.
 The same table can be embedded in several folders and bookmarks, and those are
 not necessarily shared with the same people, so inheriting would give the wrong
 answer as soon as there are two.

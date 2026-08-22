@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Trash2 } from "lucide-react";
+import { Database, Plus, Share2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { DatabaseBlock } from "../components/DatabaseBlock.js";
 import { dlg } from "../components/dialogs.js";
+import { ShareToGroup } from "../components/ShareToGroup.js";
 
 /**
  * Every database in the account, and a full-page view of one.
@@ -21,6 +22,7 @@ export function DatabasesPage() {
   const qc = useQueryClient();
   const { id } = useParams<{ id?: string }>();
   const [busy, setBusy] = useState(false);
+  const [sharing, setSharing] = useState<string | null>(null);
 
   const { data: list } = useQuery({
     queryKey: ["databases"],
@@ -100,6 +102,25 @@ export function DatabasesPage() {
                   {t("db.rowCount", { count: d.rowCount })}
                 </span>
               </button>
+              {!d.shared && (
+                <button
+                  type="button"
+                  onClick={() => setSharing(d.id)}
+                  title={t("db.shareWithGroups")}
+                  aria-label={`${t("db.shareWithGroups")}: ${d.name}`}
+                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
+                >
+                  <Share2 className="h-4 w-4" />
+                </button>
+              )}
+              {d.shared && (
+                <span
+                  title={t("db.sharedAlready")}
+                  className="p-1 text-sky-600 dark:text-sky-400"
+                >
+                  <Share2 className="h-4 w-4" />
+                </span>
+              )}
               <button
                 type="button"
                 onClick={async () => {
@@ -120,6 +141,17 @@ export function DatabasesPage() {
             </li>
           ))}
         </ul>
+      )}
+
+      {sharing && (
+        <ShareToGroup
+          sourceType="database"
+          sourceId={sharing}
+          onClose={() => {
+            setSharing(null);
+            qc.invalidateQueries({ queryKey: ["databases"] });
+          }}
+        />
       )}
     </div>
   );

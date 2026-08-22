@@ -21,6 +21,10 @@ import { and } from "drizzle-orm";
  * every existing row would still open with the old one, which the person who
  * was just removed still has.
  *
+ * Only content sealed with the group's own key is touched. Content under a key
+ * scope keeps its key: the scope survives the rotation and its grant is
+ * re-wrapped instead, which is cheaper and leaves the content alone.
+ *
  * Done inline rather than as a background job on purpose. A rotation that is
  * "queued" leaves a window in which the removal has been reported as done and
  * the content is still readable by the person removed, and that window is

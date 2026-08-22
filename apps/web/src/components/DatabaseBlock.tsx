@@ -7,12 +7,13 @@ import {
   type ViewKind,
 } from "@awesome-bookmarks/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Table2 } from "lucide-react";
+import { Database, Plus, Share2, Table2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 import { DatabaseBoard, DatabaseGallery } from "./DatabaseBoard.js";
 import { DatabaseTable } from "./DatabaseTable.js";
+import { ShareToGroup } from "./ShareToGroup.js";
 import { ViewBar } from "./DatabaseViewBar.js";
 
 /**
@@ -50,6 +51,7 @@ export function DatabaseBlock({
   const key = ["database", databaseId, blockId ?? null];
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [draftName, setDraftName] = useState("");
 
   const { data: db, isError } = useQuery({
@@ -215,7 +217,39 @@ export function DatabaseBlock({
         <span className="shrink-0 text-xs text-slate-400">
           {t("db.rowCount", { count: db.rows.length })}
         </span>
+        {/* A table is shared in its own right: the same one can sit in notes
+            that are not shared with the same people. */}
+        {!readOnly && !db.shared && (
+          <button
+            type="button"
+            onClick={() => setSharing(true)}
+            title={t("db.shareWithGroups")}
+            aria-label={t("db.shareWithGroups")}
+            className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+        )}
+        {db.shared && (
+          <span
+            title={t("db.sharedAlready")}
+            className="shrink-0 text-xs text-sky-600 dark:text-sky-400"
+          >
+            <Share2 className="h-4 w-4" />
+          </span>
+        )}
       </div>
+
+      {sharing && (
+        <ShareToGroup
+          sourceType="database"
+          sourceId={databaseId}
+          onClose={() => {
+            setSharing(false);
+            refresh();
+          }}
+        />
+      )}
 
       {view && (
         <ViewBar

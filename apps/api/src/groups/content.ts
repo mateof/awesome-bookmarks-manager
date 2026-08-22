@@ -17,6 +17,7 @@ import { sanitizeRichText } from "../util/sanitize.js";
 import { readShareAsset, type ShareAssetKind } from "./assets.js";
 import { openGroupField, sealGroupField } from "./encryption.js";
 import { groupKeyFor } from "./keys.js";
+import { canEdit, requireRole, roleOf } from "./roles.js";
 import { openRowField } from "./scope.js";
 
 /** A tag as it travels in a share: by name and colour, never by id. The
@@ -430,7 +431,9 @@ export function readGroupShareContent(
   );
   return {
     content: JSON.parse(json) as SharedContent,
-    access: row.access as "viewer" | "editor",
+    // What *this* reader may do, from their role in the group. The stored
+    // column is always "editor" now and would tell the client the wrong thing.
+    access: canEdit(roleOf(ctx, row.groupId)) ? "editor" : "viewer",
     rev: row.rev,
   };
 }
@@ -499,9 +502,8 @@ export function editSharedNode(
   },
 ): SharedContentResult {
   const row = loadShareRow(shareId);
-  if (row.access !== "editor") {
-    throw Forbidden("This share is read-only");
-  }
+  // Same reasoning as ops.ts: the level lives on the member, not the share.
+  requireRole(ctx, row.groupId, "editor");
   const groupDek = groupKeyFor(ctx, row.groupId);
   const tree = JSON.parse(
     openGroupField(groupDek, row.groupId, "share.payload", Buffer.from(row.payloadCt!)),

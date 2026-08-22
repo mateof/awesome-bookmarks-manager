@@ -26,6 +26,8 @@ interface FolderRow {
   linkedShareId: string | null;
   mine: boolean;
   keyGroupId: string | null;
+  keyScopeId: string | null;
+  shared: boolean;
 }
 
 test("importar carpeta compartida: modo enlace (symlink) y modo copia", async ({
@@ -113,7 +115,7 @@ test("importar carpeta compartida: modo enlace (symlink) y modo copia", async ({
   const groupDocs = folders.find((f) => f.name === "Docs");
   expect(groupDocs).toBeTruthy();
   expect(groupDocs!.mine).toBe(false);
-  expect(groupDocs!.keyGroupId).toBeTruthy();
+  expect(groupDocs!.shared).toBe(true);
   expect(folders.filter((f) => f.name === "Docs")).toHaveLength(1);
   // A viewer share stays read-only, and now that is enforced by the role
   // rather than by the member simply not having the rows.

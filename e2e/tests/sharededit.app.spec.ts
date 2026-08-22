@@ -55,7 +55,7 @@ test("un miembro con permiso crea dentro de la carpeta compartida y llega al due
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: folder.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: folder.id },
   });
 
   let shareId = "";
@@ -152,8 +152,19 @@ test("un miembro sin permiso de edición no puede crear nada", async ({
     })
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
+  // Read-only is the member's level, not a flag on the share: demote them.
+  const roMembers = await (
+    await o.req.get(`/api/groups/${group.id}/members`)
+  ).json();
+  const roThem = roMembers.find(
+    (x: { email: string }) =>
+      x.email === "shared.edit.ro.member.e2e@example.com",
+  );
+  await o.req.patch(`/api/groups/${group.id}/members/${roThem.userId}/role`, {
+    data: { role: "viewer" },
+  });
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: folder.id, access: "viewer" },
+    data: { sourceType: "folder", sourceId: folder.id },
   });
 
   let shareId = "";
@@ -216,11 +227,37 @@ test("los botones de crear solo salen con permiso de edición", async ({
   const readonly = await (
     await o.req.post("/api/folders", { data: { name: "Mirar" } })
   ).json();
+  // Two groups, because a group is the unit of access now: the same person
+  // cannot be an editor of one folder and a viewer of another within one.
+  const roGroup = await (
+    await o.req.post("/api/groups", { data: { name: "Interfaz lectura" } })
+  ).json();
+  const roInv = await (
+    await o.req.post(`/api/groups/${roGroup.id}/invitations`, {
+      data: {
+        email: "shared.edit.ui.member.e2e@example.com",
+        expiresInDays: 7,
+      },
+    })
+  ).json();
+  await m.req.post(`/api/invitations/${roInv.token}/accept`);
+  const roList = await (
+    await o.req.get(`/api/groups/${roGroup.id}/members`)
+  ).json();
+  const roWho = roList.find(
+    (x: { email: string }) =>
+      x.email === "shared.edit.ui.member.e2e@example.com",
+  );
+  await o.req.patch(
+    `/api/groups/${roGroup.id}/members/${roWho.userId}/role`,
+    { data: { role: "viewer" } },
+  );
+
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: editable.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: editable.id },
   });
-  await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: readonly.id, access: "viewer" },
+  await o.req.post(`/api/groups/${roGroup.id}/shares`, {
+    data: { sourceType: "folder", sourceId: readonly.id },
   });
 
   const portals: Record<string, string> = {};
@@ -294,7 +331,7 @@ test("mover, etiquetar y colorear dentro del compartido, y llega al dueño", asy
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: root.id },
   });
 
   let shareId = "";
@@ -407,7 +444,7 @@ test("favorito y reordenar dentro del compartido llegan al dueño", async ({
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: root.id },
   });
 
   let shareId = "";
@@ -506,7 +543,7 @@ test("icono, fondo y árbol lateral de una carpeta compartida", async ({
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: root.id },
   });
 
   let shareId = "";
@@ -601,7 +638,7 @@ test("editar en el compartido usa los mismos diálogos que mis carpetas", async 
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: root.id },
   });
 
   let shareId = "";
@@ -709,7 +746,7 @@ test("la ficha de un bookmark compartido: misma página, datos del compartido", 
   ).json();
   await m.req.post(`/api/invitations/${inv.token}/accept`);
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: root.id, access: "editor" },
+    data: { sourceType: "folder", sourceId: root.id },
   });
 
   let shareId = "";
@@ -785,8 +822,23 @@ test("la ficha de un bookmark compartido: misma página, datos del compartido", 
       },
     })
   ).json();
+  // Read-only comes from the member's level, so demote them before sharing
+  // the second folder. Both shares land in the same group and both are now
+  // read-only for them, which is what a group meaning one level implies.
+  const roMembers = await (
+    await o.req.get(`/api/groups/${group.id}/members`)
+  ).json();
+  // Demote the viewer specifically: the other member stays an editor, which
+  // is what makes this a permission test rather than a group-wide setting.
+  const roWho = roMembers.find(
+    (x: { email: string }) =>
+      x.email === "shared.detail.viewer.e2e@example.com",
+  );
+  await o.req.patch(`/api/groups/${group.id}/members/${roWho.userId}/role`, {
+    data: { role: "viewer" },
+  });
   await o.req.post(`/api/groups/${group.id}/shares`, {
-    data: { sourceType: "folder", sourceId: roFolder.id, access: "viewer" },
+    data: { sourceType: "folder", sourceId: roFolder.id },
   });
   let roShareId = "";
   await expect(async () => {

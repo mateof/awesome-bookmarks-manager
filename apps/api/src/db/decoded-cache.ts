@@ -47,7 +47,8 @@ keyCache.onEvict((userId) => invalidate(userId));
 /**
  * The signature covers everything the user can *see*, not just what they own.
  *
- * Shared content is now rows belonging to a group, written by other people.
+ * Shared content is rows reached through a group or a key scope, written by
+ * other people.
  * A signature scoped to `user_id` would never move when a colleague edits the
  * shared folder, and the member would keep serving a stale list until their
  * own key expired. The subquery keeps this self-checking rather than relying
@@ -65,9 +66,15 @@ function signatureFor(table: "bookmarks" | "folders", userId: string): string {
          AND (user_id = ?
               OR key_group_id IN (
                 SELECT group_id FROM group_members WHERE user_id = ?
+              )
+              OR key_scope_id IN (
+                SELECT scope_id FROM key_scope_grants
+                WHERE group_id IN (
+                  SELECT group_id FROM group_members WHERE user_id = ?
+                )
               ))`,
     )
-    .get(userId, userId) as { n: number; r: number; m: string };
+    .get(userId, userId, userId) as { n: number; r: number; m: string };
   return `${row.n}:${row.r}:${row.m}`;
 }
 

@@ -146,9 +146,11 @@ test("04 · compartir una carpeta con otro usuario", async ({ browser }) => {
   await expect(
     pageA.getByRole("heading", { name: "Compartir carpeta con grupo" }),
   ).toBeVisible();
-  await pageA.getByRole("radio").first().check();
+  // Several groups can be picked now, so these are checkboxes. Named, because
+  // the page behind the dialog has selection checkboxes of its own.
+  await pageA.getByRole("checkbox", { name: new RegExp(group.name) }).check();
   await shot(pageA, "11-share");
-  await pageA.getByRole("button", { name: "Compartir", exact: true }).click();
+  await pageA.getByRole("button", { name: "Compartir con 1 grupo" }).click();
   await expect(
     pageA.getByRole("heading", { name: "Compartir carpeta con grupo" }),
   ).toBeHidden();

@@ -53,6 +53,9 @@ import type {
   EditSharedNodeBody,
   SharedItem,
   ShareToGroupBody,
+  GroupRole,
+  ShareToGroupsBody,
+  ShareResult,
   Tag,
   TemplateItem,
   TwoFactorSetupResponse,
@@ -861,6 +864,17 @@ export const api = {
     request<{ id: string }>(`/groups/${id}/shares`, {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  /** Share one thing with several groups in a single call. */
+  shareToGroups: (body: ShareToGroupsBody) =>
+    request<ShareResult[]>("/shares/to-groups", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  setMemberRole: (groupId: string, userId: string, role: GroupRole) =>
+    request<{ ok: true }>(`/groups/${groupId}/members/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
     }),
   listGroupShares: (id: string) =>
     request<SharedItem[]>(`/groups/${id}/shares`),

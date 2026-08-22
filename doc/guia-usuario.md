@@ -149,6 +149,24 @@ La regla que lo sostiene: solo puedes actuar sobre alguien **estrictamente por
 debajo** de ti, y nunca dar tu propio nivel. Sin eso, dos admins podrían
 expulsarse mutuamente.
 
+**Se cambia desde la lista de miembros del grupo**, con un desplegable en cada
+persona. Solo salen los niveles que tú puedes conceder, así que la interfaz no
+te ofrece algo que el servidor vaya a rechazar.
+
+**Al compartir ya no se pregunta el permiso.** Antes había que elegir "solo
+lectura" o "puede editar" en cada compartición, y eso convivía con el permiso
+que cada persona ya tenía en el grupo: dos respuestas a la misma pregunta, que
+podían contradecirse. Manda el permiso del grupo.
+
+La contrapartida, dicha claramente: **el grupo es la unidad de acceso**. Si
+quieres que las mismas personas vean una carpeta y editen otra, hazlo con dos
+grupos.
+
+**Se puede compartir con varios grupos a la vez**, marcando todos los que
+quieras en el mismo diálogo. El contenido no se duplica: se cifra una vez y a
+cada grupo se le entrega la llave, así que añadir un grupo más es inmediato por
+grande que sea la carpeta.
+
 Conviene saber dónde acaba el cifrado: tener la clave del grupo te deja
 **descifrar**. Que puedas escribir o no, y que puedas dar permisos o no, lo
 decide el servidor, no la clave. La única frontera que dibuja la criptografía
@@ -972,6 +990,9 @@ Cada vista guarda sus **filtros**, su **orden**, qué columnas enseña y por qu�
 agrupa. Y guarda solo eso: filtrar no borra filas y ordenar no cambia el orden
 guardado, así que dos vistas de la misma tabla pueden enseñar cosas distintas
 sin mentir ninguna.
+
+**Se comparten con el botón de compartir** de la propia tabla, tanto desde la
+nota como desde la página de *Bases de datos*, y con uno o varios grupos.
 
 **Se comparten por separado.** Una base de datos es una entidad propia, no
 parte de la nota que la contiene: la misma tabla puede estar embebida en varias

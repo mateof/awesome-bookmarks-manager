@@ -363,6 +363,12 @@ export const folders = sqliteTable(
      * instead of through a copy that has to be reconciled later.
      */
     keyGroupId: text("key_group_id"),
+    /**
+     * The key scope this row is sealed with, when it is shared. Supersedes
+     * `keyGroupId`, which sealed with the group's own key and therefore could
+     * only ever reach one group.
+     */
+    keyScopeId: text("key_scope_id"),
     parentId: text("parent_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
     descriptionCt: blob("description_ct", { mode: "buffer" }),
@@ -412,6 +418,12 @@ export const bookmarks = sqliteTable(
      * instead of through a copy that has to be reconciled later.
      */
     keyGroupId: text("key_group_id"),
+    /**
+     * The key scope this row is sealed with, when it is shared. Supersedes
+     * `keyGroupId`, which sealed with the group's own key and therefore could
+     * only ever reach one group.
+     */
+    keyScopeId: text("key_scope_id"),
     folderId: text("folder_id"),
     titleCt: blob("title_ct", { mode: "buffer" }).notNull(),
     urlCt: blob("url_ct", { mode: "buffer" }).notNull(),
@@ -704,6 +716,12 @@ export const databases = sqliteTable(
      * instead of through a copy that has to be reconciled later.
      */
     keyGroupId: text("key_group_id"),
+    /**
+     * The key scope this row is sealed with, when it is shared. Supersedes
+     * `keyGroupId`, which sealed with the group's own key and therefore could
+     * only ever reach one group.
+     */
+    keyScopeId: text("key_scope_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
     updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
@@ -799,5 +817,44 @@ export const groupMemberKeys = sqliteTable(
   (t) => ({
     pk: primaryKey({ columns: [t.groupId, t.userId, t.keyVersion] }),
     userIdx: index("group_member_keys_user_idx").on(t.userId),
+  }),
+);
+
+
+/**
+ * A key that a piece of shared content is sealed with, granted to one or more
+ * groups.
+ *
+ * Sealing content with the *group's* key works until you share the same thing
+ * with a second group: a key cannot be narrowed to a subset, so handing group
+ * B the key of group A would give B everything A has. A scope is the missing
+ * level. The content gets its own key, and each group that may read it holds
+ * that key wrapped with its own.
+ *
+ * The practical payoff: sharing something with another group costs one small
+ * row, not a re-encryption of the content, because the content's key does not
+ * change when the audience grows.
+ */
+export const keyScopes = sqliteTable("key_scopes", {
+  id: text("id").primaryKey(),
+  /** Who created the share. Only used for accounting and diagnostics. */
+  userId: text("user_id").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+export const keyScopeGrants = sqliteTable(
+  "key_scope_grants",
+  {
+    scopeId: text("scope_id").notNull(),
+    groupId: text("group_id").notNull(),
+    /** The scope key, sealed with that group's key. */
+    wrappedKey: blob("wrapped_key", { mode: "buffer" }).notNull(),
+    /** Which version of the group key wrapped it, so rotation can find it. */
+    groupKeyVersion: integer("group_key_version").notNull().default(1),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.scopeId, t.groupId] }),
+    groupIdx: index("key_scope_grants_group_idx").on(t.groupId),
   }),
 );

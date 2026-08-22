@@ -149,6 +149,13 @@ export type DbView = z.infer<typeof DbViewSchema>;
 export const DatabaseSummarySchema = z.object({
   /** The group that owns it, or null when it is the caller's own. */
   keyGroupId: z.string().nullable().default(null),
+  /**
+   * The key scope this row is sealed with, when it is shared. Distinct from
+   * `keyGroupId`: a scope can be held by several groups, a group key by one.
+   */
+  keyScopeId: z.string().nullable().default(null),
+  /** True when this row is shared at all, by either mechanism. */
+  shared: z.boolean().default(false),
   /** False for a viewer inside a group: they can read it and nothing more. */
   canWrite: z.boolean().default(true),
   id: z.string().uuid(),
@@ -162,6 +169,13 @@ export type DatabaseSummary = z.infer<typeof DatabaseSummarySchema>;
 export const DatabaseDetailSchema = z.object({
   /** The group that owns it, or null when it is the caller's own. */
   keyGroupId: z.string().nullable().default(null),
+  /**
+   * The key scope this row is sealed with, when it is shared. Distinct from
+   * `keyGroupId`: a scope can be held by several groups, a group key by one.
+   */
+  keyScopeId: z.string().nullable().default(null),
+  /** True when this row is shared at all, by either mechanism. */
+  shared: z.boolean().default(false),
   /** False for a viewer inside a group: they can read it and nothing more. */
   canWrite: z.boolean().default(true),
   id: z.string().uuid(),

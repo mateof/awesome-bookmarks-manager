@@ -667,6 +667,14 @@ const es = {
     back: "Volver",
   },
   groups: {
+    roleOf: "Permiso de {{email}}",
+    role: {
+      viewer: "Ver",
+      editor: "Editor",
+      admin: "Admin",
+      super: "Super",
+      owner: "Propietario",
+    },
     listTitle: "Grupos",
     newGroup: "Nuevo grupo",
     pendingInvitations: "Invitaciones pendientes",
@@ -781,6 +789,12 @@ const es = {
     syncHint: "El grupo lo ve al momento; llega a la carpeta original cuando su dueño vuelva a entrar.",
   },
   shareToGroup: {
+    titleDatabase: "Compartir la tabla con un grupo",
+    noEditorGroups: "Necesitas permiso de editor o superior en algún grupo para compartir ahí.",
+    shareCount_zero: "Elige al menos un grupo",
+    shareCount_one: "Compartir con 1 grupo",
+    shareCount_other: "Compartir con {{count}} grupos",
+    rolesNote: "Cada persona podrá ver o editar según el permiso que ya tenga en el grupo.",
     titleFolder: "Compartir carpeta con grupo",
     titleBookmark: "Compartir bookmark con grupo",
     noGroups: "Aún no tienes grupos. Crea uno desde la sección Grupos.",
@@ -1024,6 +1038,8 @@ const es = {
     tooLarge: "«{{name}}» supera el máximo de {{max}} por fichero.",
   },
   db: {
+    shareWithGroups: "Compartir con grupos",
+    sharedAlready: "Ya compartida con un grupo",
     moveBlock: "Arrastrar para mover la tabla",
     moveUp: "Subir la tabla",
     moveDown: "Bajar la tabla",

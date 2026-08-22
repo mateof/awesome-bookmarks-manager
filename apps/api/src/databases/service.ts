@@ -79,14 +79,22 @@ function readableDatabase(ctx: AuthedContext, id: string) {
 /** The same, but refusing viewers: a group's table is not everyone's to edit. */
 function writableDatabase(ctx: AuthedContext, id: string) {
   const row = readableDatabase(ctx, id);
-  assertCanWrite(ctx, { userId: row.userId, keyGroupId: row.keyGroupId ?? null });
+  assertCanWrite(ctx, {
+    userId: row.userId,
+    keyGroupId: row.keyGroupId ?? null,
+    keyScopeId: row.keyScopeId ?? null,
+  });
   return row;
 }
 
 /** Shorthand for the key a database's own rows are sealed with. */
 function keyOf(ctx: AuthedContext, id: string) {
   const row = readableDatabase(ctx, id);
-  return { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
+  return {
+    userId: row.userId,
+    keyGroupId: row.keyGroupId ?? null,
+    keyScopeId: row.keyScopeId ?? null,
+  };
 }
 
 function readColumns(ctx: AuthedContext, databaseId: string): DbColumn[] {
@@ -168,7 +176,11 @@ function readViews(
 /** Key for a database this user is allowed to change. */
 function writeKey(ctx: AuthedContext, databaseId: string) {
   const row = writableDatabase(ctx, databaseId);
-  return { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
+  return {
+    userId: row.userId,
+    keyGroupId: row.keyGroupId ?? null,
+    keyScopeId: row.keyScopeId ?? null,
+  };
 }
 
 export function listDatabases(ctx: AuthedContext): DatabaseSummary[] {
@@ -182,13 +194,20 @@ export function listDatabases(ctx: AuthedContext): DatabaseSummary[] {
   return rows.map((d) => ({
     id: d.id,
     keyGroupId: d.keyGroupId ?? null,
+    keyScopeId: d.keyScopeId ?? null,
+    shared: !!(d.keyGroupId || d.keyScopeId),
     canWrite: canWriteRow(ctx, {
       userId: d.userId,
       keyGroupId: d.keyGroupId ?? null,
+      keyScopeId: d.keyScopeId ?? null,
     }),
     name: openRowField(
       ctx,
-      { userId: d.userId, keyGroupId: d.keyGroupId ?? null },
+      {
+        userId: d.userId,
+        keyGroupId: d.keyGroupId ?? null,
+        keyScopeId: d.keyScopeId ?? null,
+      },
       "db.name",
       d.nameCt,
     ),
@@ -208,10 +227,16 @@ export function getDatabase(
   blockId?: string | null,
 ): DatabaseDetail {
   const d = readableDatabase(ctx, id);
-  const keyed = { userId: d.userId, keyGroupId: d.keyGroupId ?? null };
+  const keyed = {
+    userId: d.userId,
+    keyGroupId: d.keyGroupId ?? null,
+    keyScopeId: d.keyScopeId ?? null,
+  };
   return {
     id: d.id,
     keyGroupId: d.keyGroupId ?? null,
+    keyScopeId: d.keyScopeId ?? null,
+    shared: !!(d.keyGroupId || d.keyScopeId),
     canWrite: canWriteRow(ctx, keyed),
     name: openRowField(ctx, keyed, "db.name", d.nameCt),
     columns: readColumns(ctx, id),
@@ -271,7 +296,11 @@ export function renameDatabase(
   name: string,
 ): DatabaseSummary {
   const row = writableDatabase(ctx, id);
-  const keyed = { userId: row.userId, keyGroupId: row.keyGroupId ?? null };
+  const keyed = {
+    userId: row.userId,
+    keyGroupId: row.keyGroupId ?? null,
+    keyScopeId: row.keyScopeId ?? null,
+  };
   getDb()
     .update(databases)
     .set({

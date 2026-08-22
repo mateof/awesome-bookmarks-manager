@@ -10,6 +10,7 @@ import {
   SetSharedTagsBodySchema,
   InviteMemberBodySchema,
   ShareToGroupBodySchema,
+  ShareToGroupsBodySchema,
   UpdateGroupBodySchema,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
@@ -59,6 +60,7 @@ import {
   removeMember,
   setMemberRole,
   shareToGroup,
+  shareToGroups,
   updateGroup,
 } from "./service.js";
 
@@ -197,6 +199,22 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const { id } = IdParam.parse(req.params);
     return listGroupShares(ctx, id);
+  });
+
+  /**
+   * Share one thing with several groups in one call. See `shareToGroups`: the
+   * first group's adoption re-seals the rows with its key, so doing the rest
+   * from a client that has moved on would work against content it can no
+   * longer read.
+   */
+  app.post("/shares/to-groups", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const body = ShareToGroupsBodySchema.parse(req.body);
+    reply.code(201);
+    return shareToGroups(ctx, body.groupIds, {
+      sourceType: body.sourceType,
+      sourceId: body.sourceId,
+    });
   });
 
   app.post("/groups/:id/shares", async (req, reply) => {

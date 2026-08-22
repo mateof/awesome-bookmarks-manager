@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { seedSpanish, signup } from "../fixtures/app.js";
 
 /**
- * Phase A: shared editing with viewer/editor access. Owner shares a folder as
+ * Shared editing. What a member may do is their **role in the group**; the
+ * share itself no longer carries a level. Owner shares a folder as
  * "editor"; a group member edits a node in the live shared copy; a "viewer"
  * share rejects edits (403); a stale rev is rejected (409). API-level, using
  * the two users' session cookies.
@@ -60,10 +61,12 @@ test("compartir con edición: editor edita, viewer 403, rev 409", async ({
   ).toBeTruthy();
 
   // Helper: share the folder and wait until the collaborator can read it.
-  const shareAndRead = async (access: "viewer" | "editor") => {
+  const shareAndRead = async (label: string) => {
+    void label;
     const share = await (
       await oreq.post(`/api/groups/${group.id}/shares`, {
-        data: { sourceType: "folder", sourceId: folder.id, access },
+        // No access level: the member's role in the group decides.
+        data: { sourceType: "folder", sourceId: folder.id },
       })
     ).json();
     let content: {
@@ -81,6 +84,7 @@ test("compartir con edición: editor edita, viewer 403, rev 409", async ({
 
   // Editor share: collaborator edits the bookmark node.
   const ed = await shareAndRead("editor");
+  // Joining a group makes you an editor, so the share is editable.
   expect(ed.access).toBe("editor");
   const nodeId = ed.content.bookmarks[0]!.id;
 
@@ -99,9 +103,21 @@ test("compartir con edición: editor edita, viewer 403, rev 409", async ({
   });
   expect(stale.status()).toBe(409);
 
-  // Viewer share: editing is forbidden (403).
+  // Read-only is now a property of the person, not of the share: demote them
+  // in the group and the same share stops accepting writes.
+  const members = await (
+    await oreq.get(`/api/groups/${group.id}/members`)
+  ).json();
+  const them = members.find(
+    (x: { email: string }) => x.email === pierre.email,
+  );
+  const demoted = await oreq.patch(
+    `/api/groups/${group.id}/members/${them.userId}/role`,
+    { data: { role: "viewer" } },
+  );
+  expect(demoted.ok(), await demoted.text()).toBeTruthy();
+
   const vw = await shareAndRead("viewer");
-  expect(vw.access).toBe("viewer");
   const forbidden = await creq.patch(
     `/api/shared/${vw.shareId}/node/${vw.content.bookmarks[0]!.id}`,
     { data: { title: "nope", baseRev: vw.rev } },

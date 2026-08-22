@@ -13,6 +13,7 @@ import type {
 } from "./content.js";
 import { openGroupField, sealGroupField } from "./encryption.js";
 import { groupKeyFor } from "./keys.js";
+import { requireRole } from "./roles.js";
 
 /**
  * Structural editing inside an editor share.
@@ -109,7 +110,10 @@ function loadEditableShare(ctx: AuthedContext, shareId: string): ShareRow {
     .where(eq(groupShares.id, shareId))
     .get();
   if (!row) throw NotFound("Share not found");
-  if (row.access !== "editor") throw Forbidden("This share is read-only");
+  // The caller's role decides, not the share's old `access` column: that
+  // column is now always "editor" and keeping it as the gate would let a
+  // viewer write through this endpoint.
+  requireRole(ctx, row.groupId, "editor");
   if (row.payloadStatus !== "ready" || !row.payloadCt) {
     throw Forbidden("Share is still being prepared");
   }

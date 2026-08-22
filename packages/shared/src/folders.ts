@@ -14,6 +14,13 @@ export const FolderSchema = z.object({
    * without a second request, and so an editor knows a row is theirs to change.
    */
   keyGroupId: z.string().nullable().default(null),
+  /**
+   * The key scope this row is sealed with, when it is shared. Distinct from
+   * `keyGroupId`: a scope can be held by several groups, a group key by one.
+   */
+  keyScopeId: z.string().nullable().default(null),
+  /** True when this row is shared at all, by either mechanism. */
+  shared: z.boolean().default(false),
   /** True when this row is the caller's own rather than a group's. */
   mine: z.boolean().default(true),
   /** Whether the caller may change it. False for a viewer inside a group. */
