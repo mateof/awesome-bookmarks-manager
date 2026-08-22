@@ -885,6 +885,12 @@ export const api = {
   listShared: () => request<SharedItem[]>("/shared"),
   getSharedContent: (shareId: string) =>
     request<unknown>(`/shared/${shareId}`),
+  /** Which row a share points at, and whether this caller can open it. */
+  getShareSource: (shareId: string) =>
+    request<
+      | { type: "folder" | "bookmark" | "database"; id: string; reachable: boolean }
+      | { error: string }
+    >(`/shared/${shareId}/source`),
   createSharedFolder: (
     shareId: string,
     body: { parentId?: string | null; name: string; baseRev?: number },

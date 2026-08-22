@@ -766,6 +766,9 @@ function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
     // seconds. Worse, a payload that failed to seal left it that way for good.
     // The row is there the moment the share is, and reading it is one query.
     let label = labelForSource(ctx, r.sourceType, r.sourceId);
+    // Reading the source is the same question as being able to open it, so the
+    // answer comes free with the label rather than costing a second lookup.
+    const sourceReachable = label !== null;
     if (label === null && r.payloadStatus === "ready" && r.payloadCt) {
       // Falls back to the payload for shares whose source has since been
       // deleted: the copy still says what it was.
@@ -789,6 +792,7 @@ function rawShares(ctx: AuthedContext, groupIds: string[]): SharedItem[] {
       ...rest,
       access: mine && canEdit(mine) ? "editor" : "viewer",
       label,
+      sourceReachable,
     } as SharedItem;
   });
 }

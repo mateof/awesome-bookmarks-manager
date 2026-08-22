@@ -146,6 +146,18 @@ se guardaba en la copia del grupo y se quedaba en una cola hasta que el dueño
 volvía a entrar. Ahora no hay copia que reconciliar: la edición *es* el dato, y
 el dueño la ve al momento.
 
+**Y se abre en la página de siempre.** Pulsar un elemento en *Compartidos* te
+lleva a la carpeta o al bookmark tal cual, con sus migas de pan, sus tags, sus
+adjuntos y los mismos modos de vista que usas en lo tuyo. Antes había una
+pantalla aparte, más pobre, porque lo compartido era una copia; ya no lo es, así
+que tampoco hace falta una pantalla aparte para leerla. Una etiqueta arriba te
+recuerda que eso viene de un grupo y si puedes editarlo o solo mirarlo, y te
+devuelve a la lista.
+
+Si solo tienes permiso de **ver**, los botones de crear y editar no aparecen.
+No es que se escondan por educación: el servidor rechaza esas escrituras de
+todas formas, y ofrecerte un botón que va a fallar es peor que no ofrecerlo.
+
 **Cinco niveles de permiso**, cada uno con todo lo del anterior:
 
 | Nivel | Puede |

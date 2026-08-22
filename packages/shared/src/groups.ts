@@ -141,6 +141,15 @@ export const SharedItemSchema = z.object({
   rev: z.number().int().default(1),
   // Decrypted display label (the shared folder/bookmark name), when ready.
   label: z.string().nullable().default(null),
+  /**
+   * Whether this caller can open the row the share points at.
+   *
+   * True since key scopes: sharing hands over the *same* row, so the recipient
+   * reaches it through the ordinary pages and there is nothing separate to
+   * render. False for shares made before that, whose content was only ever a
+   * materialised copy, and for a source that has since been deleted.
+   */
+  sourceReachable: z.boolean().default(false),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

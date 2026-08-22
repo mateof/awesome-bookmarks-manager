@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SharedBadge } from "../components/SharedBadge.js";
 import {
   ArrowLeft,
   Bookmark,
@@ -153,6 +154,7 @@ export function BookmarkDetailPage() {
         {!hasCover && (
           <h1 className="truncate text-xl font-semibold">{b.title}</h1>
         )}
+        {b.shared && !b.mine && <SharedBadge canWrite={b.canWrite} />}
         <div className="ml-auto flex items-center gap-2">
           {/* One primary action, two icons, everything else behind the kebab.
               Seven equal buttons wrapped onto three rows on a phone, and the

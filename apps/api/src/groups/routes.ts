@@ -285,6 +285,30 @@ export const groupRoutes: FastifyPluginAsync = async (app) => {
     return readGroupShareContent(ctx, shareId);
   });
 
+  /**
+   * Where a share's content actually lives.
+   *
+   * Sharing hands over the *same* row since key scopes, so a shared folder
+   * opens on the ordinary folder page and there is nothing separate to render.
+   * This says whether that is possible and which row to open.
+   *
+   * Deliberately its own endpoint rather than a new shape for the one above:
+   * that one is read by the linked-folder portal and by drag-and-drop, which
+   * want the payload tree and would break if it started answering something
+   * else. Small and separate beats clever and shared.
+   */
+  app.get("/shared/:shareId/source", async (req) => {
+    const ctx = requireAuth(req);
+    const { shareId } = GroupShareIdParam.parse(req.params);
+    const share = listSharesInMyGroups(ctx).find((s) => s.id === shareId);
+    if (!share) return { error: "not_found" };
+    return {
+      type: share.sourceType,
+      id: share.sourceId,
+      reachable: share.sourceReachable,
+    };
+  });
+
   // A node's icon or background inside a share. The share keeps its own copy
   // sealed with the group key (the owner's blobs need the owner's key, and
   // they may be offline), so a member sees the folder as its owner designed it.

@@ -30,11 +30,14 @@ export function InlineTags({
   tagIds,
   onSaved,
   share,
+  /** False for a viewer: the chips still show, the add button does not. */
+  canEdit = true,
 }: {
   entity: "folder" | "bookmark";
   id: string;
   tagIds: string[];
   onSaved: () => void;
+  canEdit?: boolean;
   /**
    * Inside a group share the row is not this user's: tags travel by name and
    * are saved through the share, so the picker works in names and the chips
@@ -121,14 +124,16 @@ export function InlineTags({
           <TagIcon className="h-3.5 w-3.5" /> {t("tags.noneYet")}
         </span>
       )}
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        title={t("tags.addHere")}
-        className="flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:hover:text-slate-100"
-      >
-        <Plus className="h-3 w-3" /> {t("tags.addHere")}
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title={t("tags.addHere")}
+          className="flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs text-slate-500 hover:border-slate-400 hover:text-slate-900 dark:border-slate-700 dark:hover:text-slate-100"
+        >
+          <Plus className="h-3 w-3" /> {t("tags.addHere")}
+        </button>
+      )}
     </div>
   );
 }

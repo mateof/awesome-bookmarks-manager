@@ -137,6 +137,24 @@ A member with the key reads and writes those rows through the ordinary
 endpoints. That is the whole point: an editor is not given an imitation of the
 owner's capabilities, they are given the same rows.
 
+Which is why they also get the ordinary **pages**. A shared folder opens at
+`/folder/<id>` like any other, with the breadcrumbs, tags, attachments and view
+modes that live there. `/shared/<shareId>` resolves to the row and hands over.
+
+The reduced screen that used to render a share is kept for one case only:
+shares made before key scopes, whose content never was anything but a
+materialised copy and so has no row to open. `GET /shared/:id/source` says
+which case a share is, and it is deliberately a separate endpoint from the one
+returning the payload, because that one is also read by the linked-folder
+portal and by drag-and-drop.
+
+What the split cost while it lasted is worth recording: every feature had to be
+built twice, so in practice it was built once. The reduced page never grew tags
+or attachments. The reverse also bit, and harder — the ordinary page had no
+notion of a viewer, because until this change nobody but the owner opened it.
+Sending viewers there meant teaching it to read `canWrite`, which is the same
+authority the server enforces rather than a second opinion about it.
+
 What this replaced: a materialised copy of the owner's content sealed for the
 group, plus a queue of edits waiting for the owner to log in so they could be
 replayed into the owner's rows. That queue existed only because the two sides

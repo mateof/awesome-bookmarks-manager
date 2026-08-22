@@ -11,9 +11,10 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { dlg } from "../components/dialogs.js";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { fmtDate } from "../lib/date.js";
+import { routeForShare } from "../lib/shareRoute.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
 import {
@@ -124,7 +125,7 @@ function SharedList() {
               ) : (
                 <ExternalLink className="h-5 w-5 shrink-0 text-slate-400" />
               )}
-              <Link to={`/shared/${s.id}`} className="min-w-0 flex-1">
+              <Link to={routeForShare(s)} className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium hover:underline">
                   {s.label ??
                     (s.sourceType === "folder"
@@ -185,7 +186,7 @@ function SharedList() {
               ) : (
                 <ExternalLink className="h-5 w-5 shrink-0 text-slate-400" />
               )}
-              <Link to={`/shared/${s.id}`} className="min-w-0 flex-1">
+              <Link to={routeForShare(s)} className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium hover:underline">
                   {s.label ?? t("groups.sharedItem")}
                 </div>
@@ -260,9 +261,16 @@ interface SharedResponse {
   rev: number;
 }
 
+
 function SharedItemView({ shareId }: { shareId: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  // Asked first and separately: when the row is reachable there is nothing to
+  // render here, so the payload below is a copy nobody will look at.
+  const src = useQuery({
+    queryKey: ["share-source", shareId],
+    queryFn: () => api.getShareSource(shareId),
+  });
   const q = useQuery({
     queryKey: ["shared-content", shareId],
     queryFn: () =>
@@ -273,8 +281,26 @@ function SharedItemView({ shareId }: { shareId: string }) {
   const [editing, setEditing] = useState<SharedPayload | null>(null);
   const data = q.data && "content" in q.data ? q.data : null;
 
-  if (q.isLoading)
+  if (src.isLoading || q.isLoading)
     return <div className="text-slate-400">{t("common.loading")}</div>;
+
+  // The ordinary page owns this content, so hand it over. `replace` keeps the
+  // back button pointing at the list the user came from rather than bouncing
+  // them through here again.
+  if (src.data && "id" in src.data && src.data.reachable) {
+    return (
+      <Navigate
+        replace
+        to={routeForShare({
+          id: shareId,
+          sourceType: src.data.type,
+          sourceId: src.data.id,
+          sourceReachable: true,
+        })}
+      />
+    );
+  }
+
   if (!data)
     return <div className="text-slate-400">{t("shared.cannotLoad")}</div>;
 

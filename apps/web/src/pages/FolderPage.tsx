@@ -45,6 +45,7 @@ import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
+import { SharedBadge } from "../components/SharedBadge.js";
 import { IconPicker } from "../components/IconPicker.js";
 import { VersionHistory } from "../components/VersionHistory.js";
 import { GeneratePanelDialog } from "../components/GeneratePanelDialog.js";
@@ -563,6 +564,10 @@ export function FolderPage() {
       <FolderClosed className="h-7 w-7 text-slate-500" />
     </div>
   );
+  // What the group role allows, in one place. The root (no folder) is always
+  // your own, so there is nothing to be a viewer of.
+  const canWrite = folder ? folder.canWrite : true;
+
   const headerControls = (
     <>
       <ViewModeToggle />
@@ -637,22 +642,29 @@ export function FolderPage() {
             : []),
         ]}
       />
-      <button
-        onClick={() => setShowAddFolder(true)}
-        title={t("folder.quickAddFolder")}
-        aria-label={t("folder.quickAddFolder")}
-        className="rounded border border-slate-300 p-1.5 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-      >
-        <FolderPlus className="h-4 w-4" />
-      </button>
-      <button
-        onClick={() => setShowAddBookmark(true)}
-        title={t("folder.quickAddBookmark")}
-        aria-label={t("folder.quickAddBookmark")}
-        className="rounded bg-slate-900 p-1.5 text-white dark:bg-slate-100 dark:text-slate-900"
-      >
-        <Plus className="h-4 w-4" />
-      </button>
+      {/* A viewer of a shared folder reaches this page like anybody else now,
+          so the buttons have to say what they may do. Offering a create that
+          comes back 403 is worse than not offering it. */}
+      {canWrite && (
+        <>
+          <button
+            onClick={() => setShowAddFolder(true)}
+            title={t("folder.quickAddFolder")}
+            aria-label={t("folder.quickAddFolder")}
+            className="rounded border border-slate-300 p-1.5 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <FolderPlus className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setShowAddBookmark(true)}
+            title={t("folder.quickAddBookmark")}
+            aria-label={t("folder.quickAddBookmark")}
+            className="rounded bg-slate-900 p-1.5 text-white dark:bg-slate-100 dark:text-slate-900"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </>
+      )}
     </>
   );
 
@@ -689,7 +701,11 @@ export function FolderPage() {
           subtitle={
             folder!.shareOrigin
               ? t("folder.sharedFrom", { group: folder!.shareOrigin })
-              : undefined
+              : folder!.shared && !folder!.mine
+                ? `${t("folder.shared")} · ${
+                    folder!.canWrite ? t("shared.canEdit") : t("shared.readOnly")
+                  }`
+                : undefined
           }
           actions={headerControls}
         />
@@ -713,6 +729,11 @@ export function FolderPage() {
               <Share2 className="h-3 w-3" /> {t("folder.shared")}
             </span>
           )}
+          {/* Reached through a group rather than owned. `shareOrigin` above is
+              a different thing: an imported copy, which *is* yours. */}
+          {folder?.shared && !folder.mine && (
+            <SharedBadge canWrite={folder.canWrite} />
+          )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
             {headerControls}
           </div>
@@ -724,6 +745,7 @@ export function FolderPage() {
           entity="folder"
           id={folder.id}
           tagIds={folder.tagIds ?? []}
+          canEdit={canWrite}
           onSaved={() => qc.invalidateQueries({ queryKey: ["folders"] })}
         />
       )}
@@ -731,11 +753,13 @@ export function FolderPage() {
       {folder?.description && (
         <CollapsibleRichText
           html={folder.description}
-          onEdit={() => setEditDescription(true)}
+          {...(canWrite ? { onEdit: () => setEditDescription(true) } : {})}
         />
       )}
 
-      {folder && <Attachments entity="folder" id={folder.id} />}
+      {folder && (
+        <Attachments entity="folder" id={folder.id} canEdit={canWrite} />
+      )}
 
       {editDescription && folder && (
         <DescriptionEditDialog
