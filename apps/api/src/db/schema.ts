@@ -763,6 +763,12 @@ export const databaseViews = sqliteTable(
     userId: text("user_id").notNull(),
     /** ViewKind. */
     kind: text("kind").notNull(),
+    /**
+     * The embed this view is private to, or null when it belongs to the
+     * database and appears wherever the database does. Plaintext because it is
+     * an opaque identifier the app mints, not user content.
+     */
+    blockId: text("block_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
     /** Sealed JSON: filters, sorts, hidden columns, grouping. */
     configCt: blob("config_ct", { mode: "buffer" }),

@@ -26,23 +26,35 @@ import { ViewBar } from "./DatabaseViewBar.js";
 export function DatabaseBlock({
   databaseId,
   fallbackName,
+  blockId,
+  pinnedViewId,
   readOnly = false,
 }: {
   databaseId: string;
   /** Written into the note, so the card has a name before anything loads. */
   fallbackName?: string;
+  /**
+   * Identity of this embed. Views created here belong to it alone, so the same
+   * table embedded in two notes can be looked at two ways.
+   */
+  blockId?: string | null;
+  /**
+   * When set, this embed shows one view and no tab strip: an embedded table is
+   * usually meant to be one table rather than a switcher.
+   */
+  pinnedViewId?: string | null;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const key = ["database", databaseId];
+  const key = ["database", databaseId, blockId ?? null];
   const [activeViewId, setActiveViewId] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState("");
 
   const { data: db, isError } = useQuery({
     queryKey: key,
-    queryFn: () => api.getDatabase(databaseId),
+    queryFn: () => api.getDatabase(databaseId, blockId),
   });
 
   const refresh = () => {
@@ -139,8 +151,16 @@ export function DatabaseBlock({
     );
   }
 
+  // A pinned embed shows exactly its view. Falling back to the first one when
+  // the pinned view has been deleted beats rendering nothing.
+  const pinned = pinnedViewId
+    ? (db.views.find((v) => v.id === pinnedViewId) ?? null)
+    : null;
   const view =
-    db.views.find((v) => v.id === activeViewId) ?? db.views[0] ?? null;
+    pinned ??
+    db.views.find((v) => v.id === activeViewId) ??
+    db.views[0] ??
+    null;
   const config: ViewConfig = view?.config ?? {
     filters: [],
     sorts: [],
@@ -201,6 +221,8 @@ export function DatabaseBlock({
         <ViewBar
           db={db}
           view={view}
+          blockId={blockId ?? null}
+          pinned={!!pinned}
           readOnly={readOnly}
           onSelect={setActiveViewId}
           onChanged={refresh}

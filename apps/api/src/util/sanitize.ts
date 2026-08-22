@@ -50,7 +50,14 @@ const OPTIONS: sanitizeHtml.IOptions = {
     span: ["class", "style", "data-copyable", "data-spoiler"],
     // An embedded database is a div holding only the id; the rows live in
     // their own tables and are fetched when the note renders.
-    div: ["class", "style", "data-db-id", "data-db-name"],
+    div: [
+      "class",
+      "style",
+      "data-db-id",
+      "data-db-name",
+      "data-db-block",
+      "data-db-view",
+    ],
     "*": ["class", "style"],
   },
   // `style` being an allowed *attribute* is not enough: sanitize-html parses

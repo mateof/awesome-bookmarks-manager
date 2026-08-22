@@ -43,6 +43,8 @@ test("nombre de la base, nombre de la vista y filas visibles", async ({
   await editor.click();
   await expect(editor).toBeFocused();
   await page.getByRole("button", { name: "Base de datos" }).click();
+  // The button opens a chooser now: a new table, or one that already exists.
+  await page.getByRole("button", { name: "Nueva base de datos" }).click();
 
   // --- The card in the editor says what it is, and can be renamed ----------
   const card = page.getByTestId("db-editor-card");

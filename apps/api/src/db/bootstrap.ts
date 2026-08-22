@@ -407,6 +407,7 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS group_member_keys_user_idx
       ON group_member_keys(user_id);
   `);
+  tryAddColumn("database_views", "block_id", "TEXT");
   relaxGroupDekNotNull();
   tryAddColumn("folders", "key_group_id", "TEXT");
   tryAddColumn("bookmarks", "key_group_id", "TEXT");

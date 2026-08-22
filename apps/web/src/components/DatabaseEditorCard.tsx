@@ -21,9 +21,12 @@ export function DatabaseEditorCard({ node, updateAttributes }: NodeViewProps) {
   const [name, setName] = useState((node.attrs.dbName as string) ?? "");
   const [editing, setEditing] = useState(false);
 
+  const blockId = node.attrs.blockId as string | null;
+  const viewId = (node.attrs.viewId as string | null) ?? "";
+
   const { data, isError, refetch } = useQuery({
-    queryKey: ["database", id],
-    queryFn: () => api.getDatabase(id!),
+    queryKey: ["database", id, blockId],
+    queryFn: () => api.getDatabase(id!, blockId),
     enabled: !!id,
   });
 
@@ -85,6 +88,26 @@ export function DatabaseEditorCard({ node, updateAttributes }: NodeViewProps) {
               : t("db.loading")}
         </span>
       </div>
+      {/* Which view this embed shows. Chosen when it is inserted, and changed
+          here, because the editor is the only place that can rewrite the
+          block's own attributes. */}
+      <label className="mt-1 flex items-center gap-2 text-xs opacity-80">
+        <span className="shrink-0">{t("db.pinnedView")}</span>
+        <select
+          value={viewId}
+          aria-label={t("db.pinnedView")}
+          onChange={(e) => updateAttributes({ viewId: e.target.value || null })}
+          className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-1 py-0.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+        >
+          <option value="">{t("db.unpin")}</option>
+          {(data?.views ?? []).map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+              {v.blockId ? ` (${t("db.onlyHereBadge")})` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
       <p className="mt-1 text-xs opacity-70">{t("db.editorHint")}</p>
     </NodeViewWrapper>
   );

@@ -35,12 +35,18 @@ const ICONS: Record<ViewKind, typeof Table2> = {
 export function ViewBar({
   db,
   view,
+  blockId = null,
+  pinned = false,
   onSelect,
   onChanged,
   readOnly = false,
 }: {
   db: DatabaseDetail;
   view: DbView;
+  /** The embed this bar belongs to, when it is inside a note. */
+  blockId?: string | null;
+  /** True when the note pinned this view: no tabs, just its controls. */
+  pinned?: boolean;
   onSelect: (viewId: string) => void;
   onChanged: () => void;
   readOnly?: boolean;
@@ -71,7 +77,14 @@ export function ViewBar({
   };
 
   const create = useMutation({
-    mutationFn: (kind: ViewKind) => api.addDbView(db.id, { kind, name: nameFor(kind) }),
+    mutationFn: ({ kind, onlyHere }: { kind: ViewKind; onlyHere: boolean }) =>
+      api.addDbView(db.id, {
+        kind,
+        name: nameFor(kind),
+        // Private to this embed when asked for, so the same table used in
+        // another note is not cluttered with a view meant for this one.
+        blockId: onlyHere && blockId ? blockId : undefined,
+      }),
     onSuccess: (created) => {
       setAdding(false);
       onChanged();
@@ -97,7 +110,21 @@ export function ViewBar({
 
   return (
     <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 px-2 py-1 dark:border-slate-700">
-      {db.views.map((v) => {
+      {pinned ? (
+        <span className="flex items-center gap-1 rounded bg-slate-200 px-2 py-1 text-xs dark:bg-slate-700">
+          {(() => {
+            const Icon = ICONS[view.kind];
+            return <Icon className="h-3.5 w-3.5" />;
+          })()}
+          {view.name}
+          {view.blockId && (
+            <span className="rounded bg-slate-300 px-1 text-[10px] dark:bg-slate-600">
+              {t("db.onlyHereBadge")}
+            </span>
+          )}
+        </span>
+      ) : (
+      db.views.map((v) => {
         const Icon = ICONS[v.kind];
         const on = v.id === view.id;
         if (on && renaming && !readOnly) {
@@ -142,9 +169,9 @@ export function ViewBar({
             {v.name}
           </button>
         );
-      })}
+      }))}
 
-      {!readOnly && (
+      {!readOnly && !pinned && (
         <span className="relative">
           <button
             type="button"
@@ -169,7 +196,7 @@ export function ViewBar({
                   <button
                     key={k}
                     type="button"
-                    onClick={() => create.mutate(k)}
+                    onClick={() => create.mutate({ kind: k, onlyHere: false })}
                     className="flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <Icon className="h-3.5 w-3.5 text-slate-400" />
@@ -177,6 +204,22 @@ export function ViewBar({
                   </button>
                 );
               })}
+              {blockId && (
+                <>
+                  <span className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                  <span className="px-2 pb-1 text-[10px] uppercase text-slate-400">
+                    {t("db.onlyHereHint")}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => create.mutate({ kind: "table", onlyHere: true })}
+                    className="flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <Table2 className="h-3.5 w-3.5 text-slate-400" />
+                    {t("db.onlyHere")}
+                  </button>
+                </>
+              )}
             </span>
           )}
         </span>

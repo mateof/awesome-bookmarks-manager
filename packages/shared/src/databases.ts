@@ -138,6 +138,11 @@ export const DbViewSchema = z.object({
   name: z.string(),
   config: ViewConfigSchema,
   position: z.number().int(),
+  /**
+   * The embed this view belongs to, or null when it belongs to the database
+   * itself and shows up everywhere.
+   */
+  blockId: z.string().nullable().default(null),
 });
 export type DbView = z.infer<typeof DbViewSchema>;
 
@@ -210,6 +215,8 @@ export type UpdateRowBody = z.infer<typeof UpdateRowBodySchema>;
 export const CreateViewBodySchema = z.object({
   kind: ViewKindSchema,
   name: z.string().min(1).max(80),
+  /** When given, the view is private to that embed. */
+  blockId: z.string().max(64).optional(),
 });
 export type CreateViewBody = z.infer<typeof CreateViewBodySchema>;
 
@@ -224,6 +231,22 @@ export type UpdateViewBody = z.infer<typeof UpdateViewBodySchema>;
 export const DB_BLOCK_ATTR = "data-db-id";
 /** Kept next to the id so a note still names the table before it loads. */
 export const DB_BLOCK_NAME_ATTR = "data-db-name";
+/**
+ * Identity of the embed itself, minted when the block is inserted.
+ *
+ * The same database can be embedded in many notes, and each of those places
+ * usually wants to look at it differently: the note about this quarter wants
+ * the board grouped by status, the one about suppliers wants a filtered table.
+ * That is what this id is for. A view carrying it belongs to that embed alone
+ * and does not clutter the database's own view bar or anybody else's embed.
+ */
+export const DB_BLOCK_ID_ATTR = "data-db-block";
+/**
+ * Which view this embed shows. When set, the block renders that view on its
+ * own, without the strip of tabs: an embedded table is usually meant to be one
+ * table, not a switcher.
+ */
+export const DB_BLOCK_VIEW_ATTR = "data-db-view";
 
 /** Columns a kind can meaningfully be filtered by, and with which operators. */
 export const OPS_BY_KIND: Record<ColumnKind, FilterOp[]> = {

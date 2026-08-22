@@ -38,6 +38,10 @@ import { EntityRef } from "../lib/richRefs.js";
 import { dlg } from "./dialogs.js";
 import { EditorMobileBar } from "./EditorMobileBar.js";
 import { RefPicker, type PickedRef } from "./RefPicker.js";
+import {
+  DatabasePicker,
+  type PickedDatabase,
+} from "./DatabasePicker.js";
 import { api } from "../api.js";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -87,6 +91,7 @@ export function RichTextEditor({
   const [redactSensitive, setRedactSensitive] = useState(false);
   const [maximised, setMaximised] = useState(false);
   const [picking, setPicking] = useState<"entity" | "asset" | null>(null);
+  const [pickingDatabase, setPickingDatabase] = useState(false);
   const toggleMaximised = (next: boolean) => {
     setMaximised(next);
     onMaximisedChange?.(next);
@@ -207,21 +212,41 @@ export function RichTextEditor({
   };
 
   /**
-   * Creating the table first and inserting the block second, rather than the
-   * other way round: the block is nothing but an id, so there is no block to
-   * insert until the server has given us one. If the call fails, the note is
-   * left exactly as it was instead of carrying a pointer to nothing.
+   * Put a table into the note.
+   *
+   * Every embed gets its own id, minted here. Two notes showing the same table
+   * are two embeds, and that is what lets each of them keep views of its own
+   * without those showing up in the other.
    */
-  const insertDatabase = async () => {
+  const embed = (dbId: string, dbName: string, viewId: string | null) => {
     if (!editor) return;
+    setPickingDatabase(false);
+    editor
+      .chain()
+      .insertDatabase({ dbId, dbName, blockId: crypto.randomUUID(), viewId })
+      .run();
+    // Focused through ProseMirror directly: TipTap's focus() defers to a rAF,
+    // and anything typed in between would land nowhere.
+    editor.view.focus();
+  };
+
+  /**
+   * Creating the table first and inserting the block second: the block is
+   * nothing but an id, so there is no block to insert until the server has
+   * given us one. If the call fails, the note is left exactly as it was
+   * instead of carrying a pointer to nothing.
+   */
+  const createDatabase = async () => {
     try {
       const db = await api.createDatabase(t("db.newName"));
-      editor.chain().insertDatabase({ dbId: db.id, dbName: db.name }).run();
-      editor.view.focus();
+      embed(db.id, db.name, null);
     } catch (e) {
       await dlg.alert(e instanceof Error ? e.message : String(e));
     }
   };
+
+  const applyDatabase = (picked: PickedDatabase) =>
+    embed(picked.id, picked.name, picked.viewId);
 
   useEffect(() => {
     if (!editor) return;
@@ -251,7 +276,7 @@ export function RichTextEditor({
         onToggleMaximise={() => toggleMaximised(!maximised)}
         onInsertImage={insertImage}
         onPickRef={setPicking}
-        onInsertDatabase={insertDatabase}
+        onInsertDatabase={() => setPickingDatabase(true)}
       />
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
@@ -271,8 +296,15 @@ export function RichTextEditor({
         editor={editor}
         onInsertImage={insertImage}
         onPickRef={setPicking}
-        onInsertDatabase={insertDatabase}
+        onInsertDatabase={() => setPickingDatabase(true)}
       />
+      {pickingDatabase && (
+        <DatabasePicker
+          onPick={applyDatabase}
+          onCreate={() => void createDatabase()}
+          onClose={() => setPickingDatabase(false)}
+        />
+      )}
       {picking && (
         <RefPicker
           mode={picking}

@@ -912,6 +912,24 @@ Dentro de la descripción de cualquier carpeta o bookmark puedes meter una
 Se inserta con el botón de base de datos de la barra del editor (o desde el
 **+** en el móvil).
 
+**Nueva, o una que ya tengas.** Al pulsar el botón te pregunta: crear una
+nueva, o **usar una que ya exista**. Lo segundo es lo más frecuente: la tabla
+de proveedores vive en la carpeta de proveedores *y* en las notas de este
+trimestre, y tiene que ser la misma tabla o las dos copias se separan en una
+semana. Insertarla no duplica nada.
+
+**Puedes poner solo una vista.** Al elegir una tabla existente te pregunta qué
+vista quieres: la tabla entera con sus pestañas, o una sola. Si fijas una, esa
+nota enseña solo esa y sin pestañas, que suele ser lo que se quiere de una
+tabla metida en un texto. Se cambia después desde la tarjeta del editor.
+
+**Y puedes crear una vista solo para esa nota.** En el menú de añadir vista,
+dentro de una nota, hay una opción de *nueva vista solo para esta nota*. Sirve
+para cuando la misma tabla está en varios sitios y cada uno la quiere mirar a
+su manera: la nota del trimestre la quiere en tablero por estado, la de
+proveedores en tabla filtrada. Esa vista no aparece ni en la página de la base
+de datos ni donde esa tabla esté embebida en otras notas.
+
 **Se inserta en el editor y se rellena en la ficha.** En el editor verás una
 tarjeta con el nombre de la tabla y cuántas filas tiene (y desde ahí puedes
 cambiarle el nombre), no la rejilla. Es a propósito: en esta

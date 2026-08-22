@@ -1,6 +1,8 @@
 import {
   DB_BLOCK_ATTR,
+  DB_BLOCK_ID_ATTR,
   DB_BLOCK_NAME_ATTR,
+  DB_BLOCK_VIEW_ATTR,
 } from "@awesome-bookmarks/shared";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -22,7 +24,13 @@ export function useDatabaseBlocks(
   readOnly = false,
 ) {
   const [hosts, setHosts] = useState<
-    { el: HTMLElement; id: string; name: string }[]
+    {
+      el: HTMLElement;
+      id: string;
+      name: string;
+      blockId: string | null;
+      viewId: string | null;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -31,7 +39,7 @@ export function useDatabaseBlocks(
       setHosts([]);
       return;
     }
-    const found: { el: HTMLElement; id: string; name: string }[] = [];
+    const found: typeof hosts = [];
     for (const el of root.querySelectorAll<HTMLElement>(`div[${DB_BLOCK_ATTR}]`)) {
       const id = el.getAttribute(DB_BLOCK_ATTR);
       if (!id) continue;
@@ -40,7 +48,13 @@ export function useDatabaseBlocks(
       // it shows through underneath the component.
       const name = el.getAttribute(DB_BLOCK_NAME_ATTR) ?? el.textContent ?? "";
       el.textContent = "";
-      found.push({ el, id, name });
+      found.push({
+        el,
+        id,
+        name,
+        blockId: el.getAttribute(DB_BLOCK_ID_ATTR),
+        viewId: el.getAttribute(DB_BLOCK_VIEW_ATTR),
+      });
     }
     setHosts(found);
     // Re-read on every change of the HTML: the container's children are
@@ -49,11 +63,19 @@ export function useDatabaseBlocks(
 
   return (
     <>
-      {hosts.map(({ el, id, name }) =>
+      {hosts.map(({ el, id, name, blockId, viewId }) =>
         createPortal(
-          <DatabaseBlock databaseId={id} fallbackName={name} readOnly={readOnly} />,
+          <DatabaseBlock
+            databaseId={id}
+            fallbackName={name}
+            blockId={blockId}
+            pinnedViewId={viewId}
+            readOnly={readOnly}
+          />,
           el,
-          id,
+          // Keyed by the embed, not the database: the same table twice in one
+          // note is two components with two sets of views.
+          blockId ?? id,
         ),
       )}
     </>

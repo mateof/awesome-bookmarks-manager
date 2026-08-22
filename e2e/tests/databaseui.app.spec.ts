@@ -39,6 +39,8 @@ test("insertar una base de datos en una nota y editarla donde se lee", async ({
   await editor.click();
   await expect(editor).toBeFocused();
   await page.getByRole("button", { name: "Base de datos" }).click();
+  // The button opens a chooser now: a new table, or one that already exists.
+  await page.getByRole("button", { name: "Nueva base de datos" }).click();
 
   // In the editor it is a placeholder card, not the grid.
   await expect(editor.locator(".ab-db-block")).toBeVisible();

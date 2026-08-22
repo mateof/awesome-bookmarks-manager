@@ -49,7 +49,12 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/databases/:id", async (req) => {
     const ctx = requireAuth(req);
-    return getDatabase(ctx, IdParam.parse(req.params).id);
+    // `block` identifies the embed asking, so it can be handed its own private
+    // views along with the database's shared ones.
+    const { block } = z
+      .object({ block: z.string().max(64).optional() })
+      .parse(req.query ?? {});
+    return getDatabase(ctx, IdParam.parse(req.params).id, block);
   });
 
   app.patch("/databases/:id", async (req) => {

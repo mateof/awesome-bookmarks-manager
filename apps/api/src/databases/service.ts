@@ -18,7 +18,7 @@ import {
   type UpdateViewBody,
   type ViewConfig,
 } from "@awesome-bookmarks/shared";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   assertCanWrite,
@@ -127,12 +127,28 @@ function readRows(ctx: AuthedContext, databaseId: string): DbRow[] {
     }));
 }
 
-function readViews(ctx: AuthedContext, databaseId: string): DbView[] {
+/**
+ * `blockId` is the embed asking. Views private to a *different* embed are left
+ * out: they exist so one note can look at a shared table its own way without
+ * that appearing everywhere else the table is used.
+ */
+function readViews(
+  ctx: AuthedContext,
+  databaseId: string,
+  blockId?: string | null,
+): DbView[] {
   const keyed = keyOf(ctx, databaseId);
   return getDb()
     .select()
     .from(databaseViews)
-    .where(eq(databaseViews.databaseId, databaseId))
+    .where(
+      and(
+        eq(databaseViews.databaseId, databaseId),
+        blockId
+          ? or(isNull(databaseViews.blockId), eq(databaseViews.blockId, blockId))
+          : isNull(databaseViews.blockId),
+      ),
+    )
     .orderBy(asc(databaseViews.position), asc(databaseViews.id))
     .all()
     .map((v) => ({
@@ -145,6 +161,7 @@ function readViews(ctx: AuthedContext, databaseId: string): DbView[] {
           : {},
       ),
       position: v.position,
+      blockId: v.blockId ?? null,
     }));
 }
 
@@ -185,7 +202,11 @@ export function listDatabases(ctx: AuthedContext): DatabaseSummary[] {
   }));
 }
 
-export function getDatabase(ctx: AuthedContext, id: string): DatabaseDetail {
+export function getDatabase(
+  ctx: AuthedContext,
+  id: string,
+  blockId?: string | null,
+): DatabaseDetail {
   const d = readableDatabase(ctx, id);
   const keyed = { userId: d.userId, keyGroupId: d.keyGroupId ?? null };
   return {
@@ -195,7 +216,7 @@ export function getDatabase(ctx: AuthedContext, id: string): DatabaseDetail {
     name: openRowField(ctx, keyed, "db.name", d.nameCt),
     columns: readColumns(ctx, id),
     rows: readRows(ctx, id),
-    views: readViews(ctx, id),
+    views: readViews(ctx, id, blockId),
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   };
@@ -503,6 +524,7 @@ export function addView(
       databaseId,
       userId: ctx.userId,
       kind: body.kind,
+      blockId: body.blockId ?? null,
       nameCt: sealRowField(ctx, keyed, "db.view", body.name),
       configCt: sealRowField(ctx, keyed, "db.viewConfig", JSON.stringify(config),
       ),
@@ -510,7 +532,14 @@ export function addView(
     })
     .run();
   touch(databaseId);
-  return { id, kind: body.kind, name: body.name, config, position: existing.length };
+  return {
+    id,
+    kind: body.kind,
+    name: body.name,
+    config,
+    position: existing.length,
+    blockId: body.blockId ?? null,
+  };
 }
 
 export function updateView(

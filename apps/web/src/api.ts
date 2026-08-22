@@ -706,7 +706,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name }),
     }),
-  getDatabase: (id: string) => request<DatabaseDetail>(`/databases/${id}`),
+  getDatabase: (id: string, blockId?: string | null) =>
+    request<DatabaseDetail>(
+      `/databases/${id}${blockId ? `?block=${encodeURIComponent(blockId)}` : ""}`,
+    ),
   renameDatabase: (id: string, name: string) =>
     request<DatabaseSummary>(`/databases/${id}`, {
       method: "PATCH",

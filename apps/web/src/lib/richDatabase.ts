@@ -3,7 +3,9 @@ import { ReactNodeViewRenderer } from "@tiptap/react";
 import { DatabaseEditorCard } from "../components/DatabaseEditorCard.js";
 import {
   DB_BLOCK_ATTR,
+  DB_BLOCK_ID_ATTR,
   DB_BLOCK_NAME_ATTR,
+  DB_BLOCK_VIEW_ATTR,
 } from "@awesome-bookmarks/shared";
 
 /**
@@ -32,7 +34,12 @@ import {
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     databaseBlock: {
-      insertDatabase: (attrs: { dbId: string; dbName: string }) => ReturnType;
+      insertDatabase: (attrs: {
+        dbId: string;
+        dbName: string;
+        blockId: string;
+        viewId?: string | null;
+      }) => ReturnType;
     };
   }
 }
@@ -59,6 +66,23 @@ export const DatabaseBlock = Node.create({
         parseHTML: (el) => el.getAttribute(DB_BLOCK_NAME_ATTR) ?? "",
         renderHTML: (attrs) =>
           attrs.dbName ? { [DB_BLOCK_NAME_ATTR]: attrs.dbName as string } : {},
+      },
+      /**
+       * Identity of this embed. Two notes showing the same table have
+       * different block ids, which is what lets each keep its own views.
+       */
+      blockId: {
+        default: null,
+        parseHTML: (el) => el.getAttribute(DB_BLOCK_ID_ATTR),
+        renderHTML: (attrs) =>
+          attrs.blockId ? { [DB_BLOCK_ID_ATTR]: attrs.blockId as string } : {},
+      },
+      /** Pinned view. Null shows the whole database with its strip of tabs. */
+      viewId: {
+        default: null,
+        parseHTML: (el) => el.getAttribute(DB_BLOCK_VIEW_ATTR),
+        renderHTML: (attrs) =>
+          attrs.viewId ? { [DB_BLOCK_VIEW_ATTR]: attrs.viewId as string } : {},
       },
     };
   },
