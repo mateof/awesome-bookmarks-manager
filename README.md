@@ -76,7 +76,10 @@ one port.
   app's own search already works this way), which caps a table at ~5000 rows by
   design. Databases travel whole inside the `.abz` archive with their ids
   rewritten on import, and are flattened into a static table for public panels
-  and group shares, whose readers have no session to query with.
+  and group shares, whose readers have no session to query with. A database is
+  shared **in its own right**: the same table can be embedded in several notes
+  that are not shared with the same people, so it carries its own
+  `key_group_id` rather than inheriting whichever note mentions it.
 - **Mobile editor bar** — on a narrow screen the toolbar detaches and pins
   itself directly above the on-screen keyboard, tracking its height through
   `visualViewport`, with a `+` that opens the rest of the actions as a grid.

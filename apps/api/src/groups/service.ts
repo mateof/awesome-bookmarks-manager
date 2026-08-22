@@ -39,7 +39,6 @@ import { deleteShareAssets } from "./assets.js";
 import {
 
   openGroupField,
-  unwrapGroupDek,
 
 } from "./encryption.js";
 

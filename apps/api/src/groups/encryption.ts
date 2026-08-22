@@ -2,17 +2,19 @@ import { aeadDecrypt, aeadEncrypt, generateDEK } from "@awesome-bookmarks/crypto
 import { masterKey } from "../auth/encryption.js";
 
 /**
- * Group encryption (v1).
+ * Group encryption.
  *
- * Each group has a 256-bit `group_dek` generated at creation. It is wrapped
- * with the server master key only (NOT the owner's password-derived key) so
- * any group member can read shared content even when the owner is offline.
+ * The group key itself no longer lives here: it is sealed to each member's
+ * public key by `keys.ts`, so the server cannot open a group on its own. What
+ * remains in this file is the field-level sealing that key is used for, plus
+ * the master-key wrap, which is now only used by groups that deliberately
+ * opted into being recoverable.
  *
- * Tradeoff: the server can decrypt group-shared content unilaterally given
- * the master key. Personal items keep their stronger password-tier protection.
- * If you need stronger group privacy in the future, switch to per-member
- * wrapped keys (each member holds the group_dek wrapped by their user DEK).
+ * The note that used to sit here said the server could decrypt any group's
+ * content given MASTER_KEY, and named per-member wrapped keys as the fix. That
+ * is what `keys.ts` does; this comment is what is left of the debt.
  */
+/** Only used by the recoverable path now; new keys come from `keys.ts`. */
 export function generateGroupDek(): Buffer {
   return generateDEK();
 }

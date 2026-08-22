@@ -123,6 +123,45 @@ recorre carpeta a carpeta con el mismo botón de *Subir de nivel* que usas en la
 tuya. Si cambias cualquiera de esas cosas después de compartir, el grupo lo ve
 en cuanto se vuelve a sellar la copia, que ocurre solo con guardar el cambio.
 
+**Ahora la carpeta compartida es la misma carpeta, no una copia.** Al
+compartirla, ella y todo lo que hay dentro pasan a estar cifrados con la clave
+del grupo, que tiene cada miembro. Eso quiere decir que a quien la recibe le
+aparece en su propio menú lateral como una carpeta más (marcada como del
+grupo), y trabaja con ella exactamente igual que el dueño: los mismos botones,
+los mismos diálogos, los mismos atajos.
+
+Y lo que cambia es que **ya no hay espera**. Antes, lo que editaba un miembro
+se guardaba en la copia del grupo y se quedaba en una cola hasta que el dueño
+volvía a entrar. Ahora no hay copia que reconciliar: la edición *es* el dato, y
+el dueño la ve al momento.
+
+**Cinco niveles de permiso**, cada uno con todo lo del anterior:
+
+| Nivel | Puede |
+| --- | --- |
+| **Ver** | leer |
+| **Editor** | y además cambiar el contenido |
+| **Admin** | y además dar y quitar permisos de ver y editor |
+| **Super** | y además dar y quitar permisos de admin y super |
+| **Propietario** | y además nadie puede quitárselo a él |
+
+La regla que lo sostiene: solo puedes actuar sobre alguien **estrictamente por
+debajo** de ti, y nunca dar tu propio nivel. Sin eso, dos admins podrían
+expulsarse mutuamente.
+
+Conviene saber dónde acaba el cifrado: tener la clave del grupo te deja
+**descifrar**. Que puedas escribir o no, y que puedas dar permisos o no, lo
+decide el servidor, no la clave. La única frontera que dibuja la criptografía
+es leer o no leer.
+
+**Al expulsar a alguien, la clave se cambia sola** y se reparte de nuevo a los
+que quedan, y el contenido se vuelve a cifrar con la nueva. Con un límite que
+conviene decir claro: **eso protege lo que venga después**. Quien salió tuvo la
+clave vieja y pudo copiarse lo que ya veía; ningún sistema puede deshacer eso.
+
+Cambiar a alguien de nivel (por ejemplo de editor a ver) **no** cambia la
+clave, porque ya podía leer: cambiaría mucho trabajo para no ganar nada.
+
 **Con permiso de edición se puede trabajar dentro, y se ve igual que lo tuyo.**
 La carpeta compartida se dibuja con la **misma rejilla** que las tuyas: los
 mismos cinco modos de vista, las mismas tarjetas con su fondo, su icono y sus
@@ -909,6 +948,13 @@ Cada vista guarda sus **filtros**, su **orden**, qué columnas enseña y por qu�
 agrupa. Y guarda solo eso: filtrar no borra filas y ordenar no cambia el orden
 guardado, así que dos vistas de la misma tabla pueden enseñar cosas distintas
 sin mentir ninguna.
+
+**Se comparten por separado.** Una base de datos es una entidad propia, no
+parte de la nota que la contiene: la misma tabla puede estar embebida en varias
+carpetas y bookmarks, y esos no tienen por qué estar compartidos con la misma
+gente. Por eso tiene sus propios permisos, y compartir una nota no comparte
+automáticamente todas las tablas que menciona (aunque compartir una carpeta sí
+arrastra las que sus notas embeben, o llegarían con un agujero).
 
 **Dónde están todas.** En el menú lateral, en *Bases de datos*. Ahí aparecen
 también las que insertaste en una nota, así que si borras la nota la tabla
