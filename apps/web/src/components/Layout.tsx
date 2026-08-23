@@ -400,7 +400,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       onDragEnd={onDragEnd}
     >
     <div className="flex h-full flex-col overflow-x-hidden">
-      <header className="border-b border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+      <header className="app-chrome app-chrome-fg border-b px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <button
             className="shrink-0 rounded p-1.5 lg:hidden"

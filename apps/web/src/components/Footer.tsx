@@ -14,7 +14,7 @@ const linkCls =
 export function Footer() {
   const { t } = useTranslation();
   return (
-    <footer className="mt-8 border-t border-slate-200 pt-4 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+    <footer className="app-chrome app-chrome-fg mt-8 border-t px-3 pt-4 pb-3 text-sm text-slate-500 dark:text-slate-400">
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
         <p className="flex flex-wrap items-center justify-center gap-1">
           {t("footer.madeWithPrefix")}

@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { dlg } from "./dialogs.js";
 import {
   BUILTIN_THEMES,
+  previewStyle,
+  shapeOf,
   ThemeFileSchema,
   allThemes,
   currentThemeId,
@@ -180,38 +182,95 @@ export function ThemePicker() {
 
 /** Both halves of a theme side by side: light on the left, dark on the right. */
 function Swatch({ theme }: { theme: Theme }) {
-  const dark = theme.darkNeutral ?? theme.neutral;
   const { t } = useTranslation();
   return (
-    <span className="flex h-16 w-full" aria-hidden>
+    <span className="flex h-20 w-full" aria-hidden>
+      <SwatchHalf theme={theme} dark={false} label={t("themes.lightShort")} />
+      <SwatchHalf theme={theme} dark label={t("themes.darkShort")} />
+    </span>
+  );
+}
+
+/**
+ * One side of the swatch: a miniature of the interface, not a row of colours.
+ *
+ * A theme now changes the shape of things as well as their colour, so a swatch
+ * made of dots would show two themes as identical when one is square and
+ * hard-edged and the other is all pills and shadow. It draws the frame and a
+ * card, in that theme's radius, edge, shadow and typeface.
+ */
+function SwatchHalf({
+  theme,
+  dark,
+  label,
+}: {
+  theme: Theme;
+  dark: boolean;
+  label: string;
+}) {
+  const neutral = dark && theme.darkNeutral ? theme.darkNeutral : theme.neutral;
+  const shape = shapeOf(theme);
+  const card = previewStyle(theme, dark);
+  const surface = dark ? neutral[900] : theme.white;
+  const chromeBg =
+    shape.chrome === "solid"
+      ? dark
+        ? theme.accent[800]
+        : theme.accent[600]
+      : shape.chrome === "tinted"
+        ? dark
+          ? theme.accent[950]
+          : theme.accent[50]
+        : shape.chrome === "bare"
+          ? surface
+          : dark
+            ? neutral[900]
+            : theme.white;
+
+  return (
+    <span
+      className="flex flex-1 flex-col"
+      style={{ background: surface, fontFamily: card.fontFamily }}
+    >
+      {/* The header band: the part a theme's `chrome` decides. */}
       <span
-        className="flex flex-1 flex-col justify-between p-1.5"
-        style={{ background: theme.white }}
+        className="flex items-center gap-1 px-1.5 py-1"
+        style={{
+          background: chromeBg,
+          borderBottom:
+            shape.chrome === "bare"
+              ? "0"
+              : `${shape.border === "0px" ? "1px" : shape.border} solid ${
+                  dark ? neutral[800] : neutral[200]
+                }`,
+        }}
       >
-        <span className="flex gap-1">
-          <Dot color={theme.accent[500]} />
-          <Dot color={theme.neutral[300]} />
-        </span>
+        <Dot color={theme.accent[dark ? 400 : 500]} />
         <span
-          className="text-[9px] font-semibold uppercase tracking-wide"
-          style={{ color: theme.neutral[700] }}
+          className="text-[8px] font-semibold uppercase tracking-wide"
+          style={{
+            color:
+              shape.chrome === "solid"
+                ? theme.accent[50]
+                : dark
+                  ? neutral[200]
+                  : neutral[700],
+          }}
         >
-          {t("themes.lightShort")}
+          {label}
         </span>
       </span>
-      <span
-        className="flex flex-1 flex-col justify-between p-1.5"
-        style={{ background: dark[900] }}
-      >
-        <span className="flex gap-1">
-          <Dot color={theme.accent[400]} />
-          <Dot color={dark[700]} />
-        </span>
+      {/* And a card, in this theme's shape. */}
+      <span className="flex flex-1 items-center justify-center p-1.5">
         <span
-          className="text-right text-[9px] font-semibold uppercase tracking-wide"
-          style={{ color: dark[200] }}
+          className="flex h-full w-full items-center px-1.5 text-[8px]"
+          style={{
+            ...card,
+            background: dark ? neutral[800] : neutral[50],
+            color: dark ? neutral[200] : neutral[700],
+          }}
         >
-          {t("themes.darkShort")}
+          Aa
         </span>
       </span>
     </span>

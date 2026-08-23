@@ -1,8 +1,14 @@
 # Temas de la aplicación
 
-AwesomeBookmarks trae **diez temas**, cada uno con su versión clara y su versión
-oscura, y se pueden **importar más** desde un archivo JSON. Este documento
-explica cómo elegirlos y cómo crear uno.
+AwesomeBookmarks trae **catorce temas**, cada uno con su versión clara y su
+versión oscura, y se pueden **importar más** desde un archivo JSON. Este
+documento explica cómo elegirlos y cómo crear uno.
+
+Un tema no es solo una paleta: cambia también **la forma**. El radio de las
+esquinas, el grosor de los bordes, cómo se despegan las tarjetas de la página,
+la tipografía y el tratamiento de la cabecera y el pie. Diez paletas sobre un
+mismo dibujo son diez copias de la misma aplicación; lo que hace que un tema se
+sienta distinto es la geometría.
 
 Se eligen en **Ajustes → Apariencia**. El interruptor de sol/luna de la cabecera
 sigue haciendo lo de siempre: decide si ves la mitad clara o la oscura del tema
@@ -10,7 +16,7 @@ que tengas puesto.
 
 ---
 
-## Los diez que vienen de serie
+## Los catorce que vienen de serie
 
 | Tema | De qué va |
 | --- | --- |
@@ -24,6 +30,10 @@ que tengas puesto.
 | **Alto contraste** | Grises puros, sin tinte, y un azul saturado. Para quien necesita la máxima separación. |
 | **Océano** | Neutros hacia el azul verdoso, acento turquesa. |
 | **Neón** | Neutros muy fríos y oscuros con acento magenta eléctrico. |
+| **Brutalista** | Todo cuadrado, bordes de 3 px y sombra sólida desplazada: las tarjetas parecen pegadas a la página, no flotando. Cabecera y pie en naranja quemado macizo. |
+| **Terminal** | Monoespaciada sobre casi negro, esquinas rectas y sin sombra en ningún sitio. Se lee como una consola, que es la idea. |
+| **Burbuja** | Todo es una pastilla: radio al máximo, sin bordes y sombra suave. Lo más lejos que llega esta interfaz de un rectángulo. |
+| **Prensa** | Editorial: tipografía con serifas, esquinas rectas, filetes de un píxel y ninguna sombra. |
 
 Las paletas son **valores propios**, no copias de los temas de editor conocidos
 a los que se parecen. Es deliberado: evita de raíz cualquier discusión de
@@ -49,6 +59,32 @@ claro usan los tonos bajos para las superficies y en oscuro los altos. Una rampa
 bien formada sirve para las dos. Si tu tema quiere una temperatura distinta en
 oscuro (por ejemplo, papel cálido de día y azul frío de noche), añade una
 segunda rampa en `darkNeutral`.
+
+---
+
+## La forma
+
+Además de las dos rampas, un tema puede traer una sección `shape`. **Es
+opcional**: un tema que no la lleve se ve exactamente como antes de que esto
+existiera, así que los archivos que ya tengas siguen valiendo.
+
+| Campo | Valores | Qué hace |
+| --- | --- | --- |
+| `radius` | 0 a 3 | Multiplica **todos** los radios. `0` deja la interfaz cuadrada, `1` es el dibujo original, `2` la vuelve muy redondeada. Los círculos (avatares) siguen siendo círculos. |
+| `border` | `"0px"`, `"1px"`, `"2px"`… | Grosor del borde de tarjetas, campos y botones. |
+| `elevation` | `flat`, `soft`, `hard`, `glow` | Cómo se despega una superficie de la página. `hard` es una sombra sólida desplazada (dibujada, no difuminada) y `glow` un halo del color de acento. |
+| `font` | `sans`, `serif`, `mono` | Tipografía de toda la aplicación. |
+| `chrome` | `plain`, `tinted`, `solid`, `bare` | Cabecera y pie: como la página, con un lavado de acento, en acento macizo, o sin superficie ni borde. |
+
+Dos decisiones que conviene conocer:
+
+- **`radius` es un multiplicador, no una lista de medidas.** Un solo número
+  mueve toda la escala y cada paso conserva su proporción con los demás, así que
+  no hace falta acertar seis valores para que un tema sea coherente.
+- **Las tipografías son pilas del sistema**, nunca fuentes descargadas. Una
+  aplicación self-hosted que pide una fuente a un CDN filtra una petición por
+  cada visita a cada panel público, y deja de verse bien en una instancia sin
+  salida a internet.
 
 ---
 

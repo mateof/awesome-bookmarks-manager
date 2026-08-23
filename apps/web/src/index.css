@@ -35,6 +35,59 @@
   --c-a-950: 23 37 89;
 }
 
+/* Shape, the other half of a theme.
+   A theme changes not only what colour a card is but what a card *is*: how
+   round, how it sits off the page, how heavy its edge, what it is set in.
+   Defaults here reproduce the interface as designed, so a theme that says
+   nothing about shape looks exactly as it always did — and, like the palette,
+   these have to exist before any JavaScript runs. */
+:root {
+  /* Multiplies every corner radius. 0 square, 1 as designed, 2 pill-like. */
+  --shape-radius: 1;
+  --shape-border: 1px;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+    0 4px 6px -4px rgb(0 0 0 / 0.1);
+  /* Header and footer. Their own variables because they are the two surfaces
+     that frame everything else, and a theme that cannot touch them can only
+     ever restyle the middle of the page. */
+  --chrome-bg: rgb(var(--c-white));
+  --chrome-fg: inherit;
+  --chrome-muted: rgb(var(--c-n-500));
+  --chrome-border: rgb(var(--c-n-200));
+}
+
+.dark {
+  --chrome-bg: rgb(var(--c-n-900));
+  --chrome-muted: rgb(var(--c-n-400));
+  --chrome-border: rgb(var(--c-n-800));
+}
+
+/* Applied to the header and the footer. They own their background and edge
+   through these variables rather than through utilities, which is what lets a
+   theme make the frame tinted, solid or absent. */
+.app-chrome {
+  background-color: var(--chrome-bg);
+  border-color: var(--chrome-border);
+}
+
+.app-chrome-fg {
+  color: var(--chrome-fg);
+}
+
+/* A solid chrome band paints over the page surface, so the muted utilities the
+   header and footer use resolve against the wrong background and come out
+   unreadable. Same treatment as `.on-dark-bg` below: the surface tells its own
+   contents what colour to be. */
+.app-chrome .text-slate-500,
+.app-chrome .text-slate-400 {
+  color: var(--chrome-muted);
+}
+
 html,
 body,
 #root {
