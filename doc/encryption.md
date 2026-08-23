@@ -233,6 +233,24 @@ nobody happened to exercise kept the old call for several releases: the URL of
 a bookmark went through the row key while its title did not. When touching a
 handler, check every field it opens, not the one in the bug report.
 
+### Sharing repairs the subtree
+
+Sharing a folder that already has a scope is not a no-op: it walks the subtree
+again and re-seals anything that is not on that scope, skipping everything that
+already is.
+
+That exists because of the silent half of the mistake above. A row created
+inside a shared folder without inheriting its key is readable by its owner and
+**invisible to the group** — `visibleTo` needs a scope the group can reach, and
+the row has none. Nobody reports it, because the only person who could notice
+something missing is the one who cannot see it.
+
+Two code paths used to produce exactly that (the HTML importer until v0.83.1,
+symlink creation until v0.86.0). Walking on every share makes "share it again"
+the repair, which is something a person can do without knowing what a key scope
+is. Rows belonging to other members are left alone: only their owner holds what
+is needed to re-seal them.
+
 ## Rotation
 
 Removing somebody from a group replaces the key: a new version is generated,

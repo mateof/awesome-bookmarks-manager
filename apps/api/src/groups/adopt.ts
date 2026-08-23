@@ -187,11 +187,21 @@ export function adoptFolderIntoGroup(
   if (!root) return { folders: 0, bookmarks: 0, databases: 0 };
   const dest = destinationFor(ctx, root, groupId);
   const key = dest.key;
-  if (!dest.fresh) {
-    // Already shared: the new group now holds the key and there is nothing to
-    // re-seal. Databases embedded in the notes still need their own grant.
-    return grantOnly(ctx, ids, groupId);
-  }
+  // Already shared? Then most of the loop below will do nothing, because it
+  // skips every row that is already on the destination scope. It is still run,
+  // and that is the point: **sharing repairs the subtree**.
+  //
+  // A row can end up inside a shared folder still sealed with its owner's own
+  // key — the HTML importer did that until v0.83.1, and symlink creation until
+  // v0.86.0. That failure is invisible rather than loud: the owner reads such a
+  // row perfectly and the group cannot see it at all, so nobody reports it.
+  // Walking anyway makes "share it again" the fix, which is a thing a person
+  // can do without being told about key scopes.
+  //
+  // Rows belonging to *other* members are left alone: only their owner holds
+  // what is needed to re-seal them. The databases their notes embed still need
+  // granting, which is what this collects.
+  const granted = dest.fresh ? null : grantOnly(ctx, ids, groupId);
   let folderCount = 0;
   let bookmarkCount = 0;
   const dbIds = new Set<string>();
@@ -277,7 +287,11 @@ export function adoptFolderIntoGroup(
     if (adoptDatabaseIntoGroup(ctx, id, groupId)) databaseCount++;
   }
 
-  return { folders: folderCount, bookmarks: bookmarkCount, databases: databaseCount };
+  return {
+    folders: folderCount,
+    bookmarks: bookmarkCount,
+    databases: databaseCount + (granted?.databases ?? 0),
+  };
 }
 
 /**

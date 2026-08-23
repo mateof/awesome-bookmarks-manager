@@ -1,11 +1,12 @@
 import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { sealField } from "../auth/encryption.js";
+import { sealRowField } from "../groups/scope.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import { bookmarks, folders } from "../db/schema.js";
 import { getBookmark } from "../bookmarks/service.js";
+import { groupOfFolder } from "../folders/service.js";
 import { getFolder } from "../folders/service.js";
 import { BadRequest, NotFound } from "../util/errors.js";
 import { urlHash } from "../util/url.js";
@@ -138,15 +139,24 @@ export function createFolderAlias(
   }
 
   const id = uuidv4();
+  // Inherits the destination folder's key, exactly as a real folder created
+  // there would. Sealing a symlink with its creator's own key inside a shared
+  // folder leaves a row the group cannot see at all, which reads as the link
+  // never having been made.
+  const inherited = parentId
+    ? groupOfFolder(ctx, parentId)
+    : { keyGroupId: null, keyScopeId: null };
+  const keyed = { userId: ctx.userId, ...inherited };
   getDb()
     .insert(folders)
     .values({
       id,
       userId: ctx.userId,
+      ...inherited,
       parentId,
       // Placeholder copy so the NOT NULL column is satisfied; reads use the
       // live target instead.
-      nameCt: sealField(ctx.dek, ctx.userId, "folder.name", target.name),
+      nameCt: sealRowField(ctx, keyed, "folder.name", target.name),
       descriptionCt: null,
       aliasOf: targetId,
       position: nextFolderPosition(ctx, parentId),
@@ -166,14 +176,19 @@ export function createBookmarkAlias(
   if (target.aliasOf) throw BadRequest("No se puede enlazar a otro enlace simbólico");
 
   const id = uuidv4();
+  const inherited = folderId
+    ? groupOfFolder(ctx, folderId)
+    : { keyGroupId: null, keyScopeId: null };
+  const keyed = { userId: ctx.userId, ...inherited };
   getDb()
     .insert(bookmarks)
     .values({
       id,
       userId: ctx.userId,
+      ...inherited,
       folderId,
-      titleCt: sealField(ctx.dek, ctx.userId, "bookmark.title", target.title),
-      urlCt: sealField(ctx.dek, ctx.userId, "bookmark.url", target.url),
+      titleCt: sealRowField(ctx, keyed, "bookmark.title", target.title),
+      urlCt: sealRowField(ctx, keyed, "bookmark.url", target.url),
       descriptionCt: null,
       urlHash: urlHash(target.url, ctx.userId),
       aliasOf: targetId,
