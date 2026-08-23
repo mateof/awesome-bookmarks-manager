@@ -53,6 +53,33 @@ export const ShapeSchema = z.object({
   /** Edge weight, e.g. "1px" (hairline) or "2px" (drawn). */
   border: z.string().default("1px"),
   /**
+   * Edge style. Tailwind's preflight sets `solid` on every element, so this
+   * overrides it in the same place rather than per component.
+   */
+  borderStyle: z.enum(["solid", "dashed", "dotted"]).default("solid"),
+  /**
+   * `sketch` replaces the even radius of panels and cards with an uneven one,
+   * the old trick of giving each corner a different horizontal and vertical
+   * radius. It is the only thing that makes a rectangle read as *drawn* rather
+   * than as a rectangle with round corners, and no amount of `radius` gets
+   * there, because the tell is the irregularity and not the amount.
+   *
+   * Applied to the large radii only. Doing it to every 2px corner in the
+   * interface turns icons and chips to mush; it is cards and panels that
+   * carry the effect.
+   */
+  corners: z.enum(["uniform", "sketch"]).default("uniform"),
+  /**
+   * How present the edge is.
+   *
+   * The interface writes its borders as `border-slate-200/300` (and 700/800 in
+   * the dark), which are quiet by design. A theme built on line weight — ink,
+   * blueprint — needs them loud, and no amount of `border` width fixes that:
+   * a 3px hairline-grey rule is still a hairline-grey rule. `strong` restates
+   * those four utilities against darker stops.
+   */
+  edge: z.enum(["muted", "strong"]).default("muted"),
+  /**
    * How surfaces sit off the page. Named rather than numeric because these are
    * different *kinds* of shadow, not different amounts of one: `hard` is an
    * offset solid, `glow` is coloured by the accent.
@@ -89,7 +116,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "slate",
     name: "Pizarra",
     /** The reference. Everything else is a departure from this. */
-    shape: { radius: 1, border: "1px", elevation: "soft", font: "sans", chrome: "plain" },
+    shape: {
+      radius: 1,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "plain",
+    },
     white: "#ffffff",
     neutral: {
       "50": "#f8fafc",
@@ -122,7 +158,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "nordic",
     name: "Nórdico",
     /** Soft and printed flat: generous corners, no shadow at all. */
-    shape: { radius: 1.6, border: "1px", elevation: "flat", font: "sans", chrome: "tinted" },
+    shape: {
+      radius: 1.6,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "sans",
+      chrome: "tinted",
+    },
     white: "#fafcff",
     neutral: {
       "50": "#f3fbff",
@@ -168,7 +213,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "sepia",
     name: "Sepia",
     /** Paper. Serif text, barely-rounded corners, nothing floating. */
-    shape: { radius: 0.5, border: "1px", elevation: "flat", font: "serif", chrome: "tinted" },
+    shape: {
+      radius: 0.5,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "serif",
+      chrome: "tinted",
+    },
     white: "#fdfaf3",
     neutral: {
       "50": "#fff9f1",
@@ -214,7 +268,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "forest",
     name: "Bosque",
     /** Organic: the roundest of the soft themes. */
-    shape: { radius: 2, border: "1px", elevation: "soft", font: "sans", chrome: "tinted" },
+    shape: {
+      radius: 2,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "tinted",
+    },
     white: "#f9fcf7",
     neutral: {
       "50": "#f6fbf5",
@@ -260,7 +323,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "cacao",
     name: "Cacao",
     /** Drawn rather than lit: a heavy edge and a solid band of accent. */
-    shape: { radius: 0.75, border: "2px", elevation: "flat", font: "serif", chrome: "solid" },
+    shape: {
+      radius: 0.75,
+      border: "2px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "serif",
+      chrome: "solid",
+    },
     white: "#fdf9f5",
     neutral: {
       "50": "#fff7f3",
@@ -306,7 +378,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "nocturne",
     name: "Nocturno",
     /** Night-time reading; the shape stays out of the way. */
-    shape: { radius: 1.2, border: "1px", elevation: "soft", font: "sans", chrome: "plain" },
+    shape: {
+      radius: 1.2,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "plain",
+    },
     white: "#fcfaff",
     neutral: {
       "50": "#faf8ff",
@@ -352,7 +433,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "rose",
     name: "Rosa seca",
     /** No edges at all: shape comes from the shadow and the curve. */
-    shape: { radius: 2.2, border: "0px", elevation: "soft", font: "sans", chrome: "tinted" },
+    shape: {
+      radius: 2.2,
+      border: "0px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "tinted",
+    },
     white: "#fffafb",
     neutral: {
       "50": "#fff7f9",
@@ -399,7 +489,16 @@ export const BUILTIN_THEMES: Theme[] = [
     name: "Alto contraste",
     /** Square and outlined. Shape carries the information a low-vision
      *   reader needs when colour alone will not. */
-    shape: { radius: 0, border: "2px", elevation: "flat", font: "sans", chrome: "solid" },
+    shape: {
+      radius: 0,
+      border: "2px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "strong",
+      elevation: "flat",
+      font: "sans",
+      chrome: "solid",
+    },
     white: "#ffffff",
     neutral: {
       "50": "#fafafa",
@@ -432,7 +531,16 @@ export const BUILTIN_THEMES: Theme[] = [
     id: "ocean",
     name: "Océano",
     /** Borderless and buoyant. */
-    shape: { radius: 1.5, border: "0px", elevation: "soft", font: "sans", chrome: "tinted" },
+    shape: {
+      radius: 1.5,
+      border: "0px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "tinted",
+    },
     white: "#f7fcfd",
     neutral: {
       "50": "#f2fcff",
@@ -479,7 +587,16 @@ export const BUILTIN_THEMES: Theme[] = [
     name: "Neón",
     /** Monospace, hard corners, and light that comes off the accent
      *   instead of a grey drop shadow. */
-    shape: { radius: 0.5, border: "1px", elevation: "glow", font: "mono", chrome: "bare" },
+    shape: {
+      radius: 0.5,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "glow",
+      font: "mono",
+      chrome: "bare",
+    },
     white: "#fcfaff",
     neutral: {
       "50": "#f7faff",
@@ -527,7 +644,16 @@ export const BUILTIN_THEMES: Theme[] = [
     /** Square, thick-edged and lit by an offset solid rather than a blur.
      *   The one theme where a card looks stuck onto the page instead of
      *   floating above it. */
-    shape: { radius: 0, border: "3px", elevation: "hard", font: "sans", chrome: "solid" },
+    shape: {
+      radius: 0,
+      border: "3px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "strong",
+      elevation: "hard",
+      font: "sans",
+      chrome: "solid",
+    },
     white: "#fffdfa",
     neutral: {
       "50": "#fafaf9",
@@ -561,7 +687,16 @@ export const BUILTIN_THEMES: Theme[] = [
     name: "Terminal",
     /** Monospace on near-black, hard corners, no shadow anywhere. Reads as a
      *   console, which is the point. */
-    shape: { radius: 0, border: "1px", elevation: "flat", font: "mono", chrome: "bare" },
+    shape: {
+      radius: 0,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "mono",
+      chrome: "bare",
+    },
     white: "#fbfdfb",
     neutral: {
       "50": "#f9faf9",
@@ -595,7 +730,16 @@ export const BUILTIN_THEMES: Theme[] = [
     name: "Burbuja",
     /** Everything is a pill: maximum radius, no edges, soft shadow. The
      *   furthest this interface goes from a rectangle. */
-    shape: { radius: 3, border: "0px", elevation: "soft", font: "sans", chrome: "bare" },
+    shape: {
+      radius: 3,
+      border: "0px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "soft",
+      font: "sans",
+      chrome: "bare",
+    },
     white: "#fffdfe",
     neutral: {
       "50": "#faf9fa",
@@ -629,7 +773,16 @@ export const BUILTIN_THEMES: Theme[] = [
     name: "Prensa",
     /** Editorial: serif text, square corners, hairline rules and no shadow,
      *   like a broadsheet. */
-    shape: { radius: 0, border: "1px", elevation: "flat", font: "serif", chrome: "plain" },
+    shape: {
+      radius: 0,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "serif",
+      chrome: "plain",
+    },
     white: "#fffefb",
     neutral: {
       "50": "#fafaf9",
@@ -656,6 +809,223 @@ export const BUILTIN_THEMES: Theme[] = [
       "800": "#960309",
       "900": "#791915",
       "950": "#4a1410",
+    },
+  },
+  {
+    id: "trazo",
+    name: "Trazo",
+    /** Dibujado a plumilla: todo es contorno. Borde de 2 px, sin relleno que
+     *   destaque, sin sombra y esquinas casi rectas. El peso de la línea es lo
+     *   único que separa una cosa de otra. */
+    shape: {
+      radius: 0.25,
+      border: "2px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "strong",
+      elevation: "flat",
+      font: "sans",
+      chrome: "plain",
+    },
+    white: "#fdfdfd",
+    neutral: {
+      "50": "#f9fafa",
+      "100": "#f4f4f5",
+      "200": "#e7e7e8",
+      "300": "#d3d4d5",
+      "400": "#a0a2a4",
+      "500": "#717376",
+      "600": "#525456",
+      "700": "#3e4043",
+      "800": "#27292b",
+      "900": "#16181a",
+      "950": "#060709",
+    },
+    accent: {
+      "50": "#f1f6fd",
+      "100": "#deeaf9",
+      "200": "#c6daf5",
+      "300": "#a2c3ef",
+      "400": "#74a5e5",
+      "500": "#4688da",
+      "600": "#1e6fcb",
+      "700": "#005eb8",
+      "800": "#064d96",
+      "900": "#154277",
+      "950": "#112a49",
+    },
+  },
+  {
+    id: "boceto",
+    name: "Boceto",
+    /** Cuaderno: esquinas irregulares (cada una con su radio) y borde
+     *   discontinuo, como un rectángulo trazado a mano. Lo que lo vende es la
+     *   irregularidad, no la cantidad de curva. */
+    shape: {
+      radius: 1,
+      border: "2px",
+      borderStyle: "dashed",
+      corners: "sketch",
+      edge: "strong",
+      elevation: "flat",
+      font: "serif",
+      chrome: "bare",
+    },
+    white: "#fdfcf9",
+    neutral: {
+      "50": "#fafaf9",
+      "100": "#f5f4f3",
+      "200": "#e9e7e4",
+      "300": "#d6d3cf",
+      "400": "#a6a199",
+      "500": "#77726a",
+      "600": "#58534c",
+      "700": "#443f38",
+      "800": "#2c2822",
+      "900": "#1b1711",
+      "950": "#0a0703",
+    },
+    accent: {
+      "50": "#f1f6fa",
+      "100": "#e0eaf4",
+      "200": "#c9daed",
+      "300": "#a8c4e2",
+      "400": "#7da7d3",
+      "500": "#548bc3",
+      "600": "#3274b2",
+      "700": "#1e63a0",
+      "800": "#1b5182",
+      "900": "#1f4469",
+      "950": "#162b40",
+    },
+  },
+  {
+    id: "plano",
+    name: "Plano",
+    /** Plano técnico: retícula fría, líneas de puntos finas y monoespaciada.
+     *   En oscuro es el azul de cianotipo que le da nombre. */
+    shape: {
+      radius: 0,
+      border: "2px",
+      borderStyle: "dotted",
+      corners: "uniform",
+      edge: "strong",
+      elevation: "flat",
+      font: "mono",
+      chrome: "tinted",
+    },
+    white: "#fbfdfe",
+    neutral: {
+      "50": "#f8fafb",
+      "100": "#f2f5f8",
+      "200": "#e3e8ee",
+      "300": "#cdd5de",
+      "400": "#96a3b2",
+      "500": "#667584",
+      "600": "#485663",
+      "700": "#34424f",
+      "800": "#1e2a36",
+      "900": "#0d1925",
+      "950": "#010713",
+    },
+    accent: {
+      "50": "#ebf8fb",
+      "100": "#d0eff5",
+      "200": "#aae4ee",
+      "300": "#69d2e4",
+      "400": "#00b7cd",
+      "500": "#0098ab",
+      "600": "#007f8f",
+      "700": "#006c7a",
+      "800": "#005964",
+      "900": "#004b55",
+      "950": "#003037",
+    },
+  },
+  {
+    id: "fosforo",
+    name: "Fósforo",
+    /** El otro terminal: ámbar de tubo, con halo del acento en vez de sombra
+     *   gris. Donde Terminal es sobrio, este brilla. */
+    shape: {
+      radius: 0,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "glow",
+      font: "mono",
+      chrome: "plain",
+    },
+    white: "#fefdfa",
+    neutral: {
+      "50": "#fafaf9",
+      "100": "#f5f4f3",
+      "200": "#e9e7e4",
+      "300": "#d7d3cf",
+      "400": "#a7a19a",
+      "500": "#78726a",
+      "600": "#59534c",
+      "700": "#453f38",
+      "800": "#2d2822",
+      "900": "#1c1711",
+      "950": "#0b0603",
+    },
+    accent: {
+      "50": "#fdf4ea",
+      "100": "#f9e5cf",
+      "200": "#f5d1aa",
+      "300": "#eeb46f",
+      "400": "#df8e00",
+      "500": "#ba7600",
+      "600": "#9b6200",
+      "700": "#855300",
+      "800": "#6e4400",
+      "900": "#5d3900",
+      "950": "#3c2300",
+    },
+  },
+  {
+    id: "estudio",
+    name: "Estudio",
+    /** Sobrio de estudio de diseño: grises cálidos, filete de un píxel,
+     *   esquinas mínimas y ninguna sombra. El tema que no se hace notar. */
+    shape: {
+      radius: 0.4,
+      border: "1px",
+      borderStyle: "solid",
+      corners: "uniform",
+      edge: "muted",
+      elevation: "flat",
+      font: "sans",
+      chrome: "plain",
+    },
+    white: "#fefdfc",
+    neutral: {
+      "50": "#fafaf9",
+      "100": "#f5f4f3",
+      "200": "#e9e7e5",
+      "300": "#d6d3d1",
+      "400": "#a6a09c",
+      "500": "#77726d",
+      "600": "#58534f",
+      "700": "#443f3b",
+      "800": "#2c2824",
+      "900": "#1b1713",
+      "950": "#0a0604",
+    },
+    accent: {
+      "50": "#fbf3f1",
+      "100": "#f5e5df",
+      "200": "#edd1c8",
+      "300": "#e2b5a5",
+      "400": "#d2907a",
+      "500": "#c06e51",
+      "600": "#ad5230",
+      "700": "#9b401d",
+      "800": "#7e351a",
+      "900": "#66311e",
+      "950": "#3f2015",
     },
   },
 ];
@@ -691,7 +1061,16 @@ export function previewStyle(
 } {
   const shape = shapeOf(theme);
   const neutral = dark && theme.darkNeutral ? theme.darkNeutral : theme.neutral;
-  const edge = dark ? neutral[700] : neutral[200];
+  // A strong-edged theme is *about* its line, so a swatch drawn with the quiet
+  // one would sell exactly the wrong thing.
+  const edge =
+    shape.edge === "strong"
+      ? dark
+        ? neutral[300]
+        : neutral[700]
+      : dark
+        ? neutral[700]
+        : neutral[200];
   const shadow =
     shape.elevation === "flat"
       ? "none"
@@ -701,9 +1080,17 @@ export function previewStyle(
           ? `0 0 10px -2px ${theme.accent[500]}`
           : "0 1px 3px 0 rgb(0 0 0 / 0.18)";
   return {
-    // 0.5rem is `rounded-lg`, which is what a card uses.
-    borderRadius: `calc(0.5rem * ${shape.radius})`,
-    border: shape.border === "0px" ? "0" : `${shape.border} solid ${edge}`,
+    // 0.5rem is `rounded-lg`, which is what a card uses. Sketch corners are
+    // scaled down from the ones the app uses, because the swatch card is a
+    // third of the size and the same numbers would swallow it.
+    borderRadius:
+      shape.corners === "sketch"
+        ? "7px 3px 8px 3px/3px 8px 3px 7px"
+        : `calc(0.5rem * ${shape.radius})`,
+    border:
+      shape.border === "0px"
+        ? "0"
+        : `${shape.border} ${shape.borderStyle} ${edge}`,
     boxShadow: shadow,
     fontFamily: FONTS[shape.font],
   };
@@ -796,6 +1183,7 @@ function shapeVars(theme: Theme, dark: boolean): string {
   return (
     `--shape-radius: ${shape.radius};` +
     `--shape-border: ${shape.border};` +
+    `--shape-border-style: ${shape.borderStyle};` +
     `--font-body: ${FONTS[shape.font]};` +
     shadows(shape.elevation) +
     chrome(shape.chrome, dark)
@@ -819,6 +1207,54 @@ function vars(theme: Theme, dark: boolean): string {
  * class the app already toggles and needs no JavaScript of its own — which is
  * also what keeps the two in step when the OS theme changes under us.
  */
+
+/**
+ * Rules a theme needs that no variable can express.
+ *
+ * They ship inside the theme's own stylesheet rather than as a class on
+ * `<html>`, so the boot script — which paints the cached stylesheet before any
+ * of this module loads — gets them too. A class would arrive a frame late and
+ * the first paint would be the wrong shape.
+ */
+function extraRules(theme: Theme): string {
+  const shape = shapeOf(theme);
+  return sketchCorners(shape) + strongEdges(shape);
+}
+
+/**
+ * Restate the four border utilities the interface actually uses, against stops
+ * that read as a drawn line.
+ *
+ * Naming Tailwind classes in a rule is brittle, and the alternative is worse:
+ * skewing the neutral ramp so its 200 is dark would also darken every surface
+ * and divider that legitimately wants to be quiet. The border colour is the
+ * thing being changed, so the border colour is what the rule touches.
+ */
+function strongEdges(shape: Shape): string {
+  if (shape.edge !== "strong") return "";
+  return (
+    `:root:root .border-slate-100,:root:root .border-slate-200,` +
+    `:root:root .border-slate-300{border-color:rgb(var(--c-n-700));}` +
+    `:root:root.dark .dark\\:border-slate-700,` +
+    `:root:root.dark .dark\\:border-slate-800{border-color:rgb(var(--c-n-300));}`
+  );
+}
+
+function sketchCorners(shape: Shape): string {
+  if (shape.corners !== "sketch") return "";
+  // Two shapes alternating, because the giveaway of a drawn line is that no
+  // two are identical. One value repeated everywhere reads as a new geometry,
+  // not as a hand.
+  return (
+    `:root:root .rounded-lg,:root:root .rounded-xl,:root:root .rounded-2xl` +
+    `{border-radius:14px 5px 16px 6px/6px 16px 5px 14px;}` +
+    `:root:root .rounded-lg:nth-of-type(even),` +
+    `:root:root .rounded-xl:nth-of-type(even),` +
+    `:root:root .rounded-2xl:nth-of-type(even)` +
+    `{border-radius:6px 15px 5px 17px/16px 5px 15px 6px;}`
+  );
+}
+
 export function applyTheme(theme: Theme): void {
   // `:root:root` rather than `:root`: the bundled stylesheet (which carries
   // the default palette) is linked *after* this <style> in the built HTML, so
@@ -829,7 +1265,8 @@ export function applyTheme(theme: Theme): void {
   // surface differs between light and dark whatever the ramps do.
   const css =
     `:root:root{${vars(theme, false)}}` +
-    `:root:root.dark{${vars(theme, true)}}`;
+    `:root:root.dark{${vars(theme, true)}}` +
+    extraRules(theme);
   let el = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
   if (!el) {
     el = document.createElement("style");

@@ -1,6 +1,6 @@
 # Temas de la aplicación
 
-AwesomeBookmarks trae **catorce temas**, cada uno con su versión clara y su
+AwesomeBookmarks trae **diecinueve temas**, cada uno con su versión clara y su
 versión oscura, y se pueden **importar más** desde un archivo JSON. Este
 documento explica cómo elegirlos y cómo crear uno.
 
@@ -16,7 +16,7 @@ que tengas puesto.
 
 ---
 
-## Los catorce que vienen de serie
+## Los diecinueve que vienen de serie
 
 | Tema | De qué va |
 | --- | --- |
@@ -34,6 +34,11 @@ que tengas puesto.
 | **Terminal** | Monoespaciada sobre casi negro, esquinas rectas y sin sombra en ningún sitio. Se lee como una consola, que es la idea. |
 | **Burbuja** | Todo es una pastilla: radio al máximo, sin bordes y sombra suave. Lo más lejos que llega esta interfaz de un rectángulo. |
 | **Prensa** | Editorial: tipografía con serifas, esquinas rectas, filetes de un píxel y ninguna sombra. |
+| **Trazo** | Dibujado a plumilla: todo es contorno. Línea oscura de 2 px, esquinas casi rectas y ningún relleno que destaque. El peso de la línea es lo único que separa una cosa de otra. |
+| **Boceto** | Cuaderno: esquinas irregulares (cada una con su radio) y borde discontinuo, como un rectángulo trazado a mano. |
+| **Plano** | Plano técnico: líneas de puntos, monoespaciada y retícula fría; en oscuro, el azul de cianotipo. |
+| **Fósforo** | El otro terminal: ámbar de tubo, con halo del acento en vez de sombra gris. |
+| **Estudio** | Sobrio de estudio de diseño: grises cálidos, filete de un píxel, esquinas mínimas, ninguna sombra. El tema que no se hace notar. |
 
 Las paletas son **valores propios**, no copias de los temas de editor conocidos
 a los que se parecen. Es deliberado: evita de raíz cualquier discusión de
@@ -74,6 +79,9 @@ existiera, así que los archivos que ya tengas siguen valiendo.
 | `border` | `"0px"`, `"1px"`, `"2px"`… | Grosor del borde de tarjetas, campos y botones. |
 | `elevation` | `flat`, `soft`, `hard`, `glow` | Cómo se despega una superficie de la página. `hard` es una sombra sólida desplazada (dibujada, no difuminada) y `glow` un halo del color de acento. |
 | `font` | `sans`, `serif`, `mono` | Tipografía de toda la aplicación. |
+| `borderStyle` | `solid`, `dashed`, `dotted` | Estilo del trazo. Tailwind pone `solid` en todo por defecto; esto lo sustituye en el mismo sitio, sin que ningún componente se entere. |
+| `corners` | `uniform`, `sketch` | `sketch` da a cada esquina de las tarjetas y paneles un radio distinto. Es lo único que hace que un rectángulo se lea como **dibujado** en vez de como un rectángulo redondeado: lo que lo delata es la irregularidad, no la cantidad de curva. |
+| `edge` | `muted`, `strong` | Cuánto pesa la línea. La interfaz escribe sus bordes con tonos suaves; un tema basado en el trazo los necesita oscuros, y **ensanchar el borde no basta**: un filete gris claro de 3 px sigue siendo un filete gris claro. |
 | `chrome` | `plain`, `tinted`, `solid`, `bare` | Cabecera y pie: como la página, con un lavado de acento, en acento macizo, o sin superficie ni borde. |
 
 Dos decisiones que conviene conocer:

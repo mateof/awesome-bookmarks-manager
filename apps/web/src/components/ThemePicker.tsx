@@ -240,9 +240,9 @@ function SwatchHalf({
           borderBottom:
             shape.chrome === "bare"
               ? "0"
-              : `${shape.border === "0px" ? "1px" : shape.border} solid ${
-                  dark ? neutral[800] : neutral[200]
-                }`,
+              : `${shape.border === "0px" ? "1px" : shape.border} ${
+                  shape.borderStyle
+                } ${dark ? neutral[800] : neutral[200]}`,
         }}
       >
         <Dot color={theme.accent[dark ? 400 : 500]} />

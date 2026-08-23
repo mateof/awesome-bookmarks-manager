@@ -15,14 +15,23 @@ async function themeMetrics(page: import("@playwright/test").Page) {
     const root = getComputedStyle(document.documentElement);
     // A real card on the page, not a probe element: the point is that the
     // interface changed, not that a variable holds a value.
-    const card = document.querySelector("main .rounded-lg, main [class*='rounded']");
+    const card = document.querySelector("main [class*='rounded']");
     const cs = card ? getComputedStyle(card) : null;
+    // Sketch corners are applied to the large radii only — cards and panels —
+    // so they have to be measured on one of those, not on whatever rounded
+    // thing comes first in the document.
+    const panel = document.querySelector("main .rounded-lg, main .rounded-xl");
+    const ps = panel ? getComputedStyle(panel) : null;
     return {
       radiusVar: root.getPropertyValue("--shape-radius").trim(),
       borderVar: root.getPropertyValue("--shape-border").trim(),
       shadowVar: root.getPropertyValue("--shadow").trim(),
       font: root.getPropertyValue("--font-body").trim(),
-      cardRadius: cs?.borderTopLeftRadius ?? "",
+      cardRadius: cs?.borderRadius ?? "",
+      cardBorderStyle: cs?.borderTopStyle ?? "",
+      cardBorderColor: cs?.borderTopColor ?? "",
+      borderStyleVar: root.getPropertyValue("--shape-border-style").trim(),
+      panelRadius: ps?.borderRadius ?? "",
       bodyFont: getComputedStyle(document.body).fontFamily,
       headerBg: (() => {
         const h = document.querySelector("header");
@@ -88,6 +97,26 @@ test("cambiar de tema cambia la forma, no solo el color", async ({
   await setTheme("prensa");
   const press = await themeMetrics(page);
   expect(press.bodyFont).toContain("ui-serif");
+
+  // Stroke: the line is the theme. A 2px hairline-grey rule is still a
+  // hairline-grey rule, so the border *colour* has to move as well.
+  await setTheme("trazo");
+  const ink = await themeMetrics(page);
+  expect(ink.borderVar).toBe("2px");
+  expect(ink.cardBorderColor).not.toBe(base.cardBorderColor);
+
+  // Sketch: the corners are uneven, which is the only thing that reads as
+  // drawn rather than as a rounder rectangle.
+  await setTheme("boceto");
+  const sketch = await themeMetrics(page);
+  expect(sketch.borderStyleVar).toBe("dashed");
+  expect(sketch.cardBorderStyle).toBe("dashed");
+  // An uneven radius prints as four values with a slash.
+  expect(sketch.panelRadius).toContain("/");
+
+  await setTheme("plano");
+  const blueprint = await themeMetrics(page);
+  expect(blueprint.cardBorderStyle).toBe("dotted");
 
   await setTheme("cacao");
   const cacao = await themeMetrics(page);
