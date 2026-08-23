@@ -325,6 +325,35 @@ The persistent state lives in `./data` (SQLite database + encrypted blob
 storage for snapshots/icons). **Back up that directory + your `.env`** — the
 `MASTER_KEY` is required to decrypt anything; lose it and the data is gone.
 
+### Who becomes admin
+
+By default the **first account to register** does. That is convenient and it is
+a race: between starting the container and getting round to signing up, whoever
+reaches `/signup` first owns the instance. An empty instance accepts signups
+even with registration disabled, because otherwise there would be no way to
+bootstrap at all. On anything reachable from the internet, name the admin
+instead:
+
+```
+ADMIN_EMAILS=you@example.com          # comma-separated for several
+ADMIN_PASSWORD=change-me-once         # optional, see below
+```
+
+`ADMIN_EMAILS` **turns the first-user rule off**. Someone else registering first
+gets an ordinary account; the named addresses get admin whenever they register,
+and accounts that already exist are promoted on the next boot. It only ever
+grants — a typo cannot demote your real admin, and removing one is done from the
+admin screen where you can see what you are doing.
+
+`ADMIN_PASSWORD` closes what is left. With the email alone nobody else can
+*become* admin, but nothing stops somebody registering **as** that address
+before you do, and an email is usually guessable. Given a password and a single
+`ADMIN_EMAILS`, the account is created on first boot, so there is nothing to
+claim. It is flagged must-change, so the value stops being a password the moment
+it is used once; prefer a Docker secret or an uncommitted `.env`, and delete it
+after your first sign-in. Both variables are safe to leave in place: they do
+nothing once the account exists and is an admin.
+
 ### Architecture in one paragraph
 
 The container runs a single Fastify process. It serves the API under

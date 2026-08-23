@@ -7,6 +7,37 @@ const Schema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   PUBLIC_BASE_URL: z.string().url().default("http://localhost:3001"),
 
+  /**
+   * Who administers this instance, by email, comma-separated.
+   *
+   * Set it and **"first user to register becomes admin" is switched off**.
+   * That rule is a land-grab: between deploying a container and getting round
+   * to registering, whoever reaches `/signup` first owns the instance, and an
+   * empty instance accepts signups even with registration disabled because it
+   * has to bootstrap somehow.
+   *
+   * Grants only, never revokes. A typo here should not be able to lock the
+   * real admin out of their own instance, and removing an admin is something
+   * to do deliberately from the admin screen.
+   */
+  ADMIN_EMAILS: z.string().optional(),
+
+  /**
+   * Optional one-time password for the account named by `ADMIN_EMAILS`, so it
+   * exists from the first boot instead of waiting to be registered.
+   *
+   * Without this, `ADMIN_EMAILS` still leaves a gap: nobody else can become
+   * admin, but nothing stops somebody registering *as* that email before the
+   * real owner does, and an email is often guessable. Creating the account up
+   * front closes it.
+   *
+   * The account is flagged must-change, so this value stops being a password
+   * the moment it is used once. It is still a secret sitting in a compose
+   * file: prefer a Docker secret or an `.env` that is not committed, and it
+   * can be removed after the first sign-in.
+   */
+  ADMIN_PASSWORD: z.string().min(8).optional(),
+
   MASTER_KEY: z.string().min(1, "MASTER_KEY is required"),
   SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 chars"),
 

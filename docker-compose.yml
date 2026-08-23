@@ -14,6 +14,22 @@
 #   PUBLIC_BASE_URL=http://localhost:3001
 #   CORS_ORIGIN=http://localhost:3001    # only matters if you expose
 #                                        # the app under a different host
+#
+#   ADMIN_EMAILS=you@example.com         # who administers this instance.
+#                                        #   Comma-separated for several.
+#                                        #   Setting it turns OFF "first
+#                                        #   account to register becomes
+#                                        #   admin", which is otherwise a
+#                                        #   race: whoever signs up first
+#                                        #   owns the instance. Grants only,
+#                                        #   never demotes.
+#   ADMIN_PASSWORD=change-me-once        # optional, needs a single
+#                                        #   ADMIN_EMAILS. Creates that
+#                                        #   account on first boot so nobody
+#                                        #   can register as it. Flagged
+#                                        #   must-change, so it stops working
+#                                        #   after the first sign-in; you can
+#                                        #   remove it from .env then.
 
 services:
   app:

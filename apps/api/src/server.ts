@@ -25,6 +25,8 @@ import { cloudRoutes } from "./cloud/routes.js";
 import { backfillShareAppearance } from "./groups/resync.js";
 import { groupRoutes } from "./groups/routes.js";
 import { notificationRoutes } from "./notifications/routes.js";
+import { applyDesignatedAdmins } from "./auth/adminBootstrap.js";
+import { bootstrapAdminAccount } from "./auth/service.js";
 import { ensureSchema } from "./db/bootstrap.js";
 import { closeDb, getDb } from "./db/client.js";
 import { getEnv } from "./env.js";
@@ -244,6 +246,16 @@ async function start() {
   // ensure DB exists & schema is up-to-date before anything else touches it
   getDb();
   ensureSchema();
+// Before anything is served: an instance whose administrator is named in the
+// environment must not be claimable by whoever registers first.
+applyDesignatedAdmins();
+const bootstrapped = await bootstrapAdminAccount();
+if (bootstrapped) {
+  console.log(
+    `[admin] created the administrator ${bootstrapped} from ADMIN_EMAILS; ` +
+      `its password must be changed on first sign-in`,
+  );
+}
   backfillShareAppearance();
 
   const app = await buildServer();

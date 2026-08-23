@@ -28,6 +28,12 @@ import {
 } from "../util/errors.js";
 import { masterUnwrap, masterWrap, openField } from "./encryption.js";
 import { keyCache } from "./key-cache.js";
+import {
+  designatedAdmins,
+  nicknameFor,
+  roleForNewAccount,
+} from "./adminBootstrap.js";
+import { getEnv } from "../env.js";
 import { verifyTotp } from "./totp.js";
 
 /**
@@ -82,6 +88,44 @@ async function createUserAccount(input: {
   return { id, dek };
 }
 
+
+/**
+ * Create the administrator named by `ADMIN_EMAILS` if it does not exist yet,
+ * using `ADMIN_PASSWORD` as a one-time password.
+ *
+ * Runs on every boot and does nothing once the account is there, so leaving the
+ * variables in place is harmless — and removing `ADMIN_PASSWORD` after the
+ * first sign-in is the tidier thing to do anyway.
+ *
+ * Only when exactly one email is designated: handing the same bootstrap
+ * password to several accounts would be a worse idea than the one it replaces.
+ * The rest are promoted when they register.
+ */
+export async function bootstrapAdminAccount(): Promise<string | null> {
+  const wanted = designatedAdmins();
+  const password = getEnv().ADMIN_PASSWORD;
+  if (wanted.length !== 1 || !password) return null;
+  const email = wanted[0]!;
+
+  const existing = getDb()
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(email) = lower(${email})`)
+    .get();
+  if (existing) return null;
+
+  await createUserAccount({
+    email,
+    nickname: nicknameFor(email),
+    password,
+    role: "admin",
+    // The point of the flag: this password stops being usable the moment it is
+    // used once, which is what makes a secret in a compose file tolerable.
+    mustChangePassword: true,
+  });
+  return email;
+}
+
 export async function signup(
   email: string,
   password: string,
@@ -93,9 +137,10 @@ export async function signup(
     throw Forbidden("El registro de nuevos usuarios está desactivado");
   }
 
-  // First user becomes admin so the instance has someone who can manage users.
+  // Either `ADMIN_EMAILS` decides, or the first account does — never both. See
+  // `adminBootstrap.ts` for why keeping both would leave the race open.
   const totalUsers = db.select({ id: users.id }).from(users).all().length;
-  const role = totalUsers === 0 ? "admin" : "user";
+  const role = roleForNewAccount(email, totalUsers);
 
   const { id, dek } = await createUserAccount({
     email,
