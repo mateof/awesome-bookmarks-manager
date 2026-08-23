@@ -172,4 +172,33 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const userId = requireUserId(req);
     return getMe(userId);
   });
+
+  /**
+   * The server's clock, so a disagreement about times can be settled instead of
+   * guessed at.
+   *
+   * `now` is the same ISO-8601 UTC string every stored timestamp uses, so what
+   * the client renders here and what it renders next to a history entry go
+   * through exactly the same path. If one looks wrong and the other looks
+   * right, the problem is the stored value, not the display.
+   *
+   * `timeZone` is the container's, which is usually UTC and is worth seeing:
+   * it is what the logs are written in, even though it has no bearing on the
+   * stored timestamps.
+   *
+   * Authenticated, like the version endpoint, for the same reason: there is
+   * nothing to gain from telling anonymous visitors about the instance.
+   */
+  app.get("/time", async (req) => {
+    requireUserId(req);
+    const now = new Date();
+    return {
+      now: now.toISOString(),
+      timeZone:
+        Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC",
+      // Minutes the server's local zone is ahead of UTC, the same sign
+      // convention a person expects (Madrid in summer is +120).
+      offsetMinutes: -now.getTimezoneOffset(),
+    };
+  });
 };

@@ -447,6 +447,7 @@ export function ensureSchema() {
   // across, so running it first fails with "no such column: key_version" on
   // every database that predates them. Which is every existing install.
   relaxGroupDekNotNull();
+  stampTimestampsAsUtc();
   tryAddColumn("users", "kx_public", "BLOB");
   tryAddColumn("users", "kx_private_ct", "BLOB");
   tryAddColumn("attachments", "description_ct", "BLOB");
@@ -561,6 +562,59 @@ function ensureAdminExists() {
  * with foreign keys off because several tables reference `groups` and dropping
  * it mid-transaction would otherwise cascade them away.
  */
+
+/**
+ * Give every stored timestamp its `Z`.
+ *
+ * SQLite's `current_timestamp` writes `2026-08-23 08:15:00`: the right instant,
+ * in UTC, with nothing saying so. A browser parsing that space-separated form
+ * falls back to *local time*, so every one of them arrived shifted by the
+ * reader's offset — two hours in Madrid in summer, which is exactly how far off
+ * the history looked.
+ *
+ * Every database that predates this fix is full of them, and half-full: columns
+ * written from JS already carried `Z`, so a single row could hold `created_at`
+ * in one shape and `updated_at` in the other. That also broke ordering, since
+ * these are TEXT columns and a space sorts before a `T`.
+ *
+ * Rewriting is safe because the instant does not move: the stored value already
+ * was UTC, it just never said so. Only values matching the old shape exactly are
+ * touched, so anything already ISO — including user-supplied expiry dates — is
+ * left alone. Idempotent, so it can run on every boot; after the first one it
+ * matches nothing.
+ */
+function stampTimestampsAsUtc() {
+  const sql = getSqlite();
+  const tables = sql
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
+    .all() as { name: string }[];
+  // The unmarked shape, and nothing else: four digits, dashes, a space, time.
+  const OLD = "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9]";
+  for (const { name } of tables) {
+    if (name.startsWith("sqlite_")) continue;
+    const cols = sql.prepare(`PRAGMA table_info(${name})`).all() as {
+      name: string;
+    }[];
+    for (const col of cols) {
+      // `_at` covers created_at, updated_at, expires_at and the rest; the
+      // security log calls its column plain `at`.
+      if (!col.name.endsWith("_at") && col.name !== "at") continue;
+      try {
+        sql
+          .prepare(
+            `UPDATE "${name}" SET "${col.name}" =
+               replace("${col.name}", ' ', 'T') || '.000Z'
+             WHERE "${col.name}" GLOB ?`,
+          )
+          .run(OLD);
+      } catch {
+        // A view, or a column that cannot be written. Neither is worth
+        // stopping a boot over: the read path copes with both shapes.
+      }
+    }
+  }
+}
+
 function relaxGroupDekNotNull() {
   const sql = getSqlite();
   const cols = sql.prepare(`PRAGMA table_info(groups)`).all() as {

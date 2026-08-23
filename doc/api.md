@@ -525,3 +525,18 @@ asset is decorative and the content itself stays gated.
   the internal `/api/*` multipart endpoints, not `/api/v1`.
 - Global rate limit safety net applies; there is no per-endpoint quota.
 - Deletes are soft (data is retained server-side, hidden from listings).
+
+### Timestamps
+
+Every `*_at` field is **ISO-8601 UTC with the `Z`**, e.g.
+`2026-08-23T08:15:00.000Z`. Render it in whatever zone the reader is in; the
+value itself never carries one.
+
+Releases up to v0.83.1 returned some of them as `2026-08-23 08:15:00`, which is
+the same instant, still UTC, and **unmarked**. If you parse that with anything
+that falls back to local time — which is what browsers do for the
+space-separated form — you get an answer offset by your own zone. Old rows are
+re-stamped on boot, so an upgraded instance answers in the marked form too.
+
+`GET /time` (internal API, authenticated) returns the server's clock in that
+same shape, plus its `timeZone` and `offsetMinutes`, for comparing clocks.

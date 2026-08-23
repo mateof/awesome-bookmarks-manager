@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   blob,
   index,
@@ -8,6 +7,29 @@ import {
   text,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
+
+/**
+ * Every timestamp is written as ISO-8601 UTC, with the `Z`.
+ *
+ * SQLite's own `current_timestamp` gives `2026-08-23 08:15:00`: correct, UTC,
+ * and **unmarked**. A browser parsing that string has no way to know it is UTC,
+ * and the rule it falls back to for the space-separated form is *local time*,
+ * so every such timestamp arrived shifted by the reader's offset. Two hours, in
+ * Madrid, in summer.
+ *
+ * `$defaultFn` runs in JS at insert time, so the value carries its zone. It has
+ * to be the *only* default declared here: Drizzle checks a column's SQL default
+ * first and never reaches `defaultFn` when both are set, which is a quiet way
+ * to write this fix and ship nothing. The `DEFAULT (current_timestamp)` in the
+ * CREATE TABLE statements stays as a backstop for raw-SQL inserts.
+ *
+ * Keeping one format also keeps `ORDER BY` honest: these are TEXT columns, so
+ * ordering is a string comparison, and a space sorts before a `T`. With both
+ * shapes in one column, 23:00 written one way sorts before 09:00 written the
+ * other.
+ */
+const utcNow = () => new Date().toISOString();
+
 
 export const users = sqliteTable(
   "users",
@@ -52,8 +74,8 @@ export const users = sqliteTable(
     // Per-user storage ceiling in bytes. NULL means "use the instance
     // default" (app_settings), which itself may be unset = unlimited.
     storageQuotaBytes: integer("storage_quota_bytes"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     emailIdx: uniqueIndex("users_email_idx").on(t.email),
@@ -76,8 +98,8 @@ export const userSessions = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     ip: text("ip").notNull().default(""),
     userAgent: text("user_agent").notNull().default(""),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    lastSeenAt: text("last_seen_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    lastSeenAt: text("last_seen_at").notNull().$defaultFn(utcNow),
     revokedAt: text("revoked_at"),
   },
   (t) => ({
@@ -96,7 +118,7 @@ export const securityEvents = sqliteTable(
   "security_events",
   {
     id: text("id").primaryKey(),
-    at: text("at").notNull().default(sql`(current_timestamp)`),
+    at: text("at").notNull().$defaultFn(utcNow),
     type: text("type").notNull(),
     userId: text("user_id"),
     /** Account email when known, or whatever was attempted on a failed login. */
@@ -142,7 +164,7 @@ export const webauthnCredentials = sqliteTable(
     // recoverable with MASTER_KEY (weaker). See WEBAUTHN_ALLOW_PRFLESS.
     prfless: integer("prfless", { mode: "boolean" }).notNull().default(false),
     label: text("label").notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
     lastUsedAt: text("last_used_at"),
   },
   (t) => ({
@@ -182,8 +204,8 @@ export const panels = sqliteTable(
     passwordHash: text("password_hash"),
     payloadCt: blob("payload_ct", { mode: "buffer" }),
     payloadStatus: text("payload_status").notNull().default("pending"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     slugIdx: uniqueIndex("panels_slug_idx").on(t.slug),
@@ -217,8 +239,8 @@ export const panelTemplates = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     config: text("config").notNull(), // JSON
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("panel_templates_user_idx").on(t.userId),
@@ -244,7 +266,7 @@ export const groups = sqliteTable(
     recoverable: integer("recoverable", { mode: "boolean" })
       .notNull()
       .default(false),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     ownerIdx: index("groups_owner_idx").on(t.ownerId),
@@ -261,7 +283,7 @@ export const groupMembers = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
-    joinedAt: text("joined_at").notNull().default(sql`(current_timestamp)`),
+    joinedAt: text("joined_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.groupId, t.userId] }),
@@ -284,7 +306,7 @@ export const groupInvitations = sqliteTable(
     expiresAt: text("expires_at"),
     acceptedAt: text("accepted_at"),
     rejectedAt: text("rejected_at"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     tokenIdx: uniqueIndex("group_invitations_token_idx").on(t.token),
@@ -310,8 +332,8 @@ export const groupShares = sqliteTable(
     access: text("access").notNull().default("viewer"),
     // Optimistic-concurrency revision for the editable payload.
     rev: integer("rev").notNull().default(1),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     groupIdx: index("group_shares_group_idx").on(t.groupId),
@@ -342,7 +364,7 @@ export const groupShareOps = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     payloadCt: blob("payload_ct", { mode: "buffer" }).notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     shareIdx: index("group_share_ops_share_idx").on(t.shareId),
@@ -391,8 +413,8 @@ export const folders = sqliteTable(
     // Optimistic-concurrency revision, bumped on every mutation. A conditional
     // update (WHERE rev = expected) lets a stale writer be rejected with 409.
     rev: integer("rev").notNull().default(1),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
     deletedAt: text("deleted_at"),
   },
   (t) => ({
@@ -448,8 +470,8 @@ export const bookmarks = sqliteTable(
     position: integer("position").notNull().default(0),
     // Optimistic-concurrency revision (see folders.rev).
     rev: integer("rev").notNull().default(1),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
     deletedAt: text("deleted_at"),
   },
   (t) => ({
@@ -479,8 +501,8 @@ export const smartFolders = sqliteTable(
     queryCt: blob("query_ct", { mode: "buffer" }).notNull(),
     color: text("color").notNull().default("#6366f1"),
     position: integer("position").notNull().default(0),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("smart_folders_user_idx").on(t.userId, t.position),
@@ -496,7 +518,7 @@ export const tags = sqliteTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     color: text("color").notNull().default("#64748b"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userNameIdx: uniqueIndex("tags_user_name_idx").on(t.userId, t.name),
@@ -539,10 +561,10 @@ export const jobs = sqliteTable(
     status: text("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),
     lastError: text("last_error"),
-    availableAt: text("available_at").notNull().default(sql`(current_timestamp)`),
+    availableAt: text("available_at").notNull().$defaultFn(utcNow),
     startedAt: text("started_at"),
     finishedAt: text("finished_at"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     statusIdx: index("jobs_status_available_idx").on(t.status, t.availableAt),
@@ -571,7 +593,7 @@ export const cloudConnections = sqliteTable(
     isDefault: integer("is_default", { mode: "boolean" })
       .notNull()
       .default(false),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("cloud_connections_user_idx").on(t.userId),
@@ -592,7 +614,7 @@ export const shareLinks = sqliteTable(
     payloadStatus: text("payload_status").notNull().default("pending"),
     expiresAt: text("expires_at"),
     passwordHash: text("password_hash"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     tokenIdx: uniqueIndex("share_links_token_idx").on(t.token),
@@ -614,7 +636,7 @@ export const extensionTokens = sqliteTable(
     // Nullable so pre-existing (legacy) tokens keep working via the cache.
     dekWrap: blob("dek_wrap", { mode: "buffer" }),
     lastUsedAt: text("last_used_at"),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("extension_tokens_user_idx").on(t.userId),
@@ -639,7 +661,7 @@ export const entityVersions = sqliteTable(
     // Sealed JSON snapshot of the editable fields at this version (user DEK,
     // AAD "<userId>|version.payload").
     payloadCt: blob("payload_ct", { mode: "buffer" }).notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     entityIdx: index("entity_versions_entity_idx").on(
@@ -683,7 +705,7 @@ export const attachments = sqliteTable(
     mimeCt: blob("mime_ct", { mode: "buffer" }).notNull(),
     sizeBytes: integer("size_bytes").notNull(),
     blobPath: text("blob_path").notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     entityIdx: index("attachments_entity_idx").on(
@@ -723,8 +745,8 @@ export const databases = sqliteTable(
      */
     keyScopeId: text("key_scope_id"),
     nameCt: blob("name_ct", { mode: "buffer" }).notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("databases_user_idx").on(t.userId),
@@ -763,8 +785,8 @@ export const databaseRows = sqliteTable(
     /** Sealed JSON object keyed by column id. */
     cellsCt: blob("cells_ct", { mode: "buffer" }).notNull(),
     position: integer("position").notNull().default(0),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-    updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     dbIdx: index("database_rows_db_idx").on(t.databaseId, t.position),
@@ -812,7 +834,7 @@ export const groupMemberKeys = sqliteTable(
     userId: text("user_id").notNull(),
     keyVersion: integer("key_version").notNull().default(1),
     wrappedKey: blob("wrapped_key", { mode: "buffer" }).notNull(),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.groupId, t.userId, t.keyVersion] }),
@@ -839,7 +861,7 @@ export const keyScopes = sqliteTable("key_scopes", {
   id: text("id").primaryKey(),
   /** Who created the share. Only used for accounting and diagnostics. */
   userId: text("user_id").notNull(),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  createdAt: text("created_at").notNull().$defaultFn(utcNow),
 });
 
 export const keyScopeGrants = sqliteTable(
@@ -851,7 +873,7 @@ export const keyScopeGrants = sqliteTable(
     wrappedKey: blob("wrapped_key", { mode: "buffer" }).notNull(),
     /** Which version of the group key wrapped it, so rotation can find it. */
     groupKeyVersion: integer("group_key_version").notNull().default(1),
-    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.scopeId, t.groupId] }),

@@ -79,6 +79,16 @@ const en = {
     trash: "Trash",
     invitations: "Invitations",
   },
+  clock: {
+    heading: "Server time",
+    server: "Server",
+    yours: "Yours",
+    drift: "Difference",
+    inSync: "In sync",
+    driftValue: "{{seconds}}s adrift",
+    explain:
+      "Dates are stored in UTC and shown in your own time zone, so the server and you naturally read different clock times. Drift is the thing that should not happen: it means the two clocks disagree about the instant itself.",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menu",

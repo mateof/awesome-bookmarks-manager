@@ -79,6 +79,16 @@ const es = {
     trash: "Papelera",
     invitations: "Invitaciones",
   },
+  clock: {
+    heading: "Hora del servidor",
+    server: "Servidor",
+    yours: "La tuya",
+    drift: "Diferencia",
+    inSync: "En hora",
+    driftValue: "{{seconds}} s de desfase",
+    explain:
+      "Las fechas se guardan en UTC y se muestran en tu zona horaria, así que es normal que el servidor y tú no digáis la misma hora. Lo que no debería pasar es que haya desfase: eso significa que los dos relojes no están en el mismo instante.",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

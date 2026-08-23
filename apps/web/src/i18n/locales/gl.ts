@@ -79,6 +79,16 @@ const gl = {
     trash: "Papeleira",
     invitations: "Convites",
   },
+  clock: {
+    heading: "Hora do servidor",
+    server: "Servidor",
+    yours: "A túa",
+    drift: "Diferenza",
+    inSync: "En hora",
+    driftValue: "{{seconds}} s de desfase",
+    explain:
+      "As datas gárdanse en UTC e amósanse na túa zona horaria, así que é normal que o servidor e ti non digades a mesma hora. O que non debería pasar é que haxa desfase: iso significa que os dous reloxos non están no mesmo instante.",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

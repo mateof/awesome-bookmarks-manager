@@ -263,6 +263,9 @@ export const api = {
   authConfig: () =>
     request<{ registrationEnabled: boolean }>("/auth/config"),
   me: () => request<MeResponse>("/me"),
+  /** The server's clock, for comparing against the reader's. */
+  serverTime: () =>
+    request<{ now: string; timeZone: string; offsetMinutes: number }>("/time"),
   updateMyProfile: (body: {
     nickname?: string;
     autoSnapshots?: boolean;

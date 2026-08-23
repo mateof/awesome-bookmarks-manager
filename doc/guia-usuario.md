@@ -58,6 +58,13 @@ vacío:
 
 ![Inicio vacío tras el registro](images/03-home-empty.png)
 
+**Las horas se guardan en UTC y se te muestran en tu zona.** Si el servidor
+está en UTC y tú en Madrid, el mismo momento se lee con dos horas de
+diferencia, y eso es correcto. Lo que no lo es sería que los dos relojes no
+estuviesen en el mismo instante: para comprobarlo, *Ajustes → Perfil → Hora del
+servidor* enseña la hora del servidor, la tuya y la diferencia entre ambas,
+avanzando en directo.
+
 **Al entrar verás una barra de progreso** mientras se descifra tu contenido.
 Descifrar es trabajo real, y cuanto más tengas guardado más tarda la primera
 carga de la sesión; después ya está en memoria y no vuelve a salir hasta que

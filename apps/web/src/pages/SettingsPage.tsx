@@ -3,6 +3,7 @@ import {
   Check,
   Cloud as CloudIcon,
   Copy,
+  Clock,
   Download,
   Fingerprint,
   HardDrive,
@@ -24,6 +25,7 @@ import { dlg } from "../components/dialogs.js";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { ServerClock } from "../components/ServerClock.js";
 import { fmtDateTime } from "../lib/date.js";
 import { registerPasskey, passkeysSupported } from "../webauthn.js";
 import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
@@ -379,6 +381,17 @@ function Profile() {
             {msg && <span className="text-sm text-slate-500">{msg}</span>}
           </div>
         </div>
+      </Card>
+
+      {/* Sits here rather than in the app chrome: it is something you come to
+          check when a date looks wrong, not something worth ticking away on
+          every page of a bookmark manager. */}
+      <Card>
+        <SectionHeader
+          icon={<Clock className="h-5 w-5" />}
+          title={t("clock.heading")}
+        />
+        <ServerClock />
       </Card>
 
       <Card>

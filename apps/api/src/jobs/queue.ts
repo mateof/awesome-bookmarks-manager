@@ -42,10 +42,11 @@ export interface ClaimedJob {
 export function claimNext(): ClaimedJob | null {
   const sqlite = getSqlite();
   const tx = sqlite.transaction(() => {
-    // We store available_at as ISO 8601 (e.g. "2026-05-02T10:11:51.000Z")
-    // but datetime('now') returns SQLite-format ("2026-05-02 10:11:51"),
-    // so a raw string compare is broken on same-day jobs ('T' > ' '). Wrap
-    // both sides in datetime() so SQLite normalises them to the same form.
+    // Both sides go through datetime() so the comparison does not depend on
+    // the stored shape. Everything is written ISO-8601 with the `Z` now, but a
+    // database filled before that is normalised on boot rather than rewritten
+    // here, and a raw string compare would be wrong for as long as both shapes
+    // coexist: these are TEXT columns and a space sorts before a `T`.
     const row = sqlite
       .prepare(
         `SELECT id, user_id, type, payload, attempts FROM jobs
@@ -66,7 +67,7 @@ export function claimNext(): ClaimedJob | null {
     if (!row) return null;
     sqlite
       .prepare(
-        `UPDATE jobs SET status = 'running', started_at = datetime('now'),
+        `UPDATE jobs SET status = 'running', started_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
                           attempts = attempts + 1
          WHERE id = ? AND status = 'pending'`,
       )
@@ -87,7 +88,7 @@ export function complete(id: string) {
     .update(jobs)
     .set({
       status: "done",
-      finishedAt: sql`current_timestamp`,
+      finishedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
     })
     .where(eq(jobs.id, id))
     .run();
@@ -106,7 +107,7 @@ export function failTerminal(id: string, error: string) {
     .set({
       status: "error",
       lastError: error,
-      finishedAt: sql`current_timestamp`,
+      finishedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
     })
     .where(eq(jobs.id, id))
     .run();
@@ -125,7 +126,7 @@ export function fail(id: string, error: string) {
       .set({
         status: "error",
         lastError: error,
-        finishedAt: sql`current_timestamp`,
+        finishedAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
       })
       .where(eq(jobs.id, id))
       .run();
@@ -159,7 +160,7 @@ export function reawakenForUser(userId: string) {
     .update(jobs)
     .set({
       status: "pending",
-      availableAt: sql`current_timestamp`,
+      availableAt: sql`(strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
     })
     .where(and(eq(jobs.userId, userId), eq(jobs.status, "pending_user_key")))
     .run();
