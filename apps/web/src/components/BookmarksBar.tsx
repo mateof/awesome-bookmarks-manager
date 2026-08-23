@@ -188,6 +188,8 @@ function BookmarkRow({
           <img
             src={api.bookmarkIconUrl(bookmark.id, bookmark.updatedAt)}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="h-4 w-4 rounded object-cover"
           />
         ) : (

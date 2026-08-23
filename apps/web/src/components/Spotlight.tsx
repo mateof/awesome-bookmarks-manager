@@ -506,6 +506,8 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
                       <img
                         src={r.iconUrl}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="h-5 w-5 shrink-0 rounded object-cover"
                       />
                     ) : r.kind === "folder" ? (

@@ -395,6 +395,8 @@ export function TagFilterPage() {
                   <img
                     src={api.folderIconUrl(f.aliasOf ?? f.id, f.updatedAt)}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="h-6 w-6 rounded object-cover"
                   />
                 ) : (
@@ -425,6 +427,8 @@ export function TagFilterPage() {
                   <img
                     src={api.bookmarkIconUrl(b.aliasOf ?? b.id, b.updatedAt)}
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                     className="h-8 w-8 shrink-0 rounded object-cover"
                   />
                 ) : (

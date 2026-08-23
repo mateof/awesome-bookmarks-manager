@@ -240,6 +240,8 @@ function Row({
         <img
           src={api.bookmarkIconUrl(bookmark.aliasOf ?? bookmark.id, bookmark.updatedAt)}
           alt=""
+          loading="lazy"
+          decoding="async"
           className="mt-0.5 h-5 w-5 shrink-0 rounded object-cover"
         />
       ) : (

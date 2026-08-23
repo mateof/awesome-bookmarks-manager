@@ -342,6 +342,8 @@ function FolderIcon({ sf, size }: { sf: Folder; size: string }) {
     <img
       src={iconUrl}
       alt=""
+      loading="lazy"
+      decoding="async"
       className={`${size} rounded object-cover`}
     />
   ) : (
@@ -436,6 +438,8 @@ function BookmarkIcon({ b, size }: { b: Bookmark; size: string }) {
     <img
       src={iconUrl}
       alt=""
+      loading="lazy"
+      decoding="async"
       className={`${size} shrink-0 rounded object-cover`}
     />
   ) : (

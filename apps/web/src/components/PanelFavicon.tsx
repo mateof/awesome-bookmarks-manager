@@ -37,5 +37,5 @@ export function Favicon({
       <span style={{ width: size, height: size, borderRadius: 6, background: accent, color: "#fff", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.5, fontWeight: 700, flexShrink: 0 }}>{letter.toUpperCase()}</span>
     );
   }
-  return <img src={`${origin}/favicon.ico`} alt="" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />;
+  return <img src={`${origin}/favicon.ico`} alt="" loading="lazy" decoding="async" width={size} height={size} onError={() => setFailed(true)} style={{ width: size, height: size, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />;
 }

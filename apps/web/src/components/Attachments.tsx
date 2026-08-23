@@ -138,6 +138,8 @@ export function Attachments({
                 >
                   <img
                     src={api.attachmentUrl(f.id, true)}
+                    loading="lazy"
+                    decoding="async"
                     alt=""
                     className="h-8 w-8 rounded object-cover"
                   />
