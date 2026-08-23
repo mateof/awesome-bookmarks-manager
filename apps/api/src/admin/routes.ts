@@ -1,3 +1,4 @@
+import { getInsights } from "./insights.js";
 import {
   CreateUserBodySchema,
   SetUserQuotaBodySchema,
@@ -50,6 +51,17 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.get("/admin/users", async (req) => {
     const ctx = requireAuth(req);
     return listAllUsers(ctx);
+  });
+
+  /**
+   * The panel: storage by type per account, plus how the instance is used.
+   *
+   * Metadata only, and not for want of trying: an admin holds nobody's key, so
+   * there is nothing here that had to be decrypted. See `admin/insights.ts`.
+   */
+  app.get("/admin/insights", async (req) => {
+    const ctx = requireAuth(req);
+    return getInsights(ctx);
   });
 
   // What every account is taking on disk, heaviest first.

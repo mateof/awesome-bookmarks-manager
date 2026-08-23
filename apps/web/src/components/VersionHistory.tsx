@@ -7,13 +7,10 @@ import {
   type VersionEntity,
   api,
 } from "../api.js";
+import { fmtDateTime } from "../lib/date.js";
 import { Modal } from "./Modal.js";
 import { RichTextView } from "./RichTextView.js";
 
-function fmt(iso: string): string {
-  const d = new Date(iso.includes("Z") || iso.includes("T") ? iso : `${iso}Z`);
-  return d.toLocaleString();
-}
 
 /** Read-only render of a version's snapshot fields. */
 function SnapshotView({ versionId }: { versionId: string }) {
@@ -30,7 +27,7 @@ function SnapshotView({ versionId }: { versionId: string }) {
   return (
     <div className="space-y-1 text-sm">
       <div className="text-[11px] uppercase text-slate-400">
-        {t("versions.version", { rev: q.data.rev })} · {fmt(q.data.createdAt)}
+        {t("versions.version", { rev: q.data.rev })} · {fmtDateTime(q.data.createdAt)}
       </div>
       <div className="font-medium">{isBookmark ? b.title : f.name}</div>
       {isBookmark && (
@@ -174,7 +171,7 @@ export function VersionHistory({
                   <span className="flex-1">
                     {t("versions.version", { rev: v.rev })}
                     <span className="ml-2 text-xs text-slate-400">
-                      {fmt(v.createdAt)}
+                      {fmtDateTime(v.createdAt)}
                     </span>
                   </span>
                   <button
@@ -231,7 +228,7 @@ export function VersionHistory({
                 </span>
                 <span className="flex-1 truncate font-medium">{a.label}</span>
                 <span className="text-xs text-slate-400">
-                  {t("versions.version", { rev: a.rev })} · {fmt(a.createdAt)}
+                  {t("versions.version", { rev: a.rev })} · {fmtDateTime(a.createdAt)}
                 </span>
               </div>
             ))}

@@ -1,4 +1,5 @@
 import type {
+  AdminInsights,
   AdminStorageRow,
   ArchiveScope,
   Attachment,
@@ -406,6 +407,8 @@ export const api = {
   myStorage: (fresh = false) =>
     request<StorageUsage>(`/storage/me${fresh ? "?fresh=1" : ""}`),
   adminListStorage: () => request<AdminStorageRow[]>("/admin/storage"),
+  /** Storage by type per account, plus how the instance is being used. */
+  adminInsights: () => request<AdminInsights>("/admin/insights"),
   adminSetUserQuota: (id: string, quotaBytes: number | null) =>
     request<{ ok: true }>(`/admin/users/${id}/quota`, {
       method: "PATCH",

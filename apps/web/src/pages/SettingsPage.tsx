@@ -3,6 +3,7 @@ import {
   Check,
   Cloud as CloudIcon,
   Copy,
+  BarChart3,
   Clock,
   Download,
   Fingerprint,
@@ -25,6 +26,7 @@ import { dlg } from "../components/dialogs.js";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
+import { AdminInsights } from "../components/AdminInsights.js";
 import { ServerClock } from "../components/ServerClock.js";
 import { fmtDateTime } from "../lib/date.js";
 import { registerPasskey, passkeysSupported } from "../webauthn.js";
@@ -182,6 +184,14 @@ export function SettingsPage() {
             </Tab>
           )}
           {isAdmin && (
+            <Tab
+              to="/settings/insights"
+              icon={<BarChart3 className="h-4 w-4" />}
+            >
+              {t("insights.tab")}
+            </Tab>
+          )}
+          {isAdmin && (
             <Tab to="/settings/security-log" icon={<ShieldAlert className="h-4 w-4" />}>
               {t("settings.tabs.securityLog")}
             </Tab>
@@ -202,6 +212,7 @@ export function SettingsPage() {
             <Route path="storage" element={<Storage />} />
             <Route path="api" element={<ApiTokens />} />
             {isAdmin && <Route path="admin" element={<Admin />} />}
+            {isAdmin && <Route path="insights" element={<InsightsTab />} />}
             {isAdmin && (
               <Route path="security-log" element={<SecurityLogTab />} />
             )}
@@ -1378,6 +1389,19 @@ function ApiTokens() {
 /* ------------------------------------------------------------------ */
 /* Admin                                                              */
 /* ------------------------------------------------------------------ */
+
+function InsightsTab() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <SectionHeader
+        icon={<BarChart3 className="h-5 w-5" />}
+        title={t("insights.tab")}
+      />
+      <AdminInsights />
+    </Card>
+  );
+}
 
 function Admin() {
   const { t } = useTranslation();

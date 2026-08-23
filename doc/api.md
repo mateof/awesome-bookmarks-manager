@@ -526,6 +526,18 @@ asset is decorative and the content itself stays gated.
 - Global rate limit safety net applies; there is no per-endpoint quota.
 - Deletes are soft (data is retained server-side, hidden from listings).
 
+### Admin insights
+
+`GET /admin/insights` (internal API, admin only) returns storage broken down by
+type for every account, plus instance-wide counts and 30 days of sign-in
+activity.
+
+**Metadata only, by construction.** An admin holds nobody's key, so no folder
+name, bookmark title or description appears in this response and none can: the
+server would need that user's password-derived key to read them and does not
+have it. Counts, byte sizes and timestamps were never encrypted, which is why
+they are available.
+
 ### Timestamps
 
 Every `*_at` field is **ISO-8601 UTC with the `Z`**, e.g.

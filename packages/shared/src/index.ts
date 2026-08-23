@@ -14,6 +14,7 @@ export * from "./smart-folders.js";
 export * from "./trash.js";
 export * from "./duplicates.js";
 export * from "./storage.js";
+export * from "./insights.js";
 export * from "./sessions.js";
 export * from "./security-log.js";
 export * from "./archive.js";
