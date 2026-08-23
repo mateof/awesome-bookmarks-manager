@@ -1,5 +1,7 @@
 import type {
   AdminInsights,
+  ApplyTagsBody,
+  ApplyTagsResult,
   AdminStorageRow,
   ArchiveScope,
   Attachment,
@@ -336,6 +338,12 @@ export const api = {
 
   // tags
   listTags: () => request<Tag[]>("/tags"),
+  /** Add tags to a whole selection in one call. */
+  applyTags: (body: ApplyTagsBody) =>
+    request<ApplyTagsResult>("/tags/apply", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   createTag: (body: CreateTagBody) =>
     request<Tag>("/tags", { method: "POST", body: JSON.stringify(body) }),
   updateTag: (id: string, body: UpdateTagBody) =>

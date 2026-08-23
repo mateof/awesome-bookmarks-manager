@@ -4,23 +4,8 @@ import { Plus, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
+import { pickTagColor } from "../lib/tagColors.js";
 
-const TAG_PALETTE = [
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#06b6d4",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#64748b",
-];
-
-function pickRandomColor(): string {
-  const i = Math.floor(Math.random() * TAG_PALETTE.length);
-  return TAG_PALETTE[i] ?? "#64748b";
-}
 
 interface Props {
   value: string[];
@@ -101,7 +86,7 @@ export function TagPicker({
 
   const create = useMutation({
     mutationFn: (name: string) =>
-      api.createTag({ name, color: pickRandomColor() }),
+      api.createTag({ name, color: pickTagColor(tagsQ.data ?? []) }),
     onSuccess: (tag) => {
       qc.invalidateQueries({ queryKey: ["tags"] });
       onChange([...value, tag.id]);

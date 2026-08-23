@@ -21,6 +21,7 @@ import {
   Plus,
   Share2,
   TabletSmartphone,
+  Tag as TagIcon,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -45,6 +46,7 @@ import { BackgroundPicker } from "../components/BackgroundPicker.js";
 import { BookmarkEditDialog } from "../components/BookmarkEditDialog.js";
 import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { EntityBanner } from "../components/EntityBanner.js";
+import { BulkTagDialog } from "../components/BulkTagDialog.js";
 import { SharedBadge } from "../components/SharedBadge.js";
 import { IconPicker } from "../components/IconPicker.js";
 import { VersionHistory } from "../components/VersionHistory.js";
@@ -123,6 +125,7 @@ export function FolderPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
+  const [tagTarget, setTagTarget] = useState(false);
   const [appearanceTarget, setAppearanceTarget] = useState<
     | { kind: "folder"; folder: Folder }
     | { kind: "bookmark"; bookmark: Bookmark }
@@ -798,6 +801,14 @@ export function FolderPage() {
           >
             <FolderInput className="h-4 w-4" /> {t("folder.selectionMove")}
           </button>
+          {canWrite && (
+            <button
+              onClick={() => setTagTarget(true)}
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <TagIcon className="h-4 w-4" /> {t("folder.selectionTag")}
+            </button>
+          )}
           <button
             onClick={copySelectionOutline}
             title={t("folder.selectionCopyListTitle")}
@@ -906,6 +917,14 @@ export function FolderPage() {
           onSaved={invalidate}
         />
       )}
+      {tagTarget && (
+        <BulkTagDialog
+          folderIds={selectedFolderIds}
+          bookmarkIds={selectedBookmarkIds}
+          onClose={() => setTagTarget(false)}
+        />
+      )}
+
       {appearanceTarget && (
         <AppearanceDialog
           target={appearanceTarget}

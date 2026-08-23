@@ -532,6 +532,15 @@ const en = {
     imported: "Imported {{folders}} folders and {{bookmarks}} bookmarks.",
   },
   tags: {
+    bulkTitle: "Add tags to {{count}} item",
+    bulkTitle_other: "Add tags to {{count}} items",
+    bulkHint:
+      "The tags you pick are added to the selection. Nothing already on them is removed.",
+    bulkApply: "Add to selection",
+    bulkSkipped:
+      "Done, but {{count}} item was left alone because you cannot edit it.",
+    bulkSkipped_other:
+      "Done, but {{count}} items were left alone because you cannot edit them.",
     noneYet: "No tags",
     addHere: "Add tag",
     pageTitle: "Tags",
@@ -607,6 +616,7 @@ const en = {
     selectionCopied: "Copied",
     couldNotCopy: "Could not copy to the clipboard.",
     selectionExport: "Export",
+    selectionTag: "Add tags",
     selectionMove: "Move to",
     selectionDelete: "Delete",
     selectionCancel: "Cancel",

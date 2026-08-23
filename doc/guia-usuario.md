@@ -165,6 +165,13 @@ Si solo tienes permiso de **ver**, los botones de crear y editar no aparecen.
 No es que se escondan por educación: el servidor rechaza esas escrituras de
 todas formas, y ofrecerte un botón que va a fallar es peor que no ofrecerlo.
 
+**Poner tags a varias cosas a la vez.** Selecciona carpetas y bookmarks con las
+casillas y usa *Añadir tags* en la barra de selección. Los tags que elijas se
+**suman** a los que cada elemento ya tuviera: no se quita ninguno, porque en una
+selección cada cosa suele llevar tags distintos y "estos son ahora sus tags"
+borraría justo los que habías puesto a mano. Si en la selección hay algo
+compartido que solo puedes ver, se queda sin tocar y te lo dice.
+
 **Cinco niveles de permiso**, cada uno con todo lo del anterior:
 
 | Nivel | Puede |

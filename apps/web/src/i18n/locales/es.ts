@@ -532,6 +532,15 @@ const es = {
     imported: "Importadas {{folders}} carpetas y {{bookmarks}} bookmarks.",
   },
   tags: {
+    bulkTitle: "Añadir tags a {{count}} elemento",
+    bulkTitle_other: "Añadir tags a {{count}} elementos",
+    bulkHint:
+      "Los tags que elijas se añaden a lo seleccionado. No se quita ninguno de los que ya tengan.",
+    bulkApply: "Añadir a la selección",
+    bulkSkipped:
+      "Hecho, pero {{count}} elemento se ha quedado sin cambiar porque no tienes permiso de edición sobre él.",
+    bulkSkipped_other:
+      "Hecho, pero {{count}} elementos se han quedado sin cambiar porque no tienes permiso de edición sobre ellos.",
     noneYet: "Sin tags",
     addHere: "Añadir tag",
     pageTitle: "Tags",
@@ -607,6 +616,7 @@ const es = {
     selectionCopied: "Copiado",
     couldNotCopy: "No se pudo copiar al portapapeles.",
     selectionExport: "Exportar",
+    selectionTag: "Añadir tags",
     selectionMove: "Mover a",
     selectionDelete: "Eliminar",
     selectionCancel: "Cancelar",

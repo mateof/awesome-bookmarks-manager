@@ -7,18 +7,8 @@ import { dlg } from "../components/dialogs.js";
 import { Link } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { Modal } from "../components/Modal.js";
+import { TAG_PALETTE, pickTagColor } from "../lib/tagColors.js";
 
-const PALETTE = [
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#06b6d4",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#64748b",
-];
 
 export function TagsPage() {
   const { t } = useTranslation();
@@ -134,6 +124,7 @@ export function TagsPage() {
 
       {showCreate && (
         <TagDialog
+          existingTags={tagsQ.data ?? []}
           onClose={() => setShowCreate(false)}
           onSaved={() => qc.invalidateQueries({ queryKey: ["tags"] })}
         />
@@ -141,6 +132,7 @@ export function TagsPage() {
       {editing && (
         <TagDialog
           tag={editing}
+          existingTags={tagsQ.data ?? []}
           onClose={() => setEditing(null)}
           onSaved={() => qc.invalidateQueries({ queryKey: ["tags"] })}
         />
@@ -151,17 +143,24 @@ export function TagsPage() {
 
 function TagDialog({
   tag,
+  existingTags,
   onClose,
   onSaved,
 }: {
   tag?: Tag;
+  /** So a new tag can open on a colour none of them is using. */
+  existingTags: Tag[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
   const isEdit = !!tag;
   const [name, setName] = useState(tag?.name ?? "");
-  const [color, setColor] = useState(tag?.color ?? PALETTE[0]!);
+  // A new tag opens on a colour nothing else is using, so the common case is
+  // typing a name and pressing save.
+  const [color, setColor] = useState(
+    tag?.color ?? pickTagColor(existingTags),
+  );
   const [err, setErr] = useState<string | null>(null);
 
   const m = useMutation({
@@ -201,7 +200,7 @@ function TagDialog({
             {t("tags.fieldColor")}
           </span>
           <div className="flex flex-wrap items-center gap-2">
-            {PALETTE.map((c) => (
+            {TAG_PALETTE.map((c) => (
               <button
                 key={c}
                 type="button"

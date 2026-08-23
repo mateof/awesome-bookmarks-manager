@@ -1,3 +1,6 @@
+import type { ApplyTagsResult } from "@awesome-bookmarks/shared";
+import { getFolder, updateFolder } from "../folders/service.js";
+import { getBookmark, updateBookmark } from "../bookmarks/service.js";
 import type { Tag } from "@awesome-bookmarks/shared";
 import { and, asc, eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
@@ -76,4 +79,61 @@ export function deleteTag(ctx: AuthedContext, id: string) {
     .get();
   if (!row) throw NotFound("Tag not found");
   getDb().delete(tags).where(eq(tags.id, id)).run();
+}
+
+/**
+ * Add tags to many folders and bookmarks in one call.
+ *
+ * Deliberately goes through `updateFolder` / `updateBookmark` rather than
+ * writing the join rows directly. Those carry the write permission check, the
+ * revision bump and the version history, and a bulk path that reimplemented
+ * them would be a second place for the rules to drift out of step — which in
+ * this codebase has already happened once, with the jobs that opened rows using
+ * the wrong key.
+ *
+ * An item the caller cannot write is counted and skipped rather than failing
+ * the batch: a selection that happens to include one read-only shared folder
+ * should still tag the other forty.
+ */
+export function applyTags(
+  ctx: AuthedContext,
+  input: { folderIds: string[]; bookmarkIds: string[]; tagIds: string[] },
+): ApplyTagsResult {
+  let folders = 0;
+  let bookmarks = 0;
+  let skipped = 0;
+
+  for (const id of input.folderIds) {
+    try {
+      const current = getFolder(ctx, id);
+      const next = union(current.tagIds ?? [], input.tagIds);
+      // Nothing new on this one: skip the write rather than bump a revision
+      // and record a version that says nothing changed.
+      if (next.length === (current.tagIds ?? []).length) continue;
+      updateFolder(ctx, id, { tagIds: next });
+      folders++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  for (const id of input.bookmarkIds) {
+    try {
+      const current = getBookmark(ctx, id);
+      const next = union(current.tagIds ?? [], input.tagIds);
+      if (next.length === (current.tagIds ?? []).length) continue;
+      updateBookmark(ctx, id, { tagIds: next });
+      bookmarks++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  return { folders, bookmarks, skipped };
+}
+
+function union(current: string[], adding: string[]): string[] {
+  const out = new Set(current);
+  for (const id of adding) out.add(id);
+  return [...out];
 }

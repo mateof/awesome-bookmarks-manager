@@ -20,3 +20,26 @@ export const UpdateTagBodySchema = z.object({
   color: z.string().regex(HEX_COLOR).optional(),
 });
 export type UpdateTagBody = z.infer<typeof UpdateTagBodySchema>;
+
+/**
+ * Add tags to a batch of folders and bookmarks at once.
+ *
+ * Adds rather than sets. A multi-selection holds items with different tags
+ * already, so "these are now the tags" would silently strip whatever each one
+ * had; the only operation that means the same thing for every item in a mixed
+ * selection is "also put these on".
+ */
+export const ApplyTagsBodySchema = z.object({
+  folderIds: z.array(z.string().uuid()).max(1000).default([]),
+  bookmarkIds: z.array(z.string().uuid()).max(1000).default([]),
+  tagIds: z.array(z.string().uuid()).min(1).max(64),
+});
+export type ApplyTagsBody = z.infer<typeof ApplyTagsBodySchema>;
+
+export const ApplyTagsResultSchema = z.object({
+  folders: z.number().int(),
+  bookmarks: z.number().int(),
+  /** Items the caller may see but not write, named so the UI can say so. */
+  skipped: z.number().int(),
+});
+export type ApplyTagsResult = z.infer<typeof ApplyTagsResultSchema>;

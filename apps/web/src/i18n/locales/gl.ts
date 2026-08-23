@@ -532,6 +532,15 @@ const gl = {
     imported: "Importados {{folders}} cartafoles e {{bookmarks}} bookmarks.",
   },
   tags: {
+    bulkTitle: "Engadir tags a {{count}} elemento",
+    bulkTitle_other: "Engadir tags a {{count}} elementos",
+    bulkHint:
+      "Os tags que escollas engádense ao seleccionado. Non se quita ningún dos que xa teñan.",
+    bulkApply: "Engadir á selección",
+    bulkSkipped:
+      "Feito, pero {{count}} elemento quedou sen cambiar porque non tes permiso de edición sobre el.",
+    bulkSkipped_other:
+      "Feito, pero {{count}} elementos quedaron sen cambiar porque non tes permiso de edición sobre eles.",
     noneYet: "Sen tags",
     addHere: "Engadir tag",
     pageTitle: "Etiquetas",
@@ -607,6 +616,7 @@ const gl = {
     selectionCopied: "Copiado",
     couldNotCopy: "Non se puido copiar ao portapapeis.",
     selectionExport: "Exportar",
+    selectionTag: "Engadir tags",
     selectionMove: "Mover a",
     selectionDelete: "Eliminar",
     selectionCancel: "Cancelar",

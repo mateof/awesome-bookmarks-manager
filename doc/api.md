@@ -248,6 +248,21 @@ A tag: `{ "id": "…", "name": "dev", "color": "#3b82f6" }`.
 ### `GET /tags`
 List all tags.
 
+### `POST /tags/apply` (internal API)
+Add tags to a batch of folders and bookmarks at once.
+
+```json
+{ "folderIds": ["…"], "bookmarkIds": ["…"], "tagIds": ["…"] }
+```
+→ `{ "folders": 3, "bookmarks": 12, "skipped": 1 }`
+
+**Adds, never replaces.** A selection holds items with different tags already,
+so "these are now the tags" would strip whatever each one had; the only
+operation that means the same thing for every item in a mixed selection is
+"also put these on". Items the caller may read but not write are counted in
+`skipped` rather than failing the batch, so one read-only shared folder in a
+selection does not stop the other forty being tagged.
+
 ### `POST /tags`
 Create. Body: `{ "name": string(1–64), "color"?: "#rrggbb" }` (color
 defaults to a neutral gray). → `201`. `409` if the name already exists.
