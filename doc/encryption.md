@@ -199,6 +199,40 @@ authorisation the server enforces, not mathematics:
 This is normal for any system with permission tiers, and worth stating so
 nobody assumes the key is doing more than it does.
 
+## The one mistake this design keeps inviting
+
+Reading or writing a sealed field with `ctx.dek` instead of the row's key. It
+has now caused four separate bugs, so it is worth stating as a rule rather than
+leaving it to be rediscovered:
+
+> **Every field of an entity row goes through `openRowField` / `sealRowField`.**
+> `openField(ctx.dek, …)` is for things that belong to a *user* and never to a
+> group: the TOTP secret, the private half of the keypair, saved searches.
+
+What makes it easy to get wrong is that sharing does **not** change who owns a
+row. `user_id` still points at the person who made it, so a query filtered by
+owner still returns the row and the code still runs. It just cannot open what
+it selected, because the ciphertext moved to a scope key underneath it.
+
+It surfaces two ways, and the second is the dangerous one:
+
+- **Loudly**, as `Unsupported state or unable to authenticate data`. That is
+  AES-GCM refusing to authenticate, and it reads like a network or browser
+  problem when it reaches the user as "could not capture the snapshot".
+- **Silently**, when the failure is caught, or when the *write* side is wrong.
+  A row inserted into a shared folder without inheriting its key is perfectly
+  readable by its owner and invisible to the group. Nobody reports that,
+  because nobody can see it.
+
+Writing with the wrong key is worse than reading with it: a read fails and
+stops, a write leaves a row whose fields sit under two different keys, and then
+nobody can read it, owner included.
+
+The conversion to row keys was done field by field, which is why the fields
+nobody happened to exercise kept the old call for several releases: the URL of
+a bookmark went through the row key while its title did not. When touching a
+handler, check every field it opens, not the one in the bug report.
+
 ## Rotation
 
 Removing somebody from a group replaces the key: a new version is generated,

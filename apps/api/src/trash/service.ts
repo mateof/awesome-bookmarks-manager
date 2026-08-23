@@ -1,6 +1,6 @@
 import type { TrashItem } from "@awesome-bookmarks/shared";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { openField } from "../auth/encryption.js";
+import { openRowField } from "../groups/scope.js";
 import type { AuthedContext } from "../auth/session.js";
 import { getDb, getSqlite } from "../db/client.js";
 import {
@@ -38,6 +38,9 @@ function allFolderMeta(ctx: AuthedContext): Map<string, FolderMeta> {
   const rows = getDb()
     .select({
       id: folders.id,
+      userId: folders.userId,
+      keyGroupId: folders.keyGroupId,
+      keyScopeId: folders.keyScopeId,
       parentId: folders.parentId,
       nameCt: folders.nameCt,
       deletedAt: folders.deletedAt,
@@ -49,12 +52,7 @@ function allFolderMeta(ctx: AuthedContext): Map<string, FolderMeta> {
   for (const r of rows) {
     let name = "?";
     try {
-      name = openField(
-        ctx.dek,
-        ctx.userId,
-        "folder.name",
-        Buffer.from(r.nameCt),
-      );
+      name = openRowField(ctx, r, "folder.name", Buffer.from(r.nameCt));
     } catch {
       /* undecodable row still contributes structure, just not a label */
     }
@@ -111,6 +109,9 @@ export function listTrash(
   const bmRows = getDb()
     .select({
       id: bookmarks.id,
+      userId: bookmarks.userId,
+      keyGroupId: bookmarks.keyGroupId,
+      keyScopeId: bookmarks.keyScopeId,
       folderId: bookmarks.folderId,
       titleCt: bookmarks.titleCt,
       urlCt: bookmarks.urlCt,
@@ -127,18 +128,8 @@ export function listTrash(
       items.push({
         type: "bookmark",
         id: b.id,
-        title: openField(
-          ctx.dek,
-          ctx.userId,
-          "bookmark.title",
-          Buffer.from(b.titleCt),
-        ),
-        url: openField(
-          ctx.dek,
-          ctx.userId,
-          "bookmark.url",
-          Buffer.from(b.urlCt),
-        ),
+        title: openRowField(ctx, b, "bookmark.title", Buffer.from(b.titleCt)),
+        url: openRowField(ctx, b, "bookmark.url", Buffer.from(b.urlCt)),
         parentId: b.folderId,
         path: pathOf(meta, b.folderId, rootLabel),
         deletedAt: b.deletedAt,

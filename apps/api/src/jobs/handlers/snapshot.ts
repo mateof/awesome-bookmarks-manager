@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { JSDOM } from "jsdom";
 import type { AuthedContext } from "../../auth/session.js";
-import { openRowField } from "../../groups/scope.js";
+import { openRowField, sealRowField } from "../../groups/scope.js";
 import { Readability } from "@mozilla/readability";
 import { request } from "undici";
 import { openField, sealField } from "../../auth/encryption.js";
@@ -158,7 +158,14 @@ export async function runSnapshotJob(
     );
   }
 
-  const url = openRowField({ userId, dek } as AuthedContext, row, "bookmark.url", Buffer.from(row.urlCt));
+  // Every field of this row goes through the row's own key. Sharing a folder
+  // re-seals what is inside it with a scope key without changing who owns it,
+  // so `userId` still matches above and the job runs on a row its owner's DEK
+  // can no longer open. Reading one field the right way and another the old
+  // way is what turned "re-snapshot" into "Unsupported state or unable to
+  // authenticate data".
+  const ctx = { userId, dek } as AuthedContext;
+  const url = openRowField(ctx, row, "bookmark.url", Buffer.from(row.urlCt));
 
   // Mark as running so the UI shows progress instead of staying on "pending"
   getDb()
@@ -181,15 +188,19 @@ export async function runSnapshotJob(
   // (the case for quick-add or when the user didn't set one), update it.
   let titleUpdate: { titleCt: Buffer } | undefined;
   if (result.title && result.title.trim().length > 0) {
-    const currentTitle = openField(
-      dek,
-      userId,
+    const currentTitle = openRowField(
+      ctx,
+      row,
       "bookmark.title",
       Buffer.from(row.titleCt),
     );
     if (currentTitle === url) {
+      // And written back with the same key. Sealing this one with the owner's
+      // DEK would leave a row whose fields are under two different keys, which
+      // is worse than the failure it replaces: nobody could read the title
+      // again, owner included.
       titleUpdate = {
-        titleCt: sealField(dek, userId, "bookmark.title", result.title.trim()),
+        titleCt: sealRowField(ctx, row, "bookmark.title", result.title.trim()),
       };
     }
   }

@@ -1,7 +1,9 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { sealField } from "../../auth/encryption.js";
+import type { AuthedContext } from "../../auth/session.js";
+import { sealRowField } from "../../groups/scope.js";
 import { getAutoSnapshots } from "../../auth/service.js";
+import { groupOfFolder } from "../../folders/service.js";
 import { getDb } from "../../db/client.js";
 import { bookmarks, folders } from "../../db/schema.js";
 import { enqueue } from "../queue.js";
@@ -213,6 +215,19 @@ export async function runImportJob(
     if (found) resolvedParent = payload.parentId;
   }
 
+  // Everything imported inherits the destination folder's key, the same way
+  // `createBookmark` does when you add one by hand. Sealing with the owner's
+  // DEK instead produced rows that sit inside a shared folder and look like
+  // they belong to it, while the group cannot read a single one — and silently,
+  // because the owner can read them perfectly well.
+  const ctx = { userId, dek } as AuthedContext;
+  const inherited = resolvedParent
+    ? groupOfFolder(ctx, resolvedParent)
+    : { keyGroupId: null, keyScopeId: null };
+  const keyed = { userId, ...inherited };
+  const seal = (field: string, plaintext: string) =>
+    sealRowField(ctx, keyed, field, plaintext);
+
   const wrapperName = payload.wrapperFolderName?.trim();
   if (wrapperName) {
     const wrapperId = uuidv4();
@@ -220,8 +235,9 @@ export async function runImportJob(
       .values({
         id: wrapperId,
         userId,
+        ...inherited,
         parentId: resolvedParent,
-        nameCt: sealField(dek, userId, "folder.name", wrapperName),
+        nameCt: seal("folder.name", wrapperName),
         position: nextRootPosition(userId, resolvedParent),
       })
       .run();
@@ -237,13 +253,9 @@ export async function runImportJob(
           .values({
             id,
             userId,
+            ...inherited,
             parentId,
-            nameCt: sealField(
-              dek,
-              userId,
-              "folder.name",
-              node.name ?? "Untitled",
-            ),
+            nameCt: seal("folder.name", node.name ?? "Untitled"),
             position: pos++,
           })
           .run();
@@ -255,9 +267,10 @@ export async function runImportJob(
           .values({
             id,
             userId,
+            ...inherited,
             folderId: parentId,
-            titleCt: sealField(dek, userId, "bookmark.title", title),
-            urlCt: sealField(dek, userId, "bookmark.url", node.url),
+            titleCt: seal("bookmark.title", title),
+            urlCt: seal("bookmark.url", node.url),
             urlHash: urlHash(node.url, userId),
             snapshotStatus: wantSnapshots ? "pending" : "none",
             position: pos++,
