@@ -206,3 +206,49 @@ test("un tag nuevo estrena color en vez de repetir el mismo", async ({
 
   await o.ctx.close();
 });
+
+test("tres tags creados seguidos desde el picker salen de tres colores", async ({
+  browser,
+}) => {
+  const o = await newUser(browser, {
+    email: "tag.inline.e2e@example.com",
+    nickname: "taginline",
+    password: "TagInline28xxxxx",
+  });
+  await createFolder(o.page, "Con tags");
+  const folders = await (await o.req.get("/api/folders")).json();
+  const folder = folders.find((f: { name: string }) => f.name === "Con tags");
+
+  // The inline picker on a folder, which is how tags actually get made in
+  // day-to-day use: type a name, press enter, repeat.
+  await o.page.goto(`/folder/${folder.id}`);
+  await o.page.getByRole("button", { name: "Añadir tag" }).click();
+  // Typed straight through, with no pause for anything to refetch. That is
+  // what a person does, and it is the case where a colour chosen from the
+  // client's cached list hands out the same one every time.
+  for (const name of ["alfa", "beta", "gamma"]) {
+    const box = o.page.getByPlaceholder(/tag/i).last();
+    await box.fill(name);
+    await box.press("Enter");
+  }
+  await expect(async () => {
+    const list = await (await o.req.get("/api/tags")).json();
+    expect(list).toHaveLength(3);
+  }).toPass({ timeout: 15_000 });
+
+  const list = await (await o.req.get("/api/tags")).json();
+  // All three exist. Clearing the box when the answer came back instead of
+  // when the name was submitted used to erase the middle one mid-typing.
+  expect(list.map((t: { name: string }) => t.name).sort()).toEqual([
+    "alfa",
+    "beta",
+    "gamma",
+  ]);
+  const colors = list.map((t: { color: string }) => t.color.toLowerCase());
+  // Created back to back, the client's cached tag list has not caught up
+  // between them, so anything that decides the colour from that list hands out
+  // the same one three times.
+  expect(new Set(colors).size).toBe(3);
+
+  await o.ctx.close();
+});

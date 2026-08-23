@@ -1,4 +1,4 @@
-import type { ApplyTagsResult } from "@awesome-bookmarks/shared";
+import { type ApplyTagsResult, pickTagColor } from "@awesome-bookmarks/shared";
 import { getFolder, updateFolder } from "../folders/service.js";
 import { getBookmark, updateBookmark } from "../bookmarks/service.js";
 import type { Tag } from "@awesome-bookmarks/shared";
@@ -20,8 +20,13 @@ export function listTags(ctx: AuthedContext): Tag[] {
 
 export function createTag(
   ctx: AuthedContext,
-  input: { name: string; color: string },
+  input: { name: string; color?: string },
 ): Tag {
+  // Chosen here rather than by the caller: this is the only place that can see
+  // every tag this user already has, which is what "a colour nothing else is
+  // using" needs. A client picking from its own cached list gets it wrong the
+  // moment two tags are created in a row.
+  const color = input.color ?? pickTagColor(listTags(ctx));
   const existing = getDb()
     .select({ id: tags.id })
     .from(tags)
@@ -32,9 +37,9 @@ export function createTag(
   const id = uuidv4();
   getDb()
     .insert(tags)
-    .values({ id, userId: ctx.userId, name: input.name, color: input.color })
+    .values({ id, userId: ctx.userId, name: input.name, color })
     .run();
-  return { id, name: input.name, color: input.color };
+  return { id, name: input.name, color };
 }
 
 export function updateTag(

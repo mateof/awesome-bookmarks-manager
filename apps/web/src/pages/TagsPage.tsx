@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Tag } from "@awesome-bookmarks/shared";
+import {
+  TAG_PALETTE,
+  type Tag,
+  pickTagColor,
+} from "@awesome-bookmarks/shared";
 import { Check, Filter, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -7,7 +11,7 @@ import { dlg } from "../components/dialogs.js";
 import { Link } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { Modal } from "../components/Modal.js";
-import { TAG_PALETTE, pickTagColor } from "../lib/tagColors.js";
+
 
 
 export function TagsPage() {

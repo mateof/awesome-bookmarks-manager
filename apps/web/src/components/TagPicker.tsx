@@ -4,7 +4,6 @@ import { Plus, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
-import { pickTagColor } from "../lib/tagColors.js";
 
 
 interface Props {
@@ -84,13 +83,18 @@ export function TagPicker({
     [allTags, input],
   );
 
+  // The chosen ids, readable from inside a mutation that started before the
+  // latest render. Two tags created quickly both close over the `value` their
+  // own render saw, so the second one would write a list that never had the
+  // first in it.
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
   const create = useMutation({
-    mutationFn: (name: string) =>
-      api.createTag({ name, color: pickTagColor(tagsQ.data ?? []) }),
+    mutationFn: (name: string) => api.createTag({ name }),
     onSuccess: (tag) => {
       qc.invalidateQueries({ queryKey: ["tags"] });
-      onChange([...value, tag.id]);
-      setInput("");
+      onChange([...valueRef.current, tag.id]);
     },
   });
 
@@ -104,6 +108,12 @@ export function TagPicker({
       inputRef.current?.focus();
       return;
     }
+    // Cleared here rather than when the request comes back. Clearing on
+    // success wipes whatever has been typed in the meantime, so typing three
+    // tags in a row loses the middle one: its name is erased from the box
+    // before its Enter arrives.
+    setInput("");
+    inputRef.current?.focus();
     create.mutate(name);
   };
 

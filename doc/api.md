@@ -264,8 +264,16 @@ operation that means the same thing for every item in a mixed selection is
 selection does not stop the other forty being tagged.
 
 ### `POST /tags`
-Create. Body: `{ "name": string(1–64), "color"?: "#rrggbb" }` (color
-defaults to a neutral gray). → `201`. `409` if the name already exists.
+Create. Body: `{ "name": string(1–64), "color"?: "#rrggbb" }`.
+
+**Omit `color` and the server picks one nothing else is using**, cycling a
+twenty-colour palette least-used-first. It used to default to slate grey, which
+made every caller that did not care produce a wall of identical tags. Choosing
+it client-side is not equivalent: a client picks from its own cached list, which
+is stale the moment two tags are created in a row, so the second reads a list
+without the first and picks the same colour again.
+
+→ `201`. `409` if the name already exists.
 
 ### `PATCH /tags/:id`
 Update `name` and/or `color`.

@@ -92,7 +92,7 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
     }
     const created = createTag(ctx, {
       name: body.name,
-      color: body.color ?? "#64748b",
+      ...(body.color ? { color: body.color } : {}),
     });
     reply.code(201);
     return { id: created.id, name: created.name, color: created.color };
@@ -116,7 +116,7 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
         if (id) {
           tagIds.push(id);
         } else {
-          const created = createTag(ctx, { name, color: "#64748b" });
+          const created = createTag(ctx, { name });
           tagIds.push(created.id);
           byName.set(lower, created.id);
         }

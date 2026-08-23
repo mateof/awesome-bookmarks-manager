@@ -52,7 +52,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
       if (found) {
         out.push(found);
       } else {
-        const created = createTag(ctx, { name, color: "#64748b" });
+        const created = createTag(ctx, { name });
         byName.set(lower, created.id);
         out.push(created.id);
       }
@@ -273,7 +273,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
         .optional(),
     },
     async (args) =>
-      ok(createTag(ctx, { name: args.name, color: args.color ?? "#64748b" })),
+      ok(createTag(ctx, { name: args.name, ...(args.color ? { color: args.color } : {}) })),
   );
 
   registerPanelTools(server, ctx);
