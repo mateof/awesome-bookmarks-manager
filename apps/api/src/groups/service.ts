@@ -6,14 +6,19 @@ import type { AuthedContext } from "../auth/session.js";
 import { ensureUserKeys } from "../auth/userKeys.js";
 import { getFolder } from "../folders/service.js";
 import { getBookmark } from "../bookmarks/service.js";
-import { getDatabase } from "../databases/service.js";
+import { databaseIdsIn, getDatabase } from "../databases/service.js";
 import {
   adoptBookmarkIntoGroup,
   adoptDatabaseIntoGroup,
   adoptFolderIntoGroup,
+  folderSubtree,
 } from "./adopt.js";
 import { groupKeyVersion, resealGroupContent } from "./reseal.js";
-import { rewrapGrantsForGroup } from "./scopes.js";
+import {
+  rewrapGrantsForGroup,
+  revokeScopeFrom,
+  scopeIdsFor,
+} from "./scopes.js";
 import {
   assertCanAssign,
   assertCanRemove,
@@ -34,6 +39,9 @@ import {
 } from "./keys.js";
 import { getDb } from "../db/client.js";
 import {
+  bookmarks,
+  databases,
+  folders,
   groupInvitations,
   groupMembers,
   groupShares,
@@ -807,7 +815,129 @@ export function deleteShare(ctx: AuthedContext, shareId: string) {
   // Only the sharer or a group owner/admin can revoke
   if (row.sharedBy !== ctx.userId) ensureOwnerOrAdmin(ctx, row.groupId);
   getDb().delete(groupShares).where(eq(groupShares.id, shareId)).run();
+  // Take the key away, which is what actually ends the access.
+  //
+  // Deleting the row alone removed the entry from the sharing screen and
+  // changed nothing: `visibleTo` matches on `key_scope_id`, so the group kept
+  // reading the content through a grant nobody had revoked. A revoke that
+  // reports success and revokes nothing is the worst shape a control like this
+  // can take, and `revokeScopeFrom` had been written for months without a
+  // single caller.
+  reconcileGrants(ctx, row.groupId);
   // The share's own copies of the icons/backgrounds go with it; they are the
   // sharer's bytes and count against the sharer's quota.
   void deleteShareAssets(row.sharedBy, shareId);
+}
+
+/**
+ * Every scope a group can reach through one of its shares.
+ *
+ * A folder hands over its subtree under one scope, and the tables its notes
+ * embed keep scopes of their own, so "what did this share give away" is more
+ * than the source row's own column.
+ */
+function scopesReachedBy(
+  ctx: AuthedContext,
+  share: { sourceType: string; sourceId: string },
+): string[] {
+  const db = getDb();
+  const out = new Set<string>();
+  const add = (id: string | null | undefined) => {
+    if (id) out.add(id);
+  };
+  /** Tables embedded in a note reached their own scope when this was shared. */
+  const fromNote = (description: string | null) => {
+    for (const id of databaseIdsIn(description)) {
+      const d = db
+        .select({ keyScopeId: databases.keyScopeId })
+        .from(databases)
+        .where(eq(databases.id, id))
+        .get();
+      add(d?.keyScopeId);
+    }
+  };
+
+  if (share.sourceType === "database") {
+    const d = db
+      .select({ keyScopeId: databases.keyScopeId })
+      .from(databases)
+      .where(eq(databases.id, share.sourceId))
+      .get();
+    add(d?.keyScopeId);
+    return [...out];
+  }
+
+  if (share.sourceType === "bookmark") {
+    const b = db
+      .select({ keyScopeId: bookmarks.keyScopeId })
+      .from(bookmarks)
+      .where(eq(bookmarks.id, share.sourceId))
+      .get();
+    add(b?.keyScopeId);
+    try {
+      fromNote(getBookmark(ctx, share.sourceId).description);
+    } catch {
+      /* unreadable from here; its own share, if any, will account for it */
+    }
+    return [...out];
+  }
+
+  const root = db
+    .select({ userId: folders.userId })
+    .from(folders)
+    .where(eq(folders.id, share.sourceId))
+    .get();
+  if (!root) return [];
+  const ids = folderSubtree(root.userId, share.sourceId);
+  for (const f of db
+    .select({ id: folders.id, keyScopeId: folders.keyScopeId })
+    .from(folders)
+    .where(inArray(folders.id, ids))
+    .all()) {
+    add(f.keyScopeId);
+    try {
+      fromNote(getFolder(ctx, f.id).description);
+    } catch {
+      /* see above */
+    }
+  }
+  for (const b of db
+    .select({ id: bookmarks.id, keyScopeId: bookmarks.keyScopeId })
+    .from(bookmarks)
+    .where(inArray(bookmarks.folderId, ids))
+    .all()) {
+    add(b.keyScopeId);
+    try {
+      fromNote(getBookmark(ctx, b.id).description);
+    } catch {
+      /* see above */
+    }
+  }
+  return [...out];
+}
+
+/**
+ * Drop every grant this group can no longer justify.
+ *
+ * Recomputing from the shares that remain, rather than working out what one
+ * deletion should undo, is what keeps this correct when the same content
+ * reaches a group by more than one route: revoking one share of a table that is
+ * also shared directly must not cut the other.
+ */
+function reconcileGrants(ctx: AuthedContext, groupId: string): void {
+  const remaining = getDb()
+    .select({
+      sourceType: groupShares.sourceType,
+      sourceId: groupShares.sourceId,
+    })
+    .from(groupShares)
+    .where(eq(groupShares.groupId, groupId))
+    .all();
+  const justified = new Set<string>();
+  for (const s of remaining) {
+    for (const scopeId of scopesReachedBy(ctx, s)) justified.add(scopeId);
+  }
+  for (const scopeId of scopeIdsFor([groupId])) {
+    if (!justified.has(scopeId)) revokeScopeFrom(scopeId, groupId);
+  }
 }

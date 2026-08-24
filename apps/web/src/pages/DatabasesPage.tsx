@@ -102,25 +102,21 @@ export function DatabasesPage() {
                   {t("db.rowCount", { count: d.rowCount })}
                 </span>
               </button>
-              {!d.shared && (
-                <button
-                  type="button"
-                  onClick={() => setSharing(d.id)}
-                  title={t("db.shareWithGroups")}
-                  aria-label={`${t("db.shareWithGroups")}: ${d.name}`}
-                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800"
-                >
-                  <Share2 className="h-4 w-4" />
-                </button>
-              )}
-              {d.shared && (
-                <span
-                  title={t("db.sharedAlready")}
-                  className="p-1 text-sky-600 dark:text-sky-400"
-                >
-                  <Share2 className="h-4 w-4" />
-                </span>
-              )}
+              <button
+                type="button"
+                onClick={() => setSharing(d.id)}
+                title={d.shared ? t("db.sharedManage") : t("db.shareWithGroups")}
+                aria-label={`${
+                  d.shared ? t("db.sharedManage") : t("db.shareWithGroups")
+                }: ${d.name}`}
+                className={`rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                  d.shared
+                    ? "text-sky-600 dark:text-sky-400"
+                    : "text-slate-400 hover:text-slate-900"
+                }`}
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={async () => {

@@ -219,24 +219,22 @@ export function DatabaseBlock({
         </span>
         {/* A table is shared in its own right: the same one can sit in notes
             that are not shared with the same people. */}
-        {!readOnly && !db.shared && (
+        {!readOnly && (
           <button
             type="button"
             onClick={() => setSharing(true)}
-            title={t("db.shareWithGroups")}
-            aria-label={t("db.shareWithGroups")}
-            className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            title={db.shared ? t("db.sharedManage") : t("db.shareWithGroups")}
+            aria-label={
+              db.shared ? t("db.sharedManage") : t("db.shareWithGroups")
+            }
+            className={`shrink-0 rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${
+              db.shared
+                ? "text-sky-600 dark:text-sky-400"
+                : "text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            }`}
           >
             <Share2 className="h-4 w-4" />
           </button>
-        )}
-        {db.shared && (
-          <span
-            title={t("db.sharedAlready")}
-            className="shrink-0 text-xs text-sky-600 dark:text-sky-400"
-          >
-            <Share2 className="h-4 w-4" />
-          </span>
         )}
       </div>
 

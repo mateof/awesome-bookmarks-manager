@@ -864,6 +864,9 @@ const es = {
     syncHint: "El grupo lo ve al momento; llega a la carpeta original cuando su dueño vuelva a entrar.",
   },
   shareToGroup: {
+    alreadyWith: "Compartida ahora con",
+    stop: "Dejar de compartir",
+    addMore: "Compartir además con",
     titleDatabase: "Compartir la tabla con un grupo",
     noEditorGroups: "Necesitas permiso de editor o superior en algún grupo para compartir ahí.",
     shareCount_zero: "Elige al menos un grupo",
@@ -1114,6 +1117,7 @@ const es = {
   },
   db: {
     shareWithGroups: "Compartir con grupos",
+    sharedManage: "Compartida: gestionar grupos",
     sharedAlready: "Ya compartida con un grupo",
     moveBlock: "Arrastrar para mover la tabla",
     moveUp: "Subir la tabla",

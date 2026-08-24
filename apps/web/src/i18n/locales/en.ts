@@ -864,6 +864,9 @@ const en = {
     syncHint: "The group sees it at once; it reaches the original folder when its owner next signs in.",
   },
   shareToGroup: {
+    alreadyWith: "Currently shared with",
+    stop: "Stop sharing",
+    addMore: "Also share with",
     titleDatabase: "Share the table with a group",
     noEditorGroups: "You need editor or higher in a group to share into it.",
     shareCount_zero: "Pick at least one group",
@@ -1113,6 +1116,7 @@ const en = {
   },
   db: {
     shareWithGroups: "Share with groups",
+    sharedManage: "Shared: manage groups",
     sharedAlready: "Already shared with a group",
     moveBlock: "Drag to move the table",
     moveUp: "Move the table up",

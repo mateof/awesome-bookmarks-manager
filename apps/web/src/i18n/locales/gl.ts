@@ -865,6 +865,9 @@ const gl = {
     syncHint: "O grupo veo ao momento; chega ao cartafol orixinal cando o seu dono volva entrar.",
   },
   shareToGroup: {
+    alreadyWith: "Compartida agora con",
+    stop: "Deixar de compartir",
+    addMore: "Compartir ademais con",
     titleDatabase: "Compartir a táboa cun grupo",
     noEditorGroups: "Necesitas permiso de editor ou superior nalgún grupo para compartir alí.",
     shareCount_zero: "Escolle polo menos un grupo",
@@ -1116,6 +1119,7 @@ const gl = {
   },
   db: {
     shareWithGroups: "Compartir con grupos",
+    sharedManage: "Compartida: xestionar grupos",
     sharedAlready: "Xa compartida cun grupo",
     moveBlock: "Arrastrar para mover a táboa",
     moveUp: "Subir a táboa",

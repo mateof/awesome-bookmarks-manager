@@ -25,14 +25,38 @@ export function ShareToGroup({ sourceType, sourceId, onClose }: Props) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const groups = useQuery({ queryKey: ["groups"], queryFn: api.listGroups });
+  // Who already has it. Without this the dialog can only ever add, which is
+  // why the icon used to turn into a dead end the moment you shared once:
+  // there was nowhere to go to reach a second group or to stop.
+  const mine = useQuery({
+    queryKey: ["shares-by-me"],
+    queryFn: api.listSharesByMe,
+  });
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<ShareResult[] | null>(null);
+
+  const current = (mine.data ?? []).filter((s) => s.sourceId === sourceId);
+  const sharedGroupIds = new Set(current.map((s) => s.groupId));
+
+  const revoke = useMutation({
+    mutationFn: (s: { groupId: string; id: string }) =>
+      api.deleteGroupShare(s.groupId, s.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["shares-by-me"] });
+      qc.invalidateQueries({ queryKey: ["shared"] });
+      qc.invalidateQueries({ queryKey: ["databases"] });
+      qc.invalidateQueries({ queryKey: ["folders"] });
+      qc.invalidateQueries({ queryKey: ["bookmarks"] });
+    },
+  });
 
   const share = useMutation({
     mutationFn: () =>
       api.shareToGroups({ sourceType, sourceId, groupIds: [...picked] }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["shared"] });
+      qc.invalidateQueries({ queryKey: ["shares-by-me"] });
+      qc.invalidateQueries({ queryKey: ["databases"] });
       qc.invalidateQueries({ queryKey: ["groups"] });
       for (const r of res) {
         qc.invalidateQueries({ queryKey: ["group-shares", r.groupId] });
@@ -56,7 +80,9 @@ export function ShareToGroup({ sourceType, sourceId, onClose }: Props) {
   // Sharing into a group needs at least editor there: you are handing it
   // content, which is a write.
   const eligible = all.filter(
-    (g) => GROUP_ROLE_RANK[g.myRole] >= GROUP_ROLE_RANK.editor,
+    (g) =>
+      GROUP_ROLE_RANK[g.myRole] >= GROUP_ROLE_RANK.editor &&
+      !sharedGroupIds.has(g.id),
   );
   const nameOf = (id: string) => all.find((g) => g.id === id)?.name ?? id;
 
@@ -72,14 +98,47 @@ export function ShareToGroup({ sourceType, sourceId, onClose }: Props) {
       onClose={onClose}
     >
       <div className="space-y-2">
+        {current.length > 0 && (
+          <div className="space-y-1">
+            <div className="text-xs font-medium uppercase text-slate-500">
+              {t("shareToGroup.alreadyWith")}
+            </div>
+            {current.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center gap-2 rounded border border-slate-200 p-2 dark:border-slate-700"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium">
+                  {s.groupName}
+                </span>
+                <button
+                  type="button"
+                  disabled={revoke.isPending}
+                  onClick={() =>
+                    revoke.mutate({ groupId: s.groupId, id: s.id })
+                  }
+                  className="shrink-0 rounded border border-red-300 px-2 py-0.5 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:hover:bg-red-950"
+                >
+                  {t("shareToGroup.stop")}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {all.length === 0 && (
           <div className="text-sm text-slate-500">
             {t("shareToGroup.noGroups")}
           </div>
         )}
-        {all.length > 0 && eligible.length === 0 && (
+        {all.length > 0 && eligible.length === 0 && current.length === 0 && (
           <div className="text-sm text-slate-500">
             {t("shareToGroup.noEditorGroups")}
+          </div>
+        )}
+        {eligible.length > 0 && current.length > 0 && (
+          <div className="pt-1 text-xs font-medium uppercase text-slate-500">
+            {t("shareToGroup.addMore")}
           </div>
         )}
 
@@ -112,6 +171,7 @@ export function ShareToGroup({ sourceType, sourceId, onClose }: Props) {
           </ul>
         )}
 
+        {eligible.length > 0 && (
         <button
           disabled={picked.size === 0 || share.isPending}
           onClick={() => share.mutate()}
@@ -121,6 +181,7 @@ export function ShareToGroup({ sourceType, sourceId, onClose }: Props) {
             ? t("shareToGroup.sharing")
             : t("shareToGroup.shareCount", { count: picked.size })}
         </button>
+        )}
         <p className="text-xs text-slate-500">{t("shareToGroup.rolesNote")}</p>
       </div>
     </Modal>

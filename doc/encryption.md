@@ -251,6 +251,28 @@ the repair, which is something a person can do without knowing what a key scope
 is. Rows belonging to other members are left alone: only their owner holds what
 is needed to re-seal them.
 
+### Revoking has to take the key, not the row
+
+What makes content visible to a group is a **key scope grant**. The row in
+`group_shares` is the record of who handed it over and when; `visibleTo` never
+looks at it. So deleting that row removes the entry from the sharing screen and
+changes nothing about what the group can read.
+
+That is what "stop sharing" did until v0.90.2: `revokeScopeFrom` had been
+written months earlier and **no caller ever existed**. A control that reports
+success and revokes nothing is the worst shape this kind of thing can take,
+because it is indistinguishable from working.
+
+Revoking now **reconciles**: it recomputes which scopes the group can still
+justify from the shares that remain, and drops the rest. Recomputing rather than
+undoing one deletion is what keeps it correct when the same content reaches a
+group by more than one route — a table shared both on its own and inside a
+folder must survive losing one of them — and it covers the tables a note embeds,
+which carry scopes of their own.
+
+The honest limit is the same as rotation's: it protects the future. Whoever
+could read it may have kept a copy, and nothing here undoes that.
+
 ## Rotation
 
 Removing somebody from a group replaces the key: a new version is generated,
