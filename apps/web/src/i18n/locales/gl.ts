@@ -139,6 +139,12 @@ const gl = {
     add: "Engadir",
     empty: "Sen descrición. Preme para escribir unha nota, pegar imaxes ou inserir unha táboa.",
   },
+  panelScheme: {
+    group: "Tema deste panel",
+    original: "Tema orixinal do panel",
+    light: "Claro",
+    dark: "Escuro",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

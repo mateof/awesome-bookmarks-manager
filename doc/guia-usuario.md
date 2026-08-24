@@ -304,6 +304,18 @@ copiar URL, editar, borrar) junto a la pestaña de **Plantillas**:
 
 ---
 
+**Leerlo en claro o en oscuro.** Arriba a la derecha de cualquier panel hay tres
+botones: el tema **original** (el que le pusiste al crearlo), **claro** y
+**oscuro**. La elección es **de cada panel por separado** y se recuerda en ese
+navegador, así que poner uno en oscuro para leerlo de noche no cambia los demás.
+
+Los dos forzados sustituyen la paleta por una lisa y quitan el fondo decorativo:
+una escena de cielo nocturno bajo una página blanca no es "el mismo panel en
+claro", es un panel roto. Si subiste tú una imagen de fondo, esa se respeta,
+porque es contenido tuyo y no una decoración elegida para pegar con los colores.
+
+---
+
 ## 6. Panel protegido con contraseña
 
 Si eliges el modo **Con contraseña**, el panel pide una clave antes de mostrar

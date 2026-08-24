@@ -139,6 +139,12 @@ const es = {
     add: "Añadir",
     empty: "Sin descripción. Pulsa para escribir una nota, pegar imágenes o insertar una tabla.",
   },
+  panelScheme: {
+    group: "Tema de este panel",
+    original: "Tema original del panel",
+    light: "Claro",
+    dark: "Oscuro",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",

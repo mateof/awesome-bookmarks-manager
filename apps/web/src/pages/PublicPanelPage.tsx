@@ -5,6 +5,12 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { PanelRenderer } from "../components/PanelRenderer.js";
+import {
+  type PanelScheme,
+  applyPanelScheme,
+  readPanelScheme,
+  writePanelScheme,
+} from "../lib/panelScheme.js";
 
 /** Emoji → inline SVG favicon data URL. */
 function emojiFaviconDataUrl(emoji: string): string {
@@ -57,6 +63,11 @@ export function PublicPanelPage() {
   });
 
   const resp = unlocked ?? q.data;
+  // Remembered per panel: one panel read in dark should not drag the rest with
+  // it. Initialised from storage so a return visit opens the way it was left.
+  const [scheme, setScheme] = useState<PanelScheme>(() =>
+    readPanelScheme(slug),
+  );
   usePanelTabMeta(resp, slug);
 
   if (q.isLoading) {
@@ -75,10 +86,17 @@ export function PublicPanelPage() {
     return (
       <PanelRenderer
         root={resp.root}
-        template={resp.template}
+        template={applyPanelScheme(resp.template, scheme)}
         displayTitle={resp.displayTitle}
         bgAssetUrl={bgAssetUrl}
         bgAssetKind={resp.bgAssetKind}
+        scheme={{
+          value: scheme,
+          onChange: (next) => {
+            setScheme(next);
+            if (slug) writePanelScheme(slug, next);
+          },
+        }}
       />
     );
   }

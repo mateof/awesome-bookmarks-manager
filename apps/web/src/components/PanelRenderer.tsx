@@ -23,6 +23,8 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
+import type { PanelScheme } from "../lib/panelScheme.js";
+import { PanelSchemeToggle } from "./PanelSchemeToggle.js";
 import { fuzzyScoreAny } from "../fuzzy.js";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { opaqueSurface } from "../lib/contrast.js";
@@ -54,6 +56,7 @@ export function PanelRenderer({
   displayTitle,
   bgAssetUrl,
   bgAssetKind,
+  scheme,
 }: {
   root: PanelFolder;
   template: TemplateConfig;
@@ -62,6 +65,12 @@ export function PanelRenderer({
   /** Custom uploaded background; takes precedence over the template scene. */
   bgAssetUrl?: string | null;
   bgAssetKind?: PanelBgKind | null;
+  /**
+   * Lets the reader pick light, dark or the panel's own colours. Omitted where
+   * a panel is shown as a preview of something being edited, since a reading
+   * preference has nothing to say about how the thing is being designed.
+   */
+  scheme?: { value: PanelScheme; onChange: (next: PanelScheme) => void };
 }) {
   const [sp, setSp] = useSearchParams();
   const [desc, setDesc] = useState<PanelDesc | null>(null);
@@ -206,6 +215,22 @@ export function PanelRenderer({
           padding: "2rem 1.25rem 4rem",
         }}
       >
+        {scheme && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: "0.75rem",
+            }}
+          >
+            <PanelSchemeToggle
+              value={scheme.value}
+              onChange={scheme.onChange}
+              theme={t}
+            />
+          </div>
+        )}
+
         {template.header !== "hidden" && (
           <Header
             title={filtering ? "Resultados" : path.length === 0 ? rootTitle : current.name}
