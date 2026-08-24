@@ -1,6 +1,7 @@
 import { Maximize2, PencilLine } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { Modal } from "./Modal.js";
 import { RichTextView } from "./RichTextView.js";
 
@@ -46,6 +47,24 @@ export function CollapsibleRichText({
   const innerRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const [full, setFull] = useState(false);
+  const { pathname } = useLocation();
+
+  /**
+   * Close the full view when the page underneath changes.
+   *
+   * A note can link to another folder or bookmark, and following one from the
+   * expanded view used to leave the overlay sitting on top of the page you had
+   * just arrived at, still showing the note you came from. React Router keeps
+   * this component mounted when only the route parameter changes, so nothing
+   * unmounted the dialog and nothing reset the state.
+   *
+   * Keyed on the route rather than wired into the link handler on purpose: any
+   * way of leaving the page should close it, and the reference chip is only the
+   * one that made it obvious.
+   */
+  useEffect(() => {
+    setFull(false);
+  }, [pathname]);
 
   const measure = useCallback(() => {
     const el = innerRef.current;
