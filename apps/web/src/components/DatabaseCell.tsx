@@ -4,6 +4,7 @@ import {
   type DbColumn,
   type SelectOption,
 } from "@awesome-bookmarks/shared";
+import { AnchoredPopover } from "./AnchoredPopover.js";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ExternalLink, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -220,21 +221,12 @@ function SelectCell({
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
-
   const chosen = selected
     .map((id) => optionById(column, id))
     .filter((o): o is SelectOption => !!o);
 
   return (
-    <div ref={wrap} className="relative">
+    <div ref={wrap}>
       <button
         type="button"
         disabled={readOnly}
@@ -249,7 +241,7 @@ function SelectCell({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-30 mt-1 max-h-56 w-52 overflow-y-auto rounded border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <AnchoredPopover anchor={wrap} onClose={() => setOpen(false)}>
           {column.config.options.length === 0 && (
             <p className="px-2 py-2 text-xs text-slate-400">
               {t("db.noOptions")}
@@ -282,7 +274,7 @@ function SelectCell({
               </button>
             );
           })}
-        </div>
+        </AnchoredPopover>
       )}
     </div>
   );
