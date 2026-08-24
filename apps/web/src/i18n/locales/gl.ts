@@ -134,6 +134,11 @@ const gl = {
     ofQuota: "{{pct}}% de {{quota}}",
     generatedAt: "Calculado o {{at}}",
   },
+  description: {
+    heading: "Descrición",
+    add: "Engadir",
+    empty: "Sen descrición. Preme para escribir unha nota, pegar imaxes ou inserir unha táboa.",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",
@@ -532,6 +537,7 @@ const gl = {
     imported: "Importados {{folders}} cartafoles e {{bookmarks}} bookmarks.",
   },
   tags: {
+    heading: "Tags",
     bulkTitle: "Engadir tags a {{count}} elemento",
     bulkTitle_other: "Engadir tags a {{count}} elementos",
     bulkHint:

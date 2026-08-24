@@ -9,6 +9,7 @@ import {
   History,
   Image as ImageIcon,
   Maximize2,
+  Tag as TagIcon,
   PencilLine,
   RefreshCw,
   Share2,
@@ -30,7 +31,8 @@ import { EntityBanner } from "../components/EntityBanner.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { KebabMenu } from "../components/KebabMenu.js";
 import { Attachments } from "../components/Attachments.js";
-import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
+import { DescriptionSection } from "../components/DescriptionSection.js";
+import { EntitySection } from "../components/EntitySection.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 import { InlineTags } from "../components/InlineTags.js";
@@ -235,24 +237,30 @@ export function BookmarkDetailPage() {
         />
       </div>
 
-      <InlineTags
-        entity="bookmark"
-        id={b.id}
-        tagIds={b.tagIds ?? []}
-        onSaved={() => {
-          qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
-          qc.invalidateQueries({ queryKey: ["bookmarks"] });
-        }}
+      <EntitySection
+        icon={<TagIcon className="h-3.5 w-3.5" />}
+        title={t("tags.heading")}
+        count={b.tagIds?.length ?? 0}
+      >
+        <InlineTags
+          entity="bookmark"
+          id={b.id}
+          tagIds={b.tagIds ?? []}
+          canEdit={b.canWrite}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
+            qc.invalidateQueries({ queryKey: ["bookmarks"] });
+          }}
+        />
+      </EntitySection>
+
+      <DescriptionSection
+        html={b.description}
+        canEdit={b.canWrite}
+        onEdit={() => setEditDescription(true)}
       />
 
-      {b.description && (
-        <CollapsibleRichText
-          html={b.description}
-          onEdit={() => setEditDescription(true)}
-        />
-      )}
-
-      <Attachments entity="bookmark" id={b.id} />
+      <Attachments entity="bookmark" id={b.id} canEdit={b.canWrite} />
 
       {editDescription && (
         <DescriptionEditDialog

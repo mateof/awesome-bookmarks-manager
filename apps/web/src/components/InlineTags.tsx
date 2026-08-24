@@ -120,9 +120,7 @@ export function InlineTags({
       {tagIds.length > 0 ? (
         <TagChipList tagIds={tagIds} allTags={allTags} asLink={!share} />
       ) : (
-        <span className="flex items-center gap-1 text-xs text-slate-400">
-          <TagIcon className="h-3.5 w-3.5" /> {t("tags.noneYet")}
-        </span>
+        <span className="text-xs text-slate-400">{t("tags.noneYet")}</span>
       )}
       {canEdit && (
         <button

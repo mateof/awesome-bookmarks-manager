@@ -189,8 +189,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section>
-      <h2 className="mb-2 text-xs font-medium uppercase text-slate-500">
+    <section className="border-t border-slate-200 pt-3 dark:border-slate-800">
+      <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
         {title}
       </h2>
       {children}

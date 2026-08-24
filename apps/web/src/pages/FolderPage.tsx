@@ -56,7 +56,8 @@ import { Modal } from "../components/Modal.js";
 import { MoveToDialog } from "../components/MoveToDialog.js";
 import { RichTextEditor } from "../components/RichTextEditor.js";
 import { Attachments } from "../components/Attachments.js";
-import { CollapsibleRichText } from "../components/CollapsibleRichText.js";
+import { DescriptionSection } from "../components/DescriptionSection.js";
+import { EntitySection } from "../components/EntitySection.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
 import { InlineTags } from "../components/InlineTags.js";
 import { ImportArchiveDialog } from "../components/ImportArchiveDialog.js";
@@ -744,19 +745,26 @@ export function FolderPage() {
       )}
 
       {folder && (
-        <InlineTags
-          entity="folder"
-          id={folder.id}
-          tagIds={folder.tagIds ?? []}
-          canEdit={canWrite}
-          onSaved={() => qc.invalidateQueries({ queryKey: ["folders"] })}
-        />
+        <EntitySection
+          icon={<TagIcon className="h-3.5 w-3.5" />}
+          title={t("tags.heading")}
+          count={folder.tagIds?.length ?? 0}
+        >
+          <InlineTags
+            entity="folder"
+            id={folder.id}
+            tagIds={folder.tagIds ?? []}
+            canEdit={canWrite}
+            onSaved={() => qc.invalidateQueries({ queryKey: ["folders"] })}
+          />
+        </EntitySection>
       )}
 
-      {folder?.description && (
-        <CollapsibleRichText
+      {folder && (
+        <DescriptionSection
           html={folder.description}
-          {...(canWrite ? { onEdit: () => setEditDescription(true) } : {})}
+          canEdit={canWrite}
+          onEdit={() => setEditDescription(true)}
         />
       )}
 

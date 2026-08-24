@@ -134,6 +134,11 @@ const es = {
     ofQuota: "{{pct}}% de {{quota}}",
     generatedAt: "Calculado el {{at}}",
   },
+  description: {
+    heading: "Descripción",
+    add: "Añadir",
+    empty: "Sin descripción. Pulsa para escribir una nota, pegar imágenes o insertar una tabla.",
+  },
   layout: {
     appTitle: "AwesomeBookmarks",
     menu: "Menú",
@@ -532,6 +537,7 @@ const es = {
     imported: "Importadas {{folders}} carpetas y {{bookmarks}} bookmarks.",
   },
   tags: {
+    heading: "Tags",
     bulkTitle: "Añadir tags a {{count}} elemento",
     bulkTitle_other: "Añadir tags a {{count}} elementos",
     bulkHint:
