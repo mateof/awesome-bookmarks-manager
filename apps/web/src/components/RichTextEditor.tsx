@@ -43,6 +43,7 @@ import {
   type PickedDatabase,
 } from "./DatabasePicker.js";
 import { api } from "../api.js";
+import { AnchoredPopover } from "./AnchoredPopover.js";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -361,6 +362,7 @@ function Toolbar({
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
   const imgRef = useRef<HTMLInputElement>(null);
+  const colorAnchor = useRef<HTMLSpanElement>(null);
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
       <Btn
@@ -500,7 +502,7 @@ function Toolbar({
       <Sep />
       {/* Text colour: a fixed palette rather than a wheel — notes want "make
           this red", not colorimetry. */}
-      <span className="relative inline-flex">
+      <span ref={colorAnchor} className="inline-flex">
         <Btn
           active={!!editor.getAttributes("textStyle").color}
           onClick={() => setShowColors((v) => !v)}
@@ -509,7 +511,15 @@ function Toolbar({
           <Palette className="h-3 w-3" />
         </Btn>
         {showColors && (
-          <span className="absolute left-0 top-full z-20 mt-1 flex w-40 flex-wrap items-center gap-1 rounded border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+          /* In a portal, like every other panel that hangs off a control: the
+             toolbar sits inside a dialog that scrolls, and an absolutely
+             positioned palette was cut off at its edge. */
+          <AnchoredPopover
+            anchor={colorAnchor}
+            onClose={() => setShowColors(false)}
+            width={168}
+          >
+            <span className="flex flex-wrap items-center gap-1 p-1">
             {TEXT_COLORS.map((c) => (
               <button
                 key={c}
@@ -533,7 +543,8 @@ function Toolbar({
             >
               {t("richText.clearColor")}
             </button>
-          </span>
+            </span>
+          </AnchoredPopover>
         )}
       </span>
       <select
