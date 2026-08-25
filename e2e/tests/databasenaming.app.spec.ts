@@ -64,13 +64,20 @@ test("nombre de la base, nombre de la vista y filas visibles", async ({
   await expect(block).toBeVisible();
   await expect(page.getByTestId("db-row")).toHaveCount(3);
 
-  // The note is no longer clipped to the 240px cap, so the last row is really
-  // visible rather than hidden inside a tiny scroll box.
+  // The note arrives folded and opens on a click. Both halves matter and they
+  // pull in opposite directions: a grid is tall, so a note with one in it used
+  // to push the folder's own bookmarks off the screen every time it was
+  // opened; but once open it must not be clipped either, because a table
+  // squeezed into a 240px scroll box shows its header and hides every row.
   const region = page.getByTestId("collapsible-text");
-  const clipped = await region.evaluate(
-    (el) => getComputedStyle(el).maxHeight !== "none",
-  );
-  expect(clipped).toBe(false);
+  const capped = () =>
+    region.evaluate((el) => getComputedStyle(el).maxHeight !== "none");
+  expect(await capped()).toBe(true);
+
+  await page.getByRole("button", { name: "Desplegar la descripción" }).click();
+  await expect(async () => {
+    expect(await capped()).toBe(false);
+  }).toPass({ timeout: 5000 });
   await expect(page.getByTestId("db-row").last()).toBeInViewport();
 
   // --- The name is editable here too ---------------------------------------

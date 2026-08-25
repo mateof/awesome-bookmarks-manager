@@ -126,6 +126,14 @@ export function DatabaseBlock({
     onSuccess: refresh,
   });
 
+  const columnWidth = useMutation({
+    // The server merges into the column's existing config, so sending the
+    // width alone cannot drop a select column's options.
+    mutationFn: ({ columnId, width }: { columnId: string; width: number }) =>
+      api.updateDbColumn(databaseId, columnId, { config: { width } }),
+    onSuccess: refresh,
+  });
+
   const rename = useMutation({
     mutationFn: (name: string) => api.renameDatabase(databaseId, name),
     onSuccess: () => {
@@ -312,6 +320,10 @@ export function DatabaseBlock({
         onDeleteRow={(id) => removeRow.mutate(id)}
         onReorder={(order) => reorder.mutate(order)}
         onReorderColumns={(order) => reorderColumns.mutate(order)}
+        onColumnWidth={(columnId, width) =>
+          columnWidth.mutate({ columnId, width })
+        }
+        titleColumnId={config?.titleColumnId ?? null}
         onColumnChanged={refresh}
       />
     );

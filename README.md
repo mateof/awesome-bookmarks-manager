@@ -77,9 +77,14 @@ one port.
   the cell is sealed like every other one and anyone who can read the table can
   reveal it. What it does guarantee is that the flattened copy — a public
   panel, a group's copy of a note — prints dots and never the value. Select
-  columns take a colour per option, chosen from the chip itself, and columns
-  can be dragged into another order by their header (or moved one step at a
-  time from the column menu, for people not using a mouse). Three views
+  columns take a colour per option, chosen from the chip itself; columns can be
+  dragged into another order by their header (or moved one step at a time from
+  the column menu, for people not using a mouse) and **resized** by their right
+  edge; a value too long for its column shows in full on hover; and any row
+  **opens as a form**, every field labelled, for when the grid is the wrong
+  shape to read one row in. A note holding a table arrives **folded** to a
+  strip and opens on a click, so a folder's own contents are not pushed off the
+  screen by a grid every time you visit it. Three views
   over the same rows (table, kanban board, gallery), each with its own filters,
   sorting, visible columns and grouping. The note stores only an id; the rows
   live in their own tables, sealed per row, because a description is one

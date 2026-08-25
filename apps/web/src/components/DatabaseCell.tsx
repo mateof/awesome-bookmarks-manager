@@ -5,6 +5,7 @@ import {
   type SelectOption,
 } from "@awesome-bookmarks/shared";
 import { AnchoredPopover } from "./AnchoredPopover.js";
+import { CellTooltip } from "./CellTooltip.js";
 import { CopyButton } from "./CopyButton.js";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Eye, EyeOff, ExternalLink, Plus, X } from "lucide-react";
@@ -27,11 +28,18 @@ export function DatabaseCell({
   value,
   onChange,
   readOnly = false,
+  multiline = false,
 }: {
   column: DbColumn;
   value: CellValue | undefined;
   onChange: (next: CellValue) => void;
   readOnly?: boolean;
+  /**
+   * Give text as much height as it needs. Off in the grid, where a row that
+   * grows with its longest cell makes the table unreadable, and on in the row
+   * dialog, which exists precisely because that row did not fit on a line.
+   */
+  multiline?: boolean;
 }) {
   const { t } = useTranslation();
 
@@ -75,13 +83,15 @@ export function DatabaseCell({
     case "url":
       return (
         <div className="flex items-center gap-1">
-          <TextLike
-            value={typeof value === "string" ? value : ""}
-            type="url"
-            readOnly={readOnly}
-            label={column.name}
-            onCommit={(v) => onChange(v)}
-          />
+          <CellTooltip text={typeof value === "string" ? value : ""}>
+            <TextLike
+              value={typeof value === "string" ? value : ""}
+              type="url"
+              readOnly={readOnly}
+              label={column.name}
+              onCommit={(v) => onChange(v)}
+            />
+          </CellTooltip>
           {typeof value === "string" && value.trim() !== "" && (
             <a
               href={value}
@@ -142,13 +152,24 @@ export function DatabaseCell({
       );
 
     default:
-      return (
-        <TextLike
+      return multiline ? (
+        <TextArea
           value={typeof value === "string" ? value : ""}
           readOnly={readOnly}
           label={column.name}
           onCommit={(v) => onChange(v)}
         />
+      ) : (
+        // Never on the password kind, which is why this is here and not around
+        // every `TextLike`: hovering must not do what the eye button is for.
+        <CellTooltip text={typeof value === "string" ? value : ""}>
+          <TextLike
+            value={typeof value === "string" ? value : ""}
+            readOnly={readOnly}
+            label={column.name}
+            onCommit={(v) => onChange(v)}
+          />
+        </CellTooltip>
       );
   }
 }
@@ -200,6 +221,63 @@ function TextLike({
         }
       }}
       className="w-full min-w-0 border-0 bg-transparent px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-sky-500"
+    />
+  );
+}
+
+/**
+ * The same cell with room to breathe: several lines, and draggable taller.
+ *
+ * Commits on blur like its one-line sibling, and for the same reason — a cell
+ * is one sealed write of the whole row, so saving per keystroke would be a
+ * request per character. Enter inserts a newline here rather than committing,
+ * because in a box this shape that is what Enter means.
+ */
+function TextArea({
+  value,
+  onCommit,
+  readOnly,
+  label,
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  readOnly?: boolean;
+  label: string;
+}) {
+  const [draft, setDraft] = useState(value);
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focused.current) setDraft(value);
+  }, [value]);
+
+  return (
+    <textarea
+      value={draft}
+      readOnly={readOnly}
+      aria-label={label}
+      // Tall enough for what is in it, by both measures: the lines somebody
+      // typed and the ones long text wraps into. Capped, so one enormous cell
+      // does not turn the dialog into a page of its own.
+      rows={Math.min(
+        10,
+        Math.max(2, draft.split("\n").length, Math.ceil(draft.length / 55)),
+      )}
+      spellCheck={false}
+      onFocus={() => {
+        focused.current = true;
+      }}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        focused.current = false;
+        if (draft !== value) onCommit(draft);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          setDraft(value);
+          (e.target as HTMLTextAreaElement).blur();
+        }
+      }}
+      className="w-full resize-y border-0 bg-transparent px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-sky-500"
     />
   );
 }

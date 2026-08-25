@@ -1,4 +1,4 @@
-import { Maximize2, PencilLine } from "lucide-react";
+import { ChevronDown, ChevronUp, Maximize2, PencilLine } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -85,15 +85,26 @@ export function CollapsibleRichText({
   }, [measure, html]);
 
   /**
-   * A note holding a database is not capped.
+   * A note holding a database starts folded, and opens to its full height.
    *
-   * The cap exists so a wall of prose does not push a folder's contents off
-   * screen. A database is the opposite case: it is a component the reader put
-   * there to work with, and squeezing a grid into 240 pixels of scroll shows
-   * its header and hides every row, which reads as broken. The table brings
-   * its own height limit instead.
+   * These are the two halves of the same problem. A table is a component you
+   * work with, so once it is open it must not be squeezed into 240 pixels of
+   * scroll: that shows its header, hides every row and reads as broken. But
+   * *always* open was worse in the other direction — a grid is tall, so any
+   * folder with a table in its note pushed its own bookmarks off the screen,
+   * every time you opened it, whether or not you came for the table.
+   *
+   * So: folded to a strip until asked, then uncapped. Prose keeps the plain
+   * cap it always had, which is not the same gesture and does not need one.
    */
   const hasDatabase = html.includes("data-db-id");
+  const [folded, setFolded] = useState(hasDatabase);
+  // A different entity's note is a different decision: arriving somewhere new
+  // should start folded again rather than inherit what you did on the last one.
+  useEffect(() => {
+    setFolded(hasDatabase);
+  }, [pathname, hasDatabase]);
+
   const overflows =
     !hasDatabase &&
     contentHeight !== null &&
@@ -131,9 +142,15 @@ export function CollapsibleRichText({
       <div
         data-testid="collapsible-text"
         // The scrollbar only appears when the cap actually bites, so a short
-        // note renders exactly as before.
-        className={overflows ? "overflow-y-auto" : undefined}
-        style={hasDatabase ? undefined : { maxHeight: collapsedHeight }}
+        // note renders exactly as before. Folded it is hidden instead of
+        // scrolled: a strip you can scroll invites you to work in it, and this
+        // one is a preview.
+        className={
+          folded ? "overflow-hidden" : overflows ? "overflow-y-auto" : undefined
+        }
+        style={
+          folded || !hasDatabase ? { maxHeight: collapsedHeight } : undefined
+        }
       >
         <div ref={innerRef}>
           <RichTextView
@@ -142,6 +159,30 @@ export function CollapsibleRichText({
           />
         </div>
       </div>
+
+      {hasDatabase && (
+        <>
+          {/* Fades the cut edge, so a folded note looks cut on purpose rather
+              than clipped by accident. Click-through, or it would swallow the
+              clicks meant for the text under it. */}
+          {folded && (
+            <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-b from-transparent to-white dark:to-slate-900" />
+          )}
+          <button
+            type="button"
+            onClick={() => setFolded((v) => !v)}
+            aria-expanded={!folded}
+            className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-slate-200 py-1 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          >
+            {folded ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronUp className="h-3.5 w-3.5" />
+            )}
+            {folded ? t("richText.unfold") : t("richText.fold")}
+          </button>
+        </>
+      )}
 
       {full && (
         <Modal
