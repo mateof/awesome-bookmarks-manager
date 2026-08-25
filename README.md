@@ -103,7 +103,15 @@ one port.
   columns alone: a covered value has no business in a search snippet or a
   history list. Tables go **in and out as CSV** (import appends and never
   replaces, inventing the columns and select options the file needs), and are
-  reachable over **MCP**, where password columns are not returned at all.
+  reachable over **MCP**, where password columns are not returned at all. A
+  table starts from a **template** (inventory, credentials, reading log,
+  tasks), so the status is a select and the quantity a number from the first
+  row; a column can show a **summary** in its footer (sum, average, filled,
+  ticked), where empty cells are excluded rather than counted as zero; rows
+  **duplicate** and delete **in bulk**; and a view can freeze its first column,
+  choose its row height, or lay the rows out on a **month** by one of their
+  date columns. All of that lives on the view, so it looks the same wherever
+  the table is opened, including for whoever it was shared with.
 - **Embed a table that already exists**, not only a new one: the same database
   can appear in several notes and stay one table. Each embed has its own id, so
   it can be pinned to a single view (rendered without the tab strip) and can own

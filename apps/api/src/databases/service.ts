@@ -3,6 +3,7 @@ import {
   ViewConfigSchema,
   applyView,
   emptyValue,
+  OPTION_COLORS,
   type CellValue,
   type ColumnKind,
   type CreateColumnBody,
@@ -12,6 +13,7 @@ import {
   type DatabaseSummary,
   type DbColumn,
   type DbRow,
+  type DbTemplate,
   type DbView,
   type RowSearchHit,
   type RowVersion,
@@ -256,9 +258,70 @@ export function getDatabase(
  * with a title column, a status select, a table view and three blank rows,
  * which is a table you can immediately type into.
  */
+/**
+ * The columns each template starts with.
+ *
+ * Kept here rather than in the client so a table made by the browser, by MCP
+ * and by a script are the same table. The names are Spanish because the rest
+ * of the seeded content already is; they are the user's to rename, and one
+ * column name is a cheaper thing to fix than a wrong kind.
+ */
+function templateColumns(template: DbTemplate): CreateColumnBody[] {
+  const options = (...names: string[]) => ({
+    options: names.map((name, i) => ({
+      id: randomUUID(),
+      name,
+      color: OPTION_COLORS[i % OPTION_COLORS.length]!,
+    })),
+  });
+  switch (template) {
+    case "inventory":
+      return [
+        { kind: "text", name: "Artículo" },
+        { kind: "number", name: "Cantidad" },
+        { kind: "select", name: "Ubicación", config: options("Casa", "Oficina", "Almacén") },
+        { kind: "date", name: "Comprado" },
+        { kind: "text", name: "Notas" },
+      ];
+    case "credentials":
+      // The reason this template exists: people keep these in notes anyway,
+      // and a password column is better than a text one they have to remember
+      // to cover.
+      return [
+        { kind: "text", name: "Servicio" },
+        { kind: "url", name: "URL" },
+        { kind: "text", name: "Usuario" },
+        { kind: "password", name: "Contraseña" },
+        { kind: "text", name: "Notas" },
+      ];
+    case "reading":
+      return [
+        { kind: "text", name: "Título" },
+        { kind: "text", name: "Autor" },
+        { kind: "select", name: "Estado", config: options("Por leer", "Leyendo", "Leído") },
+        { kind: "date", name: "Terminado" },
+        { kind: "number", name: "Nota" },
+      ];
+    case "tasks":
+      return [
+        { kind: "text", name: "Tarea" },
+        { kind: "select", name: "Estado", config: options("Pendiente", "En curso", "Hecho") },
+        { kind: "select", name: "Prioridad", config: options("Alta", "Media", "Baja") },
+        { kind: "date", name: "Para el" },
+        { kind: "checkbox", name: "Bloqueada" },
+      ];
+    default:
+      return [
+        { kind: "text", name: "Título" },
+        { kind: "select", name: "Estado", config: options("Pendiente", "En curso", "Hecho") },
+      ];
+  }
+}
+
 export function createDatabase(
   ctx: AuthedContext,
   name: string,
+  template: DbTemplate = "basic",
 ): DatabaseDetail {
   const id = randomUUID();
   // A new database is always personal. Sharing it is a separate, deliberate
@@ -274,23 +337,79 @@ export function createDatabase(
     })
     .run();
 
-  const title = addColumn(ctx, id, { kind: "text", name: "Título" });
-  addColumn(ctx, id, {
-    kind: "select",
-    name: "Estado",
-    config: {
-      options: [
-        { id: randomUUID(), name: "Pendiente", color: "#eab308" },
-        { id: randomUUID(), name: "En curso", color: "#3b82f6" },
-        { id: randomUUID(), name: "Hecho", color: "#22c55e" },
-      ],
-    },
-  });
+  const columns = templateColumns(template).map((c) => addColumn(ctx, id, c));
   const view = addView(ctx, id, { kind: "table", name: "Tabla" });
-  updateView(ctx, id, view.id, { config: { titleColumnId: title.id } });
+  updateView(ctx, id, view.id, { config: { titleColumnId: columns[0]?.id ?? null } });
+  // Three blank rows, so the grid is something you can type into rather than
+  // an empty box with an "add row" link.
   for (let i = 0; i < 3; i++) addRow(ctx, id, { cells: {} });
 
   return getDatabase(ctx, id);
+}
+
+/**
+ * Copy a row, right below the one it came from.
+ *
+ * Every cell, including the ones you cannot see from the grid, because the
+ * whole point is a row that starts out identical to another and gets two
+ * fields changed.
+ */
+export function duplicateRow(
+  ctx: AuthedContext,
+  databaseId: string,
+  rowId: string,
+): DbRow {
+  const keyed = writeKey(ctx, databaseId);
+  const rows = readRows(ctx, databaseId);
+  const source = rows.find((r) => r.id === rowId);
+  if (!source) throw NotFound("Row not found");
+  if (rows.length >= MAX_ROWS) {
+    throw BadRequest(`Una base de datos admite ${MAX_ROWS} filas como mucho`);
+  }
+
+  const id = randomUUID();
+  getDb()
+    .insert(databaseRows)
+    .values({
+      id,
+      databaseId,
+      userId: keyed.userId,
+      cellsCt: sealRowField(ctx, keyed, "db.cells", JSON.stringify(source.cells)),
+      position: source.position + 1,
+    })
+    .run();
+  // Everything below the original moves down one, so the copy really lands
+  // next to it rather than sharing a position and sorting arbitrarily.
+  for (const r of rows) {
+    if (r.position > source.position) {
+      getDb()
+        .update(databaseRows)
+        .set({ position: r.position + 1 })
+        .where(eq(databaseRows.id, r.id))
+        .run();
+    }
+  }
+  touch(databaseId);
+  return { id, cells: source.cells, position: source.position + 1 };
+}
+
+/** Delete a batch, each one recorded first, exactly like deleting one. */
+export function deleteRows(
+  ctx: AuthedContext,
+  databaseId: string,
+  rowIds: string[],
+): { deleted: number } {
+  let deleted = 0;
+  for (const id of rowIds) {
+    try {
+      deleteRow(ctx, databaseId, id);
+      deleted++;
+    } catch {
+      // A row that is already gone is not a failed batch: the caller asked for
+      // it to not be there, and it is not there.
+    }
+  }
+  return { deleted };
 }
 
 export function renameDatabase(

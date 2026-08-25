@@ -47,7 +47,14 @@ export function ViewSettings({
     view.config.titleColumnId,
   );
 
+  const [dateCol, setDateCol] = useState<string | null>(
+    view.config.dateColumnId,
+  );
+  const [rowHeight, setRowHeight] = useState(view.config.rowHeight);
+  const [frozen, setFrozen] = useState(view.config.frozenFirstColumn);
+
   const selectColumns = db.columns.filter((c) => c.kind === "select");
+  const dateColumns = db.columns.filter((c) => c.kind === "date");
 
   const save = useMutation({
     mutationFn: () =>
@@ -58,6 +65,9 @@ export function ViewSettings({
           hiddenColumnIds: hidden,
           groupByColumnId: groupBy,
           titleColumnId: titleCol,
+          dateColumnId: dateCol,
+          rowHeight,
+          frozenFirstColumn: frozen,
         },
       }),
     onSuccess: () => {
@@ -327,6 +337,66 @@ export function ViewSettings({
             })}
           </div>
         </section>
+
+        {view.kind === "calendar" && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              {t("db.dateColumn")}
+            </span>
+            <select
+              value={dateCol ?? ""}
+              aria-label={t("db.dateColumn")}
+              onChange={(e) => setDateCol(e.target.value || null)}
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              <option value="">{t("db.pickColumn")}</option>
+              {dateColumns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            {dateColumns.length === 0 && (
+              <span className="mt-1 block text-xs text-slate-400">
+                {t("db.calendarNeedsDate")}
+              </span>
+            )}
+          </label>
+        )}
+
+        {/* How the grid is drawn, as opposed to which rows it draws. Kept on
+            the view so it travels with it, including to whoever the table is
+            shared with. */}
+        {view.kind === "table" && (
+          <section className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">
+                {t("db.rowHeight")}
+              </span>
+              <select
+                value={rowHeight}
+                aria-label={t("db.rowHeight")}
+                onChange={(e) =>
+                  setRowHeight(e.target.value as typeof rowHeight)
+                }
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800"
+              >
+                <option value="compact">{t("db.heightCompact")}</option>
+                <option value="normal">{t("db.heightNormal")}</option>
+                <option value="tall">{t("db.heightTall")}</option>
+              </select>
+            </label>
+            <label className="flex items-end gap-2 pb-1 text-sm">
+              <input
+                type="checkbox"
+                checked={frozen}
+                onChange={(e) => setFrozen(e.target.checked)}
+                className="h-4 w-4 accent-slate-700"
+              />
+              {t("db.freezeFirst")}
+            </label>
+          </section>
+        )}
 
         {(view.kind === "board" || view.kind === "gallery") && (
           <section className="grid gap-3 sm:grid-cols-2">

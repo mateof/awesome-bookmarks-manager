@@ -1,8 +1,18 @@
 import type { DatabaseSummary, DbView } from "@awesome-bookmarks/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Database, Kanban, LayoutGrid, Plus, Search, Table2 } from "lucide-react";
+import {
+  CalendarDays,
+  Database,
+  Kanban,
+  LayoutGrid,
+  Plus,
+  Search,
+  Table2,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { DatabaseTemplatePicker } from "./DatabaseTemplatePicker.js";
+import type { DbTemplate } from "@awesome-bookmarks/shared";
 import { api } from "../api.js";
 import { Modal } from "./Modal.js";
 
@@ -13,7 +23,12 @@ export interface PickedDatabase {
   viewId: string | null;
 }
 
-const ICONS = { table: Table2, board: Kanban, gallery: LayoutGrid } as const;
+const ICONS = {
+  table: Table2,
+  board: Kanban,
+  gallery: LayoutGrid,
+  calendar: CalendarDays,
+} as const;
 
 /**
  * Choose what to put in the note: a new table, or one that already exists.
@@ -34,10 +49,11 @@ export function DatabasePicker({
   onClose,
 }: {
   onPick: (picked: PickedDatabase) => void;
-  onCreate: () => void;
+  onCreate: (template: DbTemplate) => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const [template, setTemplate] = useState<DbTemplate>("basic");
   const [q, setQ] = useState("");
   const [chosen, setChosen] = useState<DatabaseSummary | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -134,14 +150,17 @@ export function DatabasePicker({
   return (
     <Modal title={t("db.insert")} onClose={onClose} size="md">
       <div className="space-y-2">
-        <button
-          type="button"
-          onClick={onCreate}
-          className="flex w-full items-center gap-2 rounded border border-slate-300 px-3 py-2 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          <Plus className="h-4 w-4 shrink-0 text-slate-400" />
-          <span className="text-sm font-medium">{t("db.newDatabase")}</span>
-        </button>
+        <div className="rounded border border-slate-300 p-2 dark:border-slate-700">
+          <DatabaseTemplatePicker value={template} onChange={setTemplate} />
+          <button
+            type="button"
+            onClick={() => onCreate(template)}
+            className="mt-2 flex w-full items-center gap-2 rounded bg-slate-900 px-3 py-2 text-left text-white dark:bg-slate-100 dark:text-slate-900"
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span className="text-sm font-medium">{t("db.newDatabase")}</span>
+          </button>
+        </div>
 
         <div className="flex items-center gap-2 rounded border border-slate-300 px-2 dark:border-slate-700">
           <Search className="h-4 w-4 shrink-0 text-slate-400" />

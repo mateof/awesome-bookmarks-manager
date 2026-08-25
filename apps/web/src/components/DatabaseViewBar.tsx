@@ -5,6 +5,7 @@ import type {
 } from "@awesome-bookmarks/shared";
 import { useMutation } from "@tanstack/react-query";
 import {
+  CalendarDays,
   ArrowUpDown,
   Filter,
   Kanban,
@@ -23,6 +24,7 @@ const ICONS: Record<ViewKind, typeof Table2> = {
   table: Table2,
   board: Kanban,
   gallery: LayoutGrid,
+  calendar: CalendarDays,
 };
 
 /**
@@ -190,7 +192,7 @@ export function ViewBar({
               <span className="px-2 py-1 text-[10px] uppercase text-slate-400">
                 {t("db.sameRows")}
               </span>
-              {(["table", "board", "gallery"] as ViewKind[]).map((k) => {
+              {(["table", "board", "gallery", "calendar"] as ViewKind[]).map((k) => {
                 const Icon = ICONS[k];
                 return (
                   <button

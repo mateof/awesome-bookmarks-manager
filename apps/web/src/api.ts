@@ -11,6 +11,7 @@ import type {
   DatabaseDetail,
   DatabaseSummary,
   DbColumn,
+  DbTemplate,
   RowSearchHit,
   RowVersion,
   DbRow,
@@ -720,10 +721,19 @@ export const api = {
 
   // inline databases
   listDatabases: () => request<DatabaseSummary[]>("/databases"),
-  createDatabase: (name: string) =>
+  duplicateDbRow: (id: string, rowId: string) =>
+    request<DbRow>(`/databases/${id}/rows/${rowId}/duplicate`, {
+      method: "POST",
+    }),
+  deleteDbRows: (id: string, ids: string[]) =>
+    request<{ deleted: number }>(`/databases/${id}/rows/delete`, {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+  createDatabase: (name: string, template: DbTemplate = "basic") =>
     request<DatabaseDetail>("/databases", {
       method: "POST",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, template }),
     }),
   getDatabase: (id: string, blockId?: string | null) =>
     request<DatabaseDetail>(

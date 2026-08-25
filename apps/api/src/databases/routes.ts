@@ -22,7 +22,9 @@ import {
   deleteColumn,
   deleteDatabase,
   deleteRow,
+  deleteRows,
   deleteView,
+  duplicateRow,
   getDatabase,
   listDatabases,
   listRowVersions,
@@ -46,9 +48,9 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
 
   app.post("/databases", async (req, reply) => {
     const ctx = requireAuth(req);
-    const { name } = CreateDatabaseBodySchema.parse(req.body ?? {});
+    const { name, template } = CreateDatabaseBodySchema.parse(req.body ?? {});
     reply.code(201);
-    return createDatabase(ctx, name);
+    return createDatabase(ctx, name, template);
   });
 
   app.get("/databases/:id", async (req) => {
@@ -205,6 +207,27 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
       return restoreRowVersion(ctx, id, childId, versionId);
     },
   );
+
+  app.post("/databases/:id/rows/:childId/duplicate", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { id, childId } = ChildParam.parse(req.params);
+    reply.code(201);
+    return duplicateRow(ctx, id, childId);
+  });
+
+  /**
+   * Delete several rows in one call.
+   *
+   * A POST rather than a DELETE with a body: a body on DELETE is legal and
+   * badly supported by half the things that sit in front of an API.
+   */
+  app.post("/databases/:id/rows/delete", async (req) => {
+    const ctx = requireAuth(req);
+    const { ids } = z
+      .object({ ids: z.array(z.string().uuid()).min(1).max(500) })
+      .parse(req.body);
+    return deleteRows(ctx, IdParam.parse(req.params).id, ids);
+  });
 
   app.post("/databases/:id/rows/reorder", async (req) => {
     const ctx = requireAuth(req);

@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 import { dlg } from "./dialogs.js";
 import { DatabaseBoard, DatabaseGallery } from "./DatabaseBoard.js";
+import { DatabaseCalendar } from "./DatabaseCalendar.js";
 import { DatabaseTable } from "./DatabaseTable.js";
 import { ShareToGroup } from "./ShareToGroup.js";
 import { ViewBar } from "./DatabaseViewBar.js";
@@ -131,6 +132,35 @@ export function DatabaseBlock({
     onSuccess: refresh,
   });
 
+  const duplicateRow = useMutation({
+    mutationFn: (rowId: string) => api.duplicateDbRow(databaseId, rowId),
+    onSuccess: refresh,
+  });
+
+  const deleteRows = useMutation({
+    mutationFn: (ids: string[]) => api.deleteDbRows(databaseId, ids),
+    onSuccess: refresh,
+  });
+
+  /**
+   * A change to how the view is presented, merged into its config.
+   *
+   * Same call the filter and sort dialogs make. It is a view setting rather
+   * than a preference of this browser because the point of a view is that it
+   * looks the same wherever you open it, including for whoever you shared the
+   * table with.
+   */
+  const viewConfig = useMutation({
+    mutationFn: ({
+      viewId,
+      patch,
+    }: {
+      viewId: string;
+      patch: Partial<ViewConfig>;
+    }) => api.updateDbView(databaseId, viewId, { config: patch }),
+    onSuccess: refresh,
+  });
+
   const columnWidth = useMutation({
     // The server merges into the column's existing config, so sending the
     // width alone cannot drop a select column's options.
@@ -227,6 +257,10 @@ export function DatabaseBlock({
     hiddenColumnIds: [],
     groupByColumnId: null,
     titleColumnId: null,
+    dateColumnId: null,
+    aggregates: {},
+    frozenFirstColumn: false,
+    rowHeight: "normal",
   };
   const visibleColumns = db.columns.filter(
     (c) => !config.hiddenColumnIds.includes(c.id),
@@ -377,6 +411,18 @@ export function DatabaseBlock({
         />
       );
     }
+    if (kind === "calendar") {
+      return (
+        <DatabaseCalendar
+          db={shown}
+          rows={rows}
+          config={config}
+          readOnly={readOnly}
+          onCell={onCell}
+          onRefresh={refresh}
+        />
+      );
+    }
     if (kind === "gallery") {
       return (
         <DatabaseGallery
@@ -404,6 +450,12 @@ export function DatabaseBlock({
         }
         titleColumnId={config?.titleColumnId ?? null}
         openRowId={openRowId}
+        config={config}
+        onViewConfig={(patch) => {
+          if (view) viewConfig.mutate({ viewId: view.id, patch });
+        }}
+        onDuplicateRow={(rowId) => duplicateRow.mutate(rowId)}
+        onDeleteRows={(ids) => deleteRows.mutate(ids)}
         onColumnChanged={refresh}
       />
     );

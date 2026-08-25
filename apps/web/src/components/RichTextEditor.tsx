@@ -32,6 +32,7 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
+import type { DbTemplate } from "@awesome-bookmarks/shared";
 import { RICH_COLORS } from "../lib/richColors.js";
 import { ColoredUnderline, RICH_MARKS } from "../lib/richMarks.js";
 import { DatabaseBlock as DatabaseBlockNode } from "../lib/richDatabase.js";
@@ -238,9 +239,9 @@ export function RichTextEditor({
    * given us one. If the call fails, the note is left exactly as it was
    * instead of carrying a pointer to nothing.
    */
-  const createDatabase = async () => {
+  const createDatabase = async (template: DbTemplate) => {
     try {
-      const db = await api.createDatabase(t("db.newName"));
+      const db = await api.createDatabase(t("db.newName"), template);
       embed(db.id, db.name, null);
     } catch (e) {
       await dlg.alert(e instanceof Error ? e.message : String(e));
@@ -303,7 +304,7 @@ export function RichTextEditor({
       {pickingDatabase && (
         <DatabasePicker
           onPick={applyDatabase}
-          onCreate={() => void createDatabase()}
+          onCreate={(template) => void createDatabase(template)}
           onClose={() => setPickingDatabase(false)}
         />
       )}

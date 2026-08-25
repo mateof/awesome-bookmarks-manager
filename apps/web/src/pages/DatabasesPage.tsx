@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { DatabaseBlock } from "../components/DatabaseBlock.js";
+import { DatabaseTemplatePicker } from "../components/DatabaseTemplatePicker.js";
+import type { DbTemplate } from "@awesome-bookmarks/shared";
 import { dlg } from "../components/dialogs.js";
 import { ShareToGroup } from "../components/ShareToGroup.js";
 
@@ -33,8 +35,9 @@ export function DatabasesPage() {
     enabled: !id,
   });
 
+  const [template, setTemplate] = useState<DbTemplate>("basic");
   const create = useMutation({
-    mutationFn: () => api.createDatabase(t("db.newName")),
+    mutationFn: () => api.createDatabase(t("db.newName"), template),
     onSuccess: (db) => {
       qc.invalidateQueries({ queryKey: ["databases"] });
       navigate(`/databases/${db.id}`);
@@ -73,11 +76,14 @@ export function DatabasesPage() {
           <Database className="h-5 w-5" />
           {t("db.allDatabases")}
         </h1>
+        <span className="ml-auto w-52">
+          <DatabaseTemplatePicker value={template} onChange={setTemplate} />
+        </span>
         <button
           type="button"
           disabled={create.isPending || busy}
           onClick={() => create.mutate()}
-          className="ml-auto flex items-center gap-1 rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
+          className="flex items-center gap-1 self-end rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900"
         >
           <Plus className="h-4 w-4" />
           {t("db.newDatabase")}

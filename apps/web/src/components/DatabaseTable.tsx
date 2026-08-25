@@ -1,14 +1,19 @@
 import {
+  aggregateValue,
+  aggregatesFor,
   emptyValue,
+  type Aggregate,
   type CellValue,
   type ColumnKind,
   type DatabaseDetail,
   type DbColumn,
   type DbRow,
+  type ViewConfig,
 } from "@awesome-bookmarks/shared";
-import { Expand, GripVertical, Plus, Settings2, Trash2 } from "lucide-react";
+import { Copy, Expand, GripVertical, Plus, Settings2, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AnchoredPopover } from "./AnchoredPopover.js";
 import { ColumnMenu } from "./DatabaseColumnMenu.js";
 import { DatabaseCell } from "./DatabaseCell.js";
 import { DatabaseRowModal } from "./DatabaseRowModal.js";
@@ -31,6 +36,10 @@ export function DatabaseTable({
   onReorderColumns,
   onColumnWidth,
   onColumnChanged,
+  onDuplicateRow,
+  onDeleteRows,
+  onViewConfig,
+  config,
   titleColumnId = null,
   openRowId = null,
   readOnly = false,
@@ -46,6 +55,11 @@ export function DatabaseTable({
   /** Pixels, once the drag on the column's edge is released. */
   onColumnWidth: (columnId: string, width: number) => void;
   onColumnChanged: () => void;
+  onDuplicateRow: (rowId: string) => void;
+  onDeleteRows: (rowIds: string[]) => void;
+  /** Merged into the active view's config: footers, height, frozen column. */
+  onViewConfig: (patch: Partial<ViewConfig>) => void;
+  config: ViewConfig;
   /** Which column names a row, for the title of its detail dialog. */
   titleColumnId?: string | null;
   /** A row to open on arrival, from `?fila=` in the URL. */
@@ -60,6 +74,40 @@ export function DatabaseTable({
   const dragCol = useRef<string | null>(null);
   const [colTarget, setColTarget] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<DbRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [aggFor, setAggFor] = useState<DbColumn | null>(null);
+  const aggAnchor = useRef<HTMLTableCellElement | null>(null);
+
+  /**
+   * Row height and a frozen first column are view settings, not preferences of
+   * this browser: a view is supposed to look the same wherever it is opened,
+   * including for whoever the table is shared with.
+   */
+  const heightClass =
+    config.rowHeight === "compact"
+      ? "py-0.5"
+      : config.rowHeight === "tall"
+        ? "py-3"
+        : "py-1";
+  // The sticky column has to clear the handle column to its left, which is
+  // only there when the table can be written to.
+  const stickyLeft = readOnly ? 0 : 48;
+  const frozen = config.frozenFirstColumn;
+  const stickyCell = (index: number): React.CSSProperties | undefined =>
+    frozen && index === 0
+      ? { position: "sticky", left: stickyLeft, zIndex: 5 }
+      : undefined;
+  /** Opaque, or the scrolled columns show through the one standing still. */
+  const stickyBg = (index: number) =>
+    frozen && index === 0 ? "bg-white dark:bg-slate-900" : "";
+
+  const toggleRow = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   /**
    * Arriving with a row named in the URL opens it.
@@ -157,16 +205,66 @@ export function DatabaseTable({
 
   return (
     <div className="overflow-x-auto">
+      {/* Only while something is selected. A permanent toolbar for an action
+          that needs a selection is a row of dead buttons most of the time. */}
+      {selected.size > 0 && !readOnly && (
+        <div
+          data-testid="db-bulk-bar"
+          className="mb-1 flex items-center gap-2 rounded bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800"
+        >
+          <span className="font-medium">
+            {t("db.selectedRows", { count: selected.size })}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              for (const id of selected) onDuplicateRow(id);
+              setSelected(new Set());
+            }}
+            className="flex items-center gap-1 rounded border border-slate-300 px-2 py-0.5 hover:bg-white dark:border-slate-600 dark:hover:bg-slate-900"
+          >
+            <Copy className="h-3 w-3" />
+            {t("db.duplicateRow")}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              if (
+                await dlg.confirm({
+                  message: t("db.confirmDeleteRows", { count: selected.size }),
+                  danger: true,
+                })
+              ) {
+                onDeleteRows([...selected]);
+                setSelected(new Set());
+              }
+            }}
+            className="flex items-center gap-1 rounded border border-red-300 px-2 py-0.5 text-red-600 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950"
+          >
+            <Trash2 className="h-3 w-3" />
+            {t("db.deleteSelected")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            title={t("db.clearSelection")}
+            aria-label={t("db.clearSelection")}
+            className="ml-auto rounded p-0.5 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b border-slate-200 dark:border-slate-700">
-            {!readOnly && <th className="w-6" />}
-            {db.columns.map((c) => (
+            {!readOnly && <th className="w-12" />}
+            {db.columns.map((c, ci) => (
               <th
                 key={c.id}
                 style={(() => {
                   const w = widths[c.id] ?? c.config.width;
-                  return w ? { width: w } : undefined;
+                  return { ...(w ? { width: w } : {}), ...stickyCell(ci) };
                 })()}
                 onDragOver={(e) => {
                   if (!dragCol.current) return;
@@ -185,9 +283,9 @@ export function DatabaseTable({
                   ids.splice(ids.indexOf(c.id), 0, from);
                   onReorderColumns(ids);
                 }}
-                className={`relative px-2 py-1.5 text-left font-medium text-slate-500 ${
-                  colTarget === c.id ? "bg-sky-50 dark:bg-sky-950/40" : ""
-                }`}
+                className={`relative px-2 py-1.5 text-left font-medium text-slate-500 ${stickyBg(
+                  ci,
+                )} ${colTarget === c.id ? "bg-sky-50 dark:bg-sky-950/40" : ""}`}
               >
                 {!readOnly && (
                   /* The grab area is wider than the line it draws: four pixels
@@ -290,25 +388,38 @@ export function DatabaseTable({
               }`}
             >
               {!readOnly && (
-                <td className="align-middle">
-                  <span
-                    draggable
-                    onDragStart={() => {
-                      dragId.current = r.id;
-                    }}
-                    onDragEnd={() => {
-                      dragId.current = null;
-                      setDropTarget(null);
-                    }}
-                    title={t("db.dragRow")}
-                    className="flex cursor-grab justify-center text-slate-300 hover:text-slate-500"
-                  >
-                    <GripVertical className="h-4 w-4" />
+                <td className="whitespace-nowrap align-middle">
+                  <span className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleRow(r.id)}
+                      aria-label={t("db.selectRow")}
+                      className="h-3.5 w-3.5 accent-slate-700"
+                    />
+                    <span
+                      draggable
+                      onDragStart={() => {
+                        dragId.current = r.id;
+                      }}
+                      onDragEnd={() => {
+                        dragId.current = null;
+                        setDropTarget(null);
+                      }}
+                      title={t("db.dragRow")}
+                      className="flex cursor-grab justify-center text-slate-300 hover:text-slate-500"
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </span>
                   </span>
                 </td>
               )}
-              {db.columns.map((c) => (
-                <td key={c.id} className="px-2 py-1 align-top">
+              {db.columns.map((c, ci) => (
+                <td
+                  key={c.id}
+                  style={stickyCell(ci)}
+                  className={`px-2 align-top ${heightClass} ${stickyBg(ci)}`}
+                >
                   <DatabaseCell
                     column={c}
                     value={r.cells[c.id]}
@@ -332,6 +443,17 @@ export function DatabaseTable({
                 {!readOnly && (
                   <button
                     type="button"
+                    onClick={() => onDuplicateRow(r.id)}
+                    title={t("db.duplicateRow")}
+                    aria-label={t("db.duplicateRow")}
+                    className="rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {!readOnly && (
+                  <button
+                    type="button"
                     onClick={async () => {
                       if (
                         await dlg.confirm({
@@ -352,7 +474,83 @@ export function DatabaseTable({
             </tr>
           ))}
         </tbody>
+
+        {/* One line under the table saying what the column adds up to. Shown
+            only once something has been chosen for at least one column, so a
+            table nobody has asked a question of keeps its shape. */}
+        {Object.values(config.aggregates).some((a) => a && a !== "none") && (
+          <tfoot>
+            <tr className="border-t border-slate-200 text-xs text-slate-500 dark:border-slate-700">
+              {!readOnly && <td />}
+              {db.columns.map((c, ci) => {
+                const op = config.aggregates[c.id] ?? "none";
+                const value = aggregateValue(op, c, sorted);
+                return (
+                  <td
+                    key={c.id}
+                    style={stickyCell(ci)}
+                    className={`px-2 py-1 ${stickyBg(ci)}`}
+                  >
+                    {!readOnly ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          // Anchored to the cell that was clicked, so the
+                          // chooser opens under the column it is about.
+                          aggAnchor.current = e.currentTarget.closest("td");
+                          setAggFor(c);
+                        }}
+                        className="rounded px-1 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        {value === null ? "—" : value}
+                        <span className="ml-1 text-[10px] uppercase text-slate-400">
+                          {op !== "none" ? t(`db.agg.${op}` as "db.agg.count") : ""}
+                        </span>
+                      </button>
+                    ) : value === null ? null : (
+                      <span>{value}</span>
+                    )}
+                  </td>
+                );
+              })}
+              <td />
+            </tr>
+          </tfoot>
+        )}
       </table>
+
+      {aggFor && (
+        <AnchoredPopover
+          anchor={aggAnchor}
+          onClose={() => setAggFor(null)}
+          width={190}
+        >
+          <span className="block p-1">
+            <span className="mb-1 block px-1 text-[10px] uppercase text-slate-400">
+              {aggFor.name}
+            </span>
+            {aggregatesFor(aggFor.kind).map((op) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => {
+                  onViewConfig({
+                    aggregates: { ...config.aggregates, [aggFor.id]: op },
+                  });
+                  setAggFor(null);
+                }}
+                className={`block w-full rounded px-2 py-1 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                  (config.aggregates[aggFor.id] ?? "none") === op
+                    ? "font-medium"
+                    : ""
+                }`}
+              >
+                {t(`db.agg.${op}` as "db.agg.count")}
+              </button>
+            ))}
+          </span>
+        </AnchoredPopover>
+      )}
 
       {!readOnly && (
         <button
@@ -385,6 +583,13 @@ export function DatabaseTable({
           databaseId={db.id}
           column={menuFor}
           columns={db.columns}
+          aggregate={menuFor ? (config.aggregates[menuFor.id] ?? "none") : "none"}
+          onAggregate={(op) => {
+            if (menuFor)
+              onViewConfig({
+                aggregates: { ...config.aggregates, [menuFor.id]: op },
+              });
+          }}
           onClose={() => {
             setMenuFor(null);
             setAdding(false);

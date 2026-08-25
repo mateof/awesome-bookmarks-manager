@@ -120,7 +120,13 @@ export const RowSearchHitSchema = z.object({
 });
 export type RowSearchHit = z.infer<typeof RowSearchHitSchema>;
 
-export const ViewKindSchema = z.enum(["table", "board", "gallery"]);
+export const ViewKindSchema = z.enum([
+  "table",
+  "board",
+  "gallery",
+  /** A month grid, laid out by one date column. */
+  "calendar",
+]);
 export type ViewKind = z.infer<typeof ViewKindSchema>;
 
 /**
@@ -156,6 +162,30 @@ export const SortSchema = z.object({
 });
 export type Sort = z.infer<typeof SortSchema>;
 
+/**
+ * What a column's footer adds up.
+ *
+ * Deliberately short, and every one of them means the same thing for every
+ * kind it is offered on. "Filled" and "empty" are here because on a table of
+ * text they are the only honest summaries, and they answer the question people
+ * actually have about a half-typed table: how much of this is done.
+ */
+export const AggregateSchema = z.enum([
+  "none",
+  "count",
+  "filled",
+  "empty",
+  "sum",
+  "avg",
+  "min",
+  "max",
+  "checked",
+]);
+export type Aggregate = z.infer<typeof AggregateSchema>;
+
+export const RowHeightSchema = z.enum(["compact", "normal", "tall"]);
+export type RowHeight = z.infer<typeof RowHeightSchema>;
+
 export const ViewConfigSchema = z.object({
   filters: z.array(FilterSchema).max(20).default([]),
   sorts: z.array(SortSchema).max(5).default([]),
@@ -164,6 +194,17 @@ export const ViewConfigSchema = z.object({
   groupByColumnId: z.string().nullable().default(null),
   /** board / gallery: which column supplies the card's heading. */
   titleColumnId: z.string().nullable().default(null),
+  /** calendar only: the date column that decides which day a row lands on. */
+  dateColumnId: z.string().nullable().default(null),
+  /** table only, keyed by column id. Absent means no footer for that column. */
+  aggregates: z.record(z.string(), AggregateSchema).default({}),
+  /**
+   * Keep the first column in place while the rest scrolls sideways. Off by
+   * default: it costs a sticky column and only pays for itself once a table is
+   * wide enough to scroll, which most are not.
+   */
+  frozenFirstColumn: z.boolean().default(false),
+  rowHeight: RowHeightSchema.default("normal"),
 });
 export type ViewConfig = z.infer<typeof ViewConfigSchema>;
 
@@ -225,8 +266,27 @@ export type DatabaseDetail = z.infer<typeof DatabaseDetailSchema>;
 
 // --- request bodies --------------------------------------------------------
 
+/**
+ * What a new table starts as.
+ *
+ * A blank grid is a worse start than it looks: the first thing anybody does is
+ * invent the same four columns, and inventing them badly (a status as free
+ * text, a price as text) is what makes a table useless to filter later. These
+ * are the shapes this app is actually used for.
+ */
+export const DbTemplateSchema = z.enum([
+  /** Title + status + a table view: what a database has always started as. */
+  "basic",
+  "inventory",
+  "credentials",
+  "reading",
+  "tasks",
+]);
+export type DbTemplate = z.infer<typeof DbTemplateSchema>;
+
 export const CreateDatabaseBodySchema = z.object({
   name: z.string().min(1).max(120).default("Sin título"),
+  template: DbTemplateSchema.default("basic"),
 });
 export type CreateDatabaseBody = z.infer<typeof CreateDatabaseBodySchema>;
 
@@ -296,6 +356,71 @@ export const DB_BLOCK_ID_ATTR = "data-db-block";
  * table, not a switcher.
  */
 export const DB_BLOCK_VIEW_ATTR = "data-db-view";
+
+/**
+ * Run one aggregate over a column's values.
+ *
+ * Returns the text to print, or null when the operation says nothing about
+ * this column (an average of a text column). Empty cells are **excluded** from
+ * sum, average, min and max rather than counted as zero: a blank in a table is
+ * "not filled in yet", and averaging it as a zero quietly drags the answer
+ * towards a number nobody entered.
+ */
+export function aggregateValue(
+  op: Aggregate,
+  column: DbColumn,
+  rows: DbRow[],
+): string | null {
+  if (op === "none") return null;
+  const values = rows.map((r) => r.cells[column.id]);
+  const filled = values.filter(
+    (v) => !(v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length)),
+  );
+
+  switch (op) {
+    case "count":
+      return String(rows.length);
+    case "filled":
+      return String(filled.length);
+    case "empty":
+      return String(rows.length - filled.length);
+    case "checked":
+      return String(values.filter((v) => v === true).length);
+    default:
+      break;
+  }
+
+  const numbers = filled
+    .map((v) => (typeof v === "number" ? v : Number(String(v).replace(",", "."))))
+    .filter((n): n is number => Number.isFinite(n));
+  if (numbers.length === 0) return null;
+
+  switch (op) {
+    case "sum":
+      return trimNumber(numbers.reduce((a, b) => a + b, 0));
+    case "avg":
+      return trimNumber(numbers.reduce((a, b) => a + b, 0) / numbers.length);
+    case "min":
+      return trimNumber(Math.min(...numbers));
+    case "max":
+      return trimNumber(Math.max(...numbers));
+    default:
+      return null;
+  }
+}
+
+/** Two decimals at most, and none at all when they would all be zeros. */
+function trimNumber(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/** The aggregates worth offering for a kind. Others would always say null. */
+export function aggregatesFor(kind: ColumnKind): Aggregate[] {
+  const common: Aggregate[] = ["none", "count", "filled", "empty"];
+  if (kind === "number") return [...common, "sum", "avg", "min", "max"];
+  if (kind === "checkbox") return [...common, "checked"];
+  return common;
+}
 
 /** Columns a kind can meaningfully be filtered by, and with which operators. */
 export const OPS_BY_KIND: Record<ColumnKind, FilterOp[]> = {

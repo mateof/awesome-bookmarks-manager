@@ -1,6 +1,8 @@
 import {
+  aggregatesFor,
   ColumnKindSchema,
   OPTION_COLORS,
+  type Aggregate,
   type ColumnKind,
   type DbColumn,
   type SelectOption,
@@ -102,6 +104,8 @@ export function ColumnMenu({
   databaseId,
   column,
   columns,
+  aggregate,
+  onAggregate,
   onClose,
   onChanged,
 }: {
@@ -110,6 +114,9 @@ export function ColumnMenu({
   column: DbColumn | null;
   /** All of them, in their current order, for the move buttons. */
   columns: DbColumn[];
+  /** What this column's footer says today, in the active view. */
+  aggregate: Aggregate;
+  onAggregate: (op: Aggregate) => void;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -218,6 +225,29 @@ export function ColumnMenu({
             </span>
           )}
         </label>
+
+        {/* The footer of a column belongs to the view, not to the column, but
+            this is where somebody goes looking for "what does this column add
+            up to". The footer itself can change it too, once it is there. */}
+        {column && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              {t("db.summary")}
+            </span>
+            <select
+              value={aggregate}
+              aria-label={t("db.summary")}
+              onChange={(e) => onAggregate(e.target.value as Aggregate)}
+              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              {aggregatesFor(column.kind).map((op) => (
+                <option key={op} value={op}>
+                  {t(`db.agg.${op}` as "db.agg.count")}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {column && columns.length > 1 && (
           <div>
