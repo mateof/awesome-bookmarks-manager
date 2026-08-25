@@ -17,6 +17,7 @@ import {
 } from "../folders/service.js";
 import { search } from "../search/service.js";
 import { createTag, listTags } from "../tags/service.js";
+import { registerDatabaseTools } from "./database-tools.js";
 import { registerLibraryTools } from "./library-tools.js";
 import { registerPanelTools } from "./panels-tools.js";
 
@@ -278,6 +279,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
 
   registerPanelTools(server, ctx);
   registerLibraryTools(server, ctx);
+  registerDatabaseTools(server, ctx);
 
   return server;
 }

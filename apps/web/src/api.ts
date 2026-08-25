@@ -774,6 +774,16 @@ export const api = {
       `/databases/${id}/rows/${rowId}/versions/${versionId}/restore`,
       { method: "POST" },
     ),
+  importDbCsv: (id: string, csv: string) =>
+    request<{
+      rows: number;
+      newColumns: string[];
+      newOptions: string[];
+      ignored: string[];
+    }>(`/databases/${id}/import.csv`, {
+      method: "POST",
+      body: JSON.stringify({ csv }),
+    }),
   searchRows: (q: string) =>
     request<RowSearchHit[]>(`/search/rows?q=${encodeURIComponent(q)}`),
   reorderDbRows: (id: string, order: string[]) =>

@@ -101,7 +101,9 @@ one port.
   every row keeps a **history** of its last twenty states with one-click
   restore, including one for a row that was deleted. Both leave password
   columns alone: a covered value has no business in a search snippet or a
-  history list.
+  history list. Tables go **in and out as CSV** (import appends and never
+  replaces, inventing the columns and select options the file needs), and are
+  reachable over **MCP**, where password columns are not returned at all.
 - **Embed a table that already exists**, not only a new one: the same database
   can appear in several notes and stay one table. Each embed has its own id, so
   it can be pinned to a single view (rendered without the tab strip) and can own

@@ -11,6 +11,7 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
+import { exportCsv, importCsv, MAX_CSV_BYTES } from "./csv.js";
 import { adoptDatabaseIntoGroup } from "../groups/adopt.js";
 import { requireRole } from "../groups/roles.js";
 import {
@@ -92,6 +93,41 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
     requireRole(ctx, groupId, "editor");
     const moved = adoptDatabaseIntoGroup(ctx, id, groupId);
     return { shared: moved, groupId };
+  });
+
+  // --- csv -----------------------------------------------------------------
+
+  /**
+   * The table as a spreadsheet.
+   *
+   * `secrets=1` is the only way a password column leaves in the clear, and it
+   * has to be asked for on every export: a file on disk is the one copy that
+   * cannot be un-shared afterwards.
+   */
+  app.get("/databases/:id/export.csv", async (req, reply) => {
+    const ctx = requireAuth(req);
+    const { secrets } = z
+      .object({ secrets: z.enum(["0", "1"]).default("0") })
+      .parse(req.query ?? {});
+    const { filename, csv } = exportCsv(
+      ctx,
+      IdParam.parse(req.params).id,
+      secrets === "1",
+    );
+    reply
+      .header("content-type", "text/csv; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${filename}"`);
+    // The BOM is what makes Excel read it as UTF-8 rather than as the local
+    // code page, which is the difference between "Sesión" and "SesiÃ³n".
+    return `\ufeff${csv}`;
+  });
+
+  app.post("/databases/:id/import.csv", async (req) => {
+    const ctx = requireAuth(req);
+    const { csv } = z
+      .object({ csv: z.string().min(1).max(MAX_CSV_BYTES) })
+      .parse(req.body);
+    return importCsv(ctx, IdParam.parse(req.params).id, csv);
   });
 
   // --- columns -------------------------------------------------------------

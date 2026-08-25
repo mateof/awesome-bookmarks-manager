@@ -7,10 +7,11 @@ import {
   type ViewKind,
 } from "@awesome-bookmarks/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Database, Plus, Share2, Table2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Database, Download, Plus, Share2, Table2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
+import { dlg } from "./dialogs.js";
 import { DatabaseBoard, DatabaseGallery } from "./DatabaseBoard.js";
 import { DatabaseTable } from "./DatabaseTable.js";
 import { ShareToGroup } from "./ShareToGroup.js";
@@ -56,6 +57,7 @@ export function DatabaseBlock({
   const [renaming, setRenaming] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [draftName, setDraftName] = useState("");
+  const csvInput = useRef<HTMLInputElement>(null);
 
   const { data: db, isError } = useQuery({
     queryKey: key,
@@ -145,6 +147,46 @@ export function DatabaseBlock({
     },
   });
 
+  /**
+   * Export through a plain navigation rather than fetch + blob.
+   *
+   * The endpoint answers with a `content-disposition`, so the browser saves it
+   * with the right name and never holds the whole table in memory. The session
+   * cookie rides along, which is the other half of why this is simpler.
+   */
+  const exportCsv = async () => {
+    const hasSecrets = (db?.columns ?? []).some((c) => c.kind === "password");
+    let secrets = false;
+    if (hasSecrets) {
+      // Asked every time, and never the default: a CSV on disk is the copy
+      // nobody can take back.
+      secrets = await dlg.confirm({
+        message: t("db.exportSecretsAsk"),
+        danger: true,
+      });
+    }
+    window.location.href = `/api/databases/${databaseId}/export.csv${
+      secrets ? "?secrets=1" : ""
+    }`;
+  };
+
+  const importCsvFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const res = await api.importDbCsv(databaseId, text);
+      refresh();
+      await dlg.alert(
+        t("db.importCsvDone", {
+          rows: res.rows,
+          columns: res.newColumns.length,
+          options: res.newOptions.length,
+        }),
+      );
+    } catch (e) {
+      await dlg.alert(e instanceof Error ? e.message : String(e));
+    }
+  };
+
   // Keep the draft in step with the server, except while it is being typed in.
   useEffect(() => {
     if (!renaming && db?.name) setDraftName(db.name);
@@ -233,6 +275,40 @@ export function DatabaseBlock({
         <span className="shrink-0 text-xs text-slate-400">
           {t("db.rowCount", { count: db.rows.length })}
         </span>
+        {/* Out to a spreadsheet, and back from one. */}
+        <button
+          type="button"
+          onClick={() => void exportCsv()}
+          title={t("db.exportCsv")}
+          aria-label={t("db.exportCsv")}
+          className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        >
+          <Download className="h-4 w-4" />
+        </button>
+        {!readOnly && (
+          <>
+            <button
+              type="button"
+              onClick={() => csvInput.current?.click()}
+              title={t("db.importCsv")}
+              aria-label={t("db.importCsv")}
+              className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              <Upload className="h-4 w-4" />
+            </button>
+            <input
+              ref={csvInput}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void importCsvFile(file);
+              }}
+            />
+          </>
+        )}
         {/* A table is shared in its own right: the same one can sit in notes
             that are not shared with the same people. */}
         {!readOnly && (

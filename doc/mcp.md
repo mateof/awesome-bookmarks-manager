@@ -160,6 +160,34 @@ a `bin` named `awesomebookmarks-mcp`.
 | `delete_panel_template` | delete one of your templates |
 | `list_panel_scenes` | list the animated background scenes usable as `config.scene` |
 
+### Inline databases (tables)
+
+The typed tables embedded in folder and bookmark descriptions: inventories,
+credential sheets, reading logs. Cells are keyed by **column id**, not by
+column name, so `get_database` comes first in almost every errand.
+
+| tool | what it does |
+|------|--------------|
+| `list_databases` | your tables: id, name, row count, whether shared |
+| `get_database` | one table whole: columns (with select options) and rows |
+| `search_database_rows` | find text inside the rows of every table you can read |
+| `create_database` | a new table, seeded with a text column, a status select and a table view |
+| `add_database_column` | add a column (`kind`, and `options` for select/multiSelect) |
+| `add_database_row` | append a row (`cells` keyed by column id) |
+| `update_database_row` | change cells of one row; merged, not replaced |
+| `delete_database_row` | delete a row (recoverable from its history, in the app) |
+| `export_database_csv` | the table as CSV text |
+| `import_database_csv` | append the rows of a CSV; never replaces what is there |
+
+**Password columns are never returned through MCP.** Not masked behind a flag:
+not returned, by any tool, including the CSV. A value that is covered on screen
+and kept out of public copies has no business in a model's context, a
+transcript or a log; the person who wants it opens the app. Writing one is
+allowed, because putting a secret in is not the same act as taking it out.
+
+Deleting a row is recoverable: its last state stays in the row's history and
+can be restored from the app under the same id.
+
 ### Smart folders (saved queries)
 
 A smart folder stores a query, not a list: its contents are recomputed on every
