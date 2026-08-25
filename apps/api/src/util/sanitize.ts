@@ -64,6 +64,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
       "data-db-name",
       "data-db-block",
       "data-db-view",
+      "data-db-height",
+      "data-db-mode",
     ],
     "*": ["class", "style"],
   },

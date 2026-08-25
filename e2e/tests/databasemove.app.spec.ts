@@ -82,7 +82,11 @@ test("la tabla se mueve arriba y abajo dentro de la nota", async ({
 
   // One undo puts it back one step, not two: the move is a single transaction
   // rather than a delete followed by an insert.
-  await page.locator(".tiptap.ProseMirror").click();
+  // The paragraph, not the editor's middle: the card is a node view, and
+  // clicking one puts the caret nowhere, so the keystroke would go to the
+  // browser instead of to the editor's history. The card has grown taller
+  // since this was written, which is how it started landing there.
+  await page.locator(".tiptap.ProseMirror p").first().click();
   await page.keyboard.press("ControlOrMeta+z");
   expect(await order()).toEqual(["primero", "TABLE", "ultimo"]);
 

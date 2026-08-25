@@ -1165,6 +1165,10 @@ const gl = {
     noColumns: "Esta táboa non ten columnas.",
     openRow: "Ver a fila completa",
     rowHistory: "Historial da fila",
+    embedHeight: "Alto aquí",
+    embedHeightAuto: "O que pida",
+    embedSummary: "Amosar só unha tarxeta resumo",
+    quickFilter: "Filtrar estas filas",
     formulaBroken: "A fórmula non se pode calcular. Revisa os nomes de columna entre corchetes.",
     relationNeedsTarget: "Escolle a táboa á que apunta, nos axustes da columna.",
     formula: "Fórmula",
@@ -1323,6 +1327,7 @@ const gl = {
     missing: "O referenciado xa non existe",
     openUrl: "Abrir a URL nunha lapela nova",
     folderKind: "Carpeta",
+    rowKind: "Fila dunha táboa",
     noDescription: "Sen descrición",
   },
   richText: {

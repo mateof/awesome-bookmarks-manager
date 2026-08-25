@@ -384,6 +384,17 @@ export const DB_BLOCK_ID_ATTR = "data-db-block";
  * table, not a switcher.
  */
 export const DB_BLOCK_VIEW_ATTR = "data-db-view";
+/**
+ * How tall this embed is allowed to be, in pixels, before it scrolls inside
+ * itself. Per embed rather than per table: the same table can be the point of
+ * one note and a footnote in another.
+ */
+export const DB_BLOCK_HEIGHT_ATTR = "data-db-height";
+/**
+ * `summary` renders the embed as a one-line card that opens on click, instead
+ * of the grid. For the notes where a table is a reference, not the work.
+ */
+export const DB_BLOCK_MODE_ATTR = "data-db-mode";
 
 /**
  * Run one aggregate over a column's values.

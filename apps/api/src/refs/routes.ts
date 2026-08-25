@@ -9,6 +9,7 @@ import { attachmentBySlug } from "../attachments/service.js";
 import { requireAuth } from "../auth/session.js";
 import { listBookmarks } from "../bookmarks/service.js";
 import { listFolders } from "../folders/service.js";
+import { getDatabase, searchRows } from "../databases/service.js";
 
 /**
  * Resolving and finding the things a description can point at.
@@ -77,6 +78,23 @@ export const refRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    // Rows of tables, found by the same search the palette uses. Only when
+    // something has been typed: the picker opens on a list of folders and
+    // bookmarks, and decrypting every table to fill it would be a lot of work
+    // for a list nobody has aimed at yet.
+    if (needle) {
+      for (const hit of searchRows(ctx, needle, 10)) {
+        out.push({
+          type: "row",
+          id: `${hit.databaseId}:${hit.rowId}`,
+          slug: null,
+          title: hit.label,
+          url: null,
+          hint: hit.databaseName,
+        });
+      }
+    }
+
     // Titles that start with what was typed first: when you type "cont" you
     // almost always mean the thing called "Contratos", not the one that merely
     // mentions it halfway through.
@@ -138,6 +156,38 @@ export const refRoutes: FastifyPluginAsync = async (app) => {
           description: plainPreview(b.description),
           found: true,
         };
+      }
+      if (r.type === "row") {
+        const [databaseId, rowId] = (r.id ?? "").split(":");
+        if (!databaseId || !rowId) return missing("row", r.id ?? null, null);
+        try {
+          const db = getDatabase(ctx, databaseId);
+          const row = db.rows.find((x) => x.id === rowId);
+          if (!row) return missing("row", r.id ?? null, null);
+          const titleColumn = db.columns.find((c) => c.kind === "text");
+          const label =
+            titleColumn && typeof row.cells[titleColumn.id] === "string"
+              ? (row.cells[titleColumn.id] as string)
+              : db.name;
+          // The preview is the row's other text cells, and never a password
+          // one: a tooltip is a rendered list like any other.
+          const preview = db.columns
+            .filter((c) => c.kind === "text" && c.id !== titleColumn?.id)
+            .map((c) => row.cells[c.id])
+            .filter((v): v is string => typeof v === "string" && !!v.trim())
+            .join(" · ");
+          return {
+            type: "row",
+            id: `${databaseId}:${rowId}`,
+            slug: null,
+            title: label || db.name,
+            url: null,
+            description: preview || db.name,
+            found: true,
+          };
+        } catch {
+          return missing("row", r.id ?? null, null);
+        }
       }
       // Assets are addressed by slug, so that a file replaced under the same
       // slug keeps every note that mentions it working.

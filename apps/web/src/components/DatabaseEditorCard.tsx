@@ -213,6 +213,38 @@ export function DatabaseEditorCard({
           ))}
         </select>
       </label>
+      {/* How much room it gets where the note is read, and whether it is a
+          grid at all. Both belong to the embed, not to the table: the same
+          table can be the point of one note and a footnote in another. */}
+      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs opacity-80">
+        <label className="flex items-center gap-1">
+          <span className="shrink-0">{t("db.embedHeight")}</span>
+          <select
+            value={String(node.attrs.height ?? "")}
+            aria-label={t("db.embedHeight")}
+            onChange={(e) =>
+              updateAttributes({ height: e.target.value || null })
+            }
+            className="rounded border border-slate-300 bg-white px-1 py-0.5 text-xs dark:border-slate-600 dark:bg-slate-800"
+          >
+            <option value="">{t("db.embedHeightAuto")}</option>
+            <option value="240">240 px</option>
+            <option value="400">400 px</option>
+            <option value="600">600 px</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={node.attrs.mode === "summary"}
+            onChange={(e) =>
+              updateAttributes({ mode: e.target.checked ? "summary" : null })
+            }
+            className="h-3.5 w-3.5 accent-slate-700"
+          />
+          {t("db.embedSummary")}
+        </label>
+      </div>
       <p className="mt-1 text-xs opacity-70">{t("db.editorHint")}</p>
     </NodeViewWrapper>
   );

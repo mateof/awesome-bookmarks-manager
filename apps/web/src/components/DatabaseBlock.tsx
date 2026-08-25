@@ -32,6 +32,8 @@ export function DatabaseBlock({
   blockId,
   pinnedViewId,
   openRowId = null,
+  maxHeight = null,
+  summary = false,
   readOnly = false,
 }: {
   databaseId: string;
@@ -49,6 +51,10 @@ export function DatabaseBlock({
   pinnedViewId?: string | null;
   /** Opened on arrival, from a link that names one row. */
   openRowId?: string | null;
+  /** Pixels this embed may take before scrolling inside itself. */
+  maxHeight?: number | null;
+  /** Render as a one-line card that opens on click, rather than as the grid. */
+  summary?: boolean;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
@@ -58,6 +64,9 @@ export function DatabaseBlock({
   const [renaming, setRenaming] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [draftName, setDraftName] = useState("");
+  // Opened from the summary card, and only for as long as the note is open.
+  const [expanded, setExpanded] = useState(false);
+  const [quickFilter, setQuickFilter] = useState("");
   const csvInput = useRef<HTMLInputElement>(null);
 
   const { data: db, isError } = useQuery({
@@ -265,12 +274,69 @@ export function DatabaseBlock({
   const visibleColumns = db.columns.filter(
     (c) => !config.hiddenColumnIds.includes(c.id),
   );
-  const rows: DbRow[] = applyView(db.rows, db.columns, config);
+  const viewed: DbRow[] = applyView(db.rows, db.columns, config);
+  /**
+   * Narrow the rows by typing, without saving anything.
+   *
+   * The view's filters are the durable answer and they travel with the table;
+   * this is the other half people actually want most of the time, which is
+   * "show me the three rows I am talking about, now". It never touches a
+   * password column, for the same reason the search does not.
+   */
+  const needle = quickFilter.trim().toLowerCase();
+  const rows: DbRow[] = needle
+    ? viewed.filter((r) =>
+        db.columns.some((c) => {
+          if (c.kind === "password") return false;
+          const v = r.cells[c.id];
+          if (v === null || v === undefined || typeof v === "object") return false;
+          if (c.kind === "select" || c.kind === "multiSelect") {
+            const ids = Array.isArray(v) ? v : [v];
+            return c.config.options.some(
+              (o) => ids.includes(o.id) && o.name.toLowerCase().includes(needle),
+            );
+          }
+          return String(v).toLowerCase().includes(needle);
+        }),
+      )
+    : viewed;
   const shown = { ...db, columns: visibleColumns };
+
+  /**
+   * A table as a footnote.
+   *
+   * Some notes mention a table without being about it. A grid there costs a
+   * screenful and a fetch of every row to say "there is a table called X";
+   * this says the same in one line and opens on demand. It counts rows, which
+   * is the one thing worth knowing before deciding to open it.
+   */
+  if (summary && !expanded) {
+    const done = (() => {
+      const status = db.columns.find((c) => c.kind === "checkbox");
+      if (!status) return null;
+      return db.rows.filter((r) => r.cells[status.id] === true).length;
+    })();
+    return (
+      <button
+        type="button"
+        data-testid="db-summary"
+        onClick={() => setExpanded(true)}
+        className="my-3 flex w-full items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+      >
+        <Table2 className="h-4 w-4 shrink-0 text-slate-400" />
+        <span className="min-w-0 flex-1 truncate font-medium">{db.name}</span>
+        <span className="shrink-0 text-xs text-slate-400">
+          {t("db.rowCount", { count: db.rows.length })}
+          {done !== null ? ` · ${done}/${db.rows.length}` : ""}
+        </span>
+      </button>
+    );
+  }
 
   return (
     <div
       data-testid="db-block"
+      style={maxHeight ? { maxHeight, overflowY: "auto" } : undefined}
       className="my-3 rounded-lg border border-slate-200 dark:border-slate-700"
     >
       <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-1.5 dark:border-slate-700">
@@ -309,6 +375,13 @@ export function DatabaseBlock({
         <span className="shrink-0 text-xs text-slate-400">
           {t("db.rowCount", { count: db.rows.length })}
         </span>
+        <input
+          value={quickFilter}
+          onChange={(e) => setQuickFilter(e.target.value)}
+          placeholder={t("db.quickFilter")}
+          aria-label={t("db.quickFilter")}
+          className="h-6 w-28 shrink-0 rounded border border-slate-300 bg-transparent px-1.5 text-xs outline-none focus:w-40 focus:ring-1 focus:ring-sky-500 dark:border-slate-600"
+        />
         {/* Out to a spreadsheet, and back from one. */}
         <button
           type="button"

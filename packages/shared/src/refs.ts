@@ -21,7 +21,20 @@ export const REF_TYPE_ATTR = "data-ref";
 export const REF_ID_ATTR = "data-ref-id";
 export const REF_SLUG_ATTR = "data-ref-slug";
 
-export const RefTypeSchema = z.enum(["folder", "bookmark", "asset"]);
+export const RefTypeSchema = z.enum([
+  "folder",
+  "bookmark",
+  "asset",
+  /**
+   * One row of one of your tables.
+   *
+   * Addressed by `databaseId:rowId` in the single id attribute a chip has.
+   * Two ids in one string is not elegant, but the alternative is a second
+   * attribute that every sanitiser, renderer and copy path in the app would
+   * have to learn about, for one kind of reference.
+   */
+  "row",
+]);
 export type RefType = z.infer<typeof RefTypeSchema>;
 
 /** What a reference chip needs in order to render itself and its tooltip. */

@@ -1162,6 +1162,10 @@ const en = {
     noColumns: "This table has no columns.",
     openRow: "Open the whole row",
     rowHistory: "Row history",
+    embedHeight: "Height here",
+    embedHeightAuto: "As tall as it needs",
+    embedSummary: "Show only a summary card",
+    quickFilter: "Filter these rows",
     formulaBroken: "This formula cannot be worked out. Check the column names in brackets.",
     relationNeedsTarget: "Pick the table it points at, in the column settings.",
     formula: "Formula",
@@ -1320,6 +1324,7 @@ const en = {
     missing: "What this points at no longer exists",
     openUrl: "Open the URL in a new tab",
     folderKind: "Folder",
+    rowKind: "Row of a table",
     noDescription: "No description",
   },
   richText: {

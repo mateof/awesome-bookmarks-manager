@@ -5,6 +5,8 @@ import {
   DB_BLOCK_ATTR,
   DB_BLOCK_ID_ATTR,
   DB_BLOCK_NAME_ATTR,
+  DB_BLOCK_HEIGHT_ATTR,
+  DB_BLOCK_MODE_ATTR,
   DB_BLOCK_VIEW_ATTR,
 } from "@awesome-bookmarks/shared";
 
@@ -78,6 +80,18 @@ export const DatabaseBlock = Node.create({
           attrs.blockId ? { [DB_BLOCK_ID_ATTR]: attrs.blockId as string } : {},
       },
       /** Pinned view. Null shows the whole database with its strip of tabs. */
+      height: {
+        default: null,
+        parseHTML: (el) => el.getAttribute(DB_BLOCK_HEIGHT_ATTR),
+        renderHTML: (attrs) =>
+          attrs.height ? { [DB_BLOCK_HEIGHT_ATTR]: attrs.height as string } : {},
+      },
+      mode: {
+        default: null,
+        parseHTML: (el) => el.getAttribute(DB_BLOCK_MODE_ATTR),
+        renderHTML: (attrs) =>
+          attrs.mode ? { [DB_BLOCK_MODE_ATTR]: attrs.mode as string } : {},
+      },
       viewId: {
         default: null,
         parseHTML: (el) => el.getAttribute(DB_BLOCK_VIEW_ATTR),

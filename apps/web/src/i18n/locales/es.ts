@@ -1163,6 +1163,10 @@ const es = {
     noColumns: "Esta tabla no tiene columnas.",
     openRow: "Ver la fila completa",
     rowHistory: "Historial de la fila",
+    embedHeight: "Alto aquí",
+    embedHeightAuto: "El que pida",
+    embedSummary: "Mostrar solo una tarjeta resumen",
+    quickFilter: "Filtrar estas filas",
     formulaBroken: "La fórmula no se puede calcular. Revisa los nombres de columna entre corchetes.",
     relationNeedsTarget: "Elige la tabla a la que apunta, en los ajustes de la columna.",
     formula: "Fórmula",
@@ -1321,6 +1325,7 @@ const es = {
     missing: "Lo referenciado ya no existe",
     openUrl: "Abrir la URL en una pestaña nueva",
     folderKind: "Carpeta",
+    rowKind: "Fila de una tabla",
     noDescription: "Sin descripción",
   },
   richText: {

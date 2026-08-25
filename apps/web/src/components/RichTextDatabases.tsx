@@ -2,6 +2,8 @@ import {
   DB_BLOCK_ATTR,
   DB_BLOCK_ID_ATTR,
   DB_BLOCK_NAME_ATTR,
+  DB_BLOCK_HEIGHT_ATTR,
+  DB_BLOCK_MODE_ATTR,
   DB_BLOCK_VIEW_ATTR,
 } from "@awesome-bookmarks/shared";
 import { useEffect, useState } from "react";
@@ -30,6 +32,8 @@ export function useDatabaseBlocks(
       name: string;
       blockId: string | null;
       viewId: string | null;
+      height: number | null;
+      mode: string | null;
     }[]
   >([]);
 
@@ -54,6 +58,8 @@ export function useDatabaseBlocks(
         name,
         blockId: el.getAttribute(DB_BLOCK_ID_ATTR),
         viewId: el.getAttribute(DB_BLOCK_VIEW_ATTR),
+        height: Number(el.getAttribute(DB_BLOCK_HEIGHT_ATTR)) || null,
+        mode: el.getAttribute(DB_BLOCK_MODE_ATTR),
       });
     }
     setHosts(found);
@@ -63,13 +69,15 @@ export function useDatabaseBlocks(
 
   return (
     <>
-      {hosts.map(({ el, id, name, blockId, viewId }) =>
+      {hosts.map(({ el, id, name, blockId, viewId, height, mode }) =>
         createPortal(
           <DatabaseBlock
             databaseId={id}
             fallbackName={name}
             blockId={blockId}
             pinnedViewId={viewId}
+            maxHeight={height}
+            summary={mode === "summary"}
             readOnly={readOnly}
           />,
           el,

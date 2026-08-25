@@ -125,7 +125,14 @@ one port.
   can appear in several notes and stay one table. Each embed has its own id, so
   it can be pinned to a single view (rendered without the tab strip) and can own
   views that exist only in that note, which is what lets one place show a board
-  grouped by status while another shows a filtered table.
+  grouped by status while another shows a filtered table. Per embed it also
+  carries **how tall it may be** and whether it renders as a grid at all or as
+  a one-line **summary card** that opens on click, because the same table can
+  be the point of one note and a footnote in another. A **quick filter** in the
+  embed narrows the rows as you type without saving anything. And `@` reaches
+  **rows**, not only folders and bookmarks, so the row where something was
+  written down is linkable from the note where it was decided; the chip stores
+  ids, so renaming the row changes what the note shows.
 - **Mobile editor bar** — on a narrow screen the toolbar detaches and pins
   itself directly above the on-screen keyboard, tracking its height through
   `visualViewport`, with a `+` that opens the rest of the actions as a grid.

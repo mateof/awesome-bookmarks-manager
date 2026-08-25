@@ -37,7 +37,14 @@ function readChips(root: HTMLElement): ChipRef[] {
   const out: ChipRef[] = [];
   for (const el of root.querySelectorAll<HTMLElement>(`a[${REF_TYPE_ATTR}]`)) {
     const type = el.getAttribute(REF_TYPE_ATTR) as RefType | null;
-    if (type !== "folder" && type !== "bookmark" && type !== "asset") continue;
+    if (
+      type !== "folder" &&
+      type !== "bookmark" &&
+      type !== "asset" &&
+      type !== "row"
+    ) {
+      continue;
+    }
     const id = el.getAttribute(REF_ID_ATTR);
     const slug = el.getAttribute(REF_SLUG_ATTR);
     const key = `${type}:${id ?? ""}:${slug ?? ""}`;
@@ -166,6 +173,11 @@ export function useRefChips(
         else navigate(`/bookmark/${r.id}`);
       } else if (r.type === "folder") {
         navigate(`/folder/${r.id}`);
+      } else if (r.type === "row") {
+        // The id carries both halves: which table, and which row in it. The
+        // table page opens that row's dialog on arrival.
+        const [databaseId, rowId] = (r.id ?? "").split(":");
+        if (databaseId && rowId) navigate(`/databases/${databaseId}?fila=${rowId}`);
       } else if (r.id) {
         window.open(api.attachmentUrl(r.id), "_blank", "noopener");
       }
@@ -240,7 +252,9 @@ function RefTooltip({ state }: { state: HoverState }) {
           {ref.url ??
             (ref.type === "asset"
               ? `#${ref.slug}`
-              : t("refs.folderKind"))}
+              : ref.type === "row"
+                ? t("refs.rowKind")
+                : t("refs.folderKind"))}
         </div>
       </div>
       <div className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
