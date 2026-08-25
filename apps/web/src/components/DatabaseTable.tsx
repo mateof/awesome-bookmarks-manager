@@ -32,6 +32,7 @@ export function DatabaseTable({
   onColumnWidth,
   onColumnChanged,
   titleColumnId = null,
+  openRowId = null,
   readOnly = false,
 }: {
   db: DatabaseDetail;
@@ -47,6 +48,8 @@ export function DatabaseTable({
   onColumnChanged: () => void;
   /** Which column names a row, for the title of its detail dialog. */
   titleColumnId?: string | null;
+  /** A row to open on arrival, from `?fila=` in the URL. */
+  openRowId?: string | null;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
@@ -57,6 +60,22 @@ export function DatabaseTable({
   const dragCol = useRef<string | null>(null);
   const [colTarget, setColTarget] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<DbRow | null>(null);
+
+  /**
+   * Arriving with a row named in the URL opens it.
+   *
+   * Honoured once per id, tracked in a ref rather than by clearing the URL:
+   * the rows reload on every edit, and without the guard closing the dialog
+   * would be undone by the next refresh, which is a dialog you cannot shut.
+   */
+  const honoured = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openRowId || honoured.current === openRowId) return;
+    const found = rows.find((r) => r.id === openRowId);
+    if (!found) return;
+    honoured.current = openRowId;
+    setOpenRow(found);
+  }, [openRowId, rows]);
 
   /**
    * Column widths while the mouse is down.
@@ -348,6 +367,8 @@ export function DatabaseTable({
 
       {openRow && (
         <DatabaseRowModal
+          databaseId={db.id}
+          onRestored={onColumnChanged}
           columns={db.columns}
           // Live rather than the row captured when the button was pressed: an
           // edit inside the dialog has to show its own result.

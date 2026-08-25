@@ -29,6 +29,7 @@ export function DatabaseBlock({
   fallbackName,
   blockId,
   pinnedViewId,
+  openRowId = null,
   readOnly = false,
 }: {
   databaseId: string;
@@ -44,6 +45,8 @@ export function DatabaseBlock({
    * usually meant to be one table rather than a switcher.
    */
   pinnedViewId?: string | null;
+  /** Opened on arrival, from a link that names one row. */
+  openRowId?: string | null;
   readOnly?: boolean;
 }) {
   const { t } = useTranslation();
@@ -324,6 +327,7 @@ export function DatabaseBlock({
           columnWidth.mutate({ columnId, width })
         }
         titleColumnId={config?.titleColumnId ?? null}
+        openRowId={openRowId}
         onColumnChanged={refresh}
       />
     );

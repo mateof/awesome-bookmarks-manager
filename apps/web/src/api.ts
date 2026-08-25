@@ -11,6 +11,8 @@ import type {
   DatabaseDetail,
   DatabaseSummary,
   DbColumn,
+  RowSearchHit,
+  RowVersion,
   DbRow,
   DbView,
   RefCandidate,
@@ -765,6 +767,15 @@ export const api = {
     }),
   deleteDbRow: (id: string, rowId: string) =>
     request<void>(`/databases/${id}/rows/${rowId}`, { method: "DELETE" }),
+  listRowVersions: (id: string, rowId: string) =>
+    request<RowVersion[]>(`/databases/${id}/rows/${rowId}/versions`),
+  restoreRowVersion: (id: string, rowId: string, versionId: string) =>
+    request<DbRow>(
+      `/databases/${id}/rows/${rowId}/versions/${versionId}/restore`,
+      { method: "POST" },
+    ),
+  searchRows: (q: string) =>
+    request<RowSearchHit[]>(`/search/rows?q=${encodeURIComponent(q)}`),
   reorderDbRows: (id: string, order: string[]) =>
     request<{ ok: true }>(`/databases/${id}/rows/reorder`, {
       method: "POST",

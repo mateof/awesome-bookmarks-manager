@@ -11,6 +11,7 @@ import {
   Search,
   Settings,
   Share2,
+  Table2,
   Tag,
   Trash2,
   Users,
@@ -30,6 +31,14 @@ type Result = { near: boolean; iconUrl: string | null; snippet?: string } & (
   | { kind: "folder"; id: string; title: string; sub: string }
   | { kind: "bookmark"; id: string; title: string; url: string; sub: string }
   | { kind: "action"; id: string; title: string; sub: string; run: () => void }
+  | {
+      kind: "row";
+      id: string;
+      title: string;
+      sub: string;
+      databaseId: string;
+      rowId: string;
+    }
 );
 
 interface ActionDef {
@@ -128,6 +137,20 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
   const content = useQuery({
     queryKey: ["search-content", deferred],
     queryFn: () => api.search(deferred),
+    enabled: deferred.length >= 2,
+    staleTime: 30_000,
+  });
+
+  /**
+   * Text inside tables, asked for separately.
+   *
+   * Its own endpoint and its own query on purpose: a row is not a bookmark,
+   * and the rows of a table are the one place in the app where something you
+   * wrote could not be found from here at all.
+   */
+  const rowHits = useQuery({
+    queryKey: ["search-rows", deferred],
+    queryFn: () => api.searchRows(deferred),
     enabled: deferred.length >= 2,
     staleTime: 30_000,
   });
@@ -372,6 +395,25 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
       });
     }
 
+    // Ranked below title matches and beside the description/snapshot hits:
+    // a table row is usually what you meant when nothing else matched, not
+    // instead of the bookmark you were looking for.
+    for (const hit of rowHits.data ?? []) {
+      scored.push({
+        kind: "row",
+        id: `${hit.databaseId}:${hit.rowId}`,
+        title: hit.label,
+        sub: `${t("db.inTable", { name: hit.databaseName })} · ${hit.columnName}`,
+        databaseId: hit.databaseId,
+        rowId: hit.rowId,
+        near: false,
+        iconUrl: null,
+        snippet: hit.snippet,
+        _s: 950,
+        _near: 1,
+      });
+    }
+
     scored.sort(
       (a, b) =>
         a._near - b._near || a._s - b._s || (a.kind === "folder" ? -1 : 1),
@@ -384,6 +426,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
     t,
     activeFolderId,
     content.data,
+    rowHits.data,
     snippets,
   ]);
 
@@ -398,6 +441,8 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
   const activate = (r: Result) => {
     if (r.kind === "action") r.run();
     else if (r.kind === "folder") nav(`/folder/${r.id}`);
+    else if (r.kind === "row")
+      nav(`/databases/${r.databaseId}?fila=${r.rowId}`);
     else window.open(r.url, "_blank", "noopener,noreferrer");
     onClose();
   };
@@ -512,6 +557,10 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
                       />
                     ) : r.kind === "folder" ? (
                       <FolderClosed className="h-4 w-4 shrink-0 text-slate-400" />
+                    ) : r.kind === "row" ? (
+                      /* A row is not a bookmark and must not look like one: a
+                         letter tile here would read as a saved link. */
+                      <Table2 className="h-4 w-4 shrink-0 text-slate-400" />
                     ) : (
                       <LetterIcon
                         label={r.title || (r.kind === "bookmark" ? r.url : "")}

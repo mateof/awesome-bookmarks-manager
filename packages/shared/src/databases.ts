@@ -96,6 +96,30 @@ export const DbRowSchema = z.object({
 });
 export type DbRow = z.infer<typeof DbRowSchema>;
 
+/** One past state of a row, as the history dialog lists it. */
+export const RowVersionSchema = z.object({
+  id: z.string(),
+  actorId: z.string(),
+  createdAt: z.string(),
+  cells: z.record(z.string(), CellValueSchema),
+  /** What the row was called at that point, for a list you can read. */
+  label: z.string().nullable(),
+});
+export type RowVersion = z.infer<typeof RowVersionSchema>;
+
+/** A match inside a table, for the command palette. */
+export const RowSearchHitSchema = z.object({
+  databaseId: z.string(),
+  databaseName: z.string(),
+  rowId: z.string(),
+  label: z.string(),
+  columnName: z.string(),
+  snippet: z.string(),
+  /** True when the scan hit its budget and stopped short of every row. */
+  truncated: z.boolean(),
+});
+export type RowSearchHit = z.infer<typeof RowSearchHitSchema>;
+
 export const ViewKindSchema = z.enum(["table", "board", "gallery"]);
 export type ViewKind = z.infer<typeof ViewKindSchema>;
 

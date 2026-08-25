@@ -378,6 +378,18 @@ export function ensureSchema() {
     CREATE INDEX IF NOT EXISTS database_rows_db_idx
       ON database_rows(database_id, position);
 
+    CREATE TABLE IF NOT EXISTS database_row_versions (
+      id TEXT PRIMARY KEY,
+      database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,
+      row_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      actor_id TEXT NOT NULL,
+      cells_ct BLOB NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+    CREATE INDEX IF NOT EXISTS database_row_versions_row_idx
+      ON database_row_versions(row_id, created_at);
+
     CREATE TABLE IF NOT EXISTS database_views (
       id TEXT PRIMARY KEY,
       database_id TEXT NOT NULL REFERENCES databases(id) ON DELETE CASCADE,

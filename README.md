@@ -96,7 +96,12 @@ one port.
   and group shares, whose readers have no session to query with. A database is
   shared **in its own right**: the same table can be embedded in several notes
   that are not shared with the same people, so it carries its own
-  `key_group_id` rather than inheriting whichever note mentions it.
+  `key_group_id` rather than inheriting whichever note mentions it. The command
+  palette searches **inside** tables and takes you to the matching row, and
+  every row keeps a **history** of its last twenty states with one-click
+  restore, including one for a row that was deleted. Both leave password
+  columns alone: a covered value has no business in a search snippet or a
+  history list.
 - **Embed a table that already exists**, not only a new one: the same database
   can appear in several notes and stay one table. Each embed has its own id, so
   it can be pinned to a single view (rendered without the tab strip) and can own

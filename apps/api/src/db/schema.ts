@@ -793,6 +793,36 @@ export const databaseRows = sqliteTable(
   }),
 );
 
+/**
+ * What a row said before the last edit.
+ *
+ * Sealed with the **row's** key rather than the editor's own, which is the
+ * whole design decision here. A shared table is written by several people; a
+ * history sealed with whoever happened to type would be readable only by them,
+ * so the owner would watch their table change and be unable to read a single
+ * entry of its past. The rows themselves already work this way.
+ */
+export const databaseRowVersions = sqliteTable(
+  "database_row_versions",
+  {
+    id: text("id").primaryKey(),
+    databaseId: text("database_id")
+      .notNull()
+      .references(() => databases.id, { onDelete: "cascade" }),
+    rowId: text("row_id").notNull(),
+    /** The key's owner, mirroring `database_rows`. */
+    userId: text("user_id").notNull(),
+    /** Who made the change that produced this entry. */
+    actorId: text("actor_id").notNull(),
+    /** Sealed JSON of the cells as they were. */
+    cellsCt: blob("cells_ct", { mode: "buffer" }).notNull(),
+    createdAt: text("created_at").notNull().$defaultFn(utcNow),
+  },
+  (t) => ({
+    rowIdx: index("database_row_versions_row_idx").on(t.rowId, t.createdAt),
+  }),
+);
+
 export const databaseViews = sqliteTable(
   "database_views",
   {

@@ -24,9 +24,11 @@ import {
   deleteView,
   getDatabase,
   listDatabases,
+  listRowVersions,
   renameDatabase,
   reorderColumns,
   reorderRows,
+  restoreRowVersion,
   updateColumn,
   updateRow,
   updateView,
@@ -150,6 +152,23 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
     deleteRow(ctx, id, childId);
     reply.code(204);
   });
+
+  app.get("/databases/:id/rows/:childId/versions", async (req) => {
+    const ctx = requireAuth(req);
+    const { id, childId } = ChildParam.parse(req.params);
+    return listRowVersions(ctx, id, childId);
+  });
+
+  app.post(
+    "/databases/:id/rows/:childId/versions/:versionId/restore",
+    async (req) => {
+      const ctx = requireAuth(req);
+      const { id, childId, versionId } = ChildParam.extend({
+        versionId: z.string().uuid(),
+      }).parse(req.params);
+      return restoreRowVersion(ctx, id, childId, versionId);
+    },
+  );
 
   app.post("/databases/:id/rows/reorder", async (req) => {
     const ctx = requireAuth(req);

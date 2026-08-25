@@ -13,12 +13,14 @@ import {
   type DbColumn,
   type DbRow,
   type DbView,
+  type RowSearchHit,
+  type RowVersion,
   type UpdateColumnBody,
   type UpdateRowBody,
   type UpdateViewBody,
   type ViewConfig,
 } from "@awesome-bookmarks/shared";
-import { and, asc, eq, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import {
   assertCanWrite,
@@ -31,6 +33,7 @@ import type { AuthedContext } from "../auth/session.js";
 import { getDb } from "../db/client.js";
 import {
   databaseColumns,
+  databaseRowVersions,
   databaseRows,
   databaseViews,
   databases,
@@ -511,6 +514,12 @@ export function updateRow(
     for (const [k, v] of Object.entries(body.cells)) {
       if (v === null || v === "") delete merged[k];
     }
+    // Snapshot what it said before, and only when something actually changes.
+    // A cell commits on blur, so tabbing through a row without touching
+    // anything would otherwise fill the history with identical entries.
+    if (JSON.stringify(merged) !== JSON.stringify(current.cells)) {
+      recordRowVersion(ctx, databaseId, rowId, keyed, current.cells);
+    }
     patch.cellsCt = sealRowField(ctx, keyed, "db.cells", JSON.stringify(merged),
     );
   }
@@ -527,8 +536,281 @@ export function deleteRow(
   rowId: string,
 ): void {
   const keyed = writeKey(ctx, databaseId);
+  // Recorded before it goes, so a row deleted by mistake is not gone for good.
+  // Restoring one puts it back under its own id, which is what keeps any
+  // relation pointing at it working.
+  const current = readRows(ctx, databaseId).find((r) => r.id === rowId);
+  if (current) recordRowVersion(ctx, databaseId, rowId, keyed, current.cells);
   getDb().delete(databaseRows).where(eq(databaseRows.id, rowId)).run();
   touch(databaseId);
+}
+
+// --- search ----------------------------------------------------------------
+
+/**
+ * How many rows one search will decrypt before it stops looking.
+ *
+ * Cells are encrypted at rest, so the server cannot ask SQLite to find
+ * anything: it has to open them. That is the same bargain the bookmark search
+ * already makes, and it is affordable at the sizes this tool is for. The
+ * budget is here so a library that has grown past them degrades into a slower,
+ * partial answer instead of a request that never returns, and the result says
+ * when it was hit rather than pretending it saw everything.
+ */
+const SEARCH_ROW_BUDGET = 20_000;
+
+/**
+ * Find text inside tables.
+ *
+ * Password columns are not searched, and not because a match would be useless:
+ * the snippet would print the secret into a results list, which is the one
+ * place a covered value must never end up. Same rule as the flattened copy and
+ * the history.
+ */
+export function searchRows(
+  ctx: AuthedContext,
+  query: string,
+  limit = 30,
+): RowSearchHit[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+
+  const hits: RowSearchHit[] = [];
+  let scanned = 0;
+  let truncated = false;
+
+  for (const summary of listDatabases(ctx)) {
+    if (hits.length >= limit || truncated) break;
+    let db;
+    try {
+      db = getDatabase(ctx, summary.id);
+    } catch {
+      continue;
+    }
+    const searchable = db.columns.filter((c) => c.kind !== "password");
+    for (const row of db.rows) {
+      if (++scanned > SEARCH_ROW_BUDGET) {
+        truncated = true;
+        break;
+      }
+      if (hits.length >= limit) break;
+      for (const col of searchable) {
+        const text = cellText(col, row.cells[col.id]);
+        if (!text || !text.toLowerCase().includes(q)) continue;
+        hits.push({
+          databaseId: db.id,
+          databaseName: db.name,
+          rowId: row.id,
+          label: labelOf(db.columns, row.cells) ?? db.name,
+          columnName: col.name,
+          snippet: snippetAround(text, q),
+          truncated,
+        });
+        break;
+      }
+    }
+  }
+  if (truncated) for (const h of hits) h.truncated = true;
+  return hits;
+}
+
+/** A cell as words, resolving what a select or a checkbox actually says. */
+function cellText(column: DbColumn, value: CellValue | undefined): string {
+  if (value === null || value === undefined) return "";
+  switch (column.kind) {
+    case "select":
+      return column.config.options.find((o) => o.id === value)?.name ?? "";
+    case "multiSelect":
+      return (Array.isArray(value) ? value : [])
+        .map((id) => column.config.options.find((o) => o.id === id)?.name ?? "")
+        .join(" ");
+    case "checkbox":
+      return value ? "1" : "";
+    case "ref":
+      return "";
+    default:
+      return typeof value === "object" ? "" : String(value);
+  }
+}
+
+/** Enough of the value around the match to recognise it, not the whole cell. */
+function snippetAround(text: string, needle: string): string {
+  const at = text.toLowerCase().indexOf(needle);
+  if (at < 0) return text.slice(0, 80);
+  const from = Math.max(0, at - 24);
+  const to = Math.min(text.length, at + needle.length + 40);
+  return `${from > 0 ? "…" : ""}${text.slice(from, to)}${to < text.length ? "…" : ""}`;
+}
+
+// --- row history -----------------------------------------------------------
+
+/** How many past states one row keeps. Beyond this the oldest are dropped. */
+const MAX_ROW_VERSIONS = 20;
+
+type KeyedRow = { userId: string; keyGroupId: string | null; keyScopeId?: string | null };
+
+function recordRowVersion(
+  ctx: AuthedContext,
+  databaseId: string,
+  rowId: string,
+  keyed: KeyedRow,
+  cells: Record<string, CellValue>,
+): void {
+  getDb()
+    .insert(databaseRowVersions)
+    .values({
+      id: randomUUID(),
+      databaseId,
+      rowId,
+      userId: keyed.userId,
+      actorId: ctx.userId,
+      cellsCt: sealRowField(ctx, keyed, "db.rowVersion", JSON.stringify(cells)),
+    })
+    .run();
+
+  // Trimmed here rather than by a sweep: the cost is one delete on the write
+  // that caused the growth, and a table nobody edits never needs visiting.
+  const old = getDb()
+    .select({ id: databaseRowVersions.id })
+    .from(databaseRowVersions)
+    .where(eq(databaseRowVersions.rowId, rowId))
+    .orderBy(desc(databaseRowVersions.createdAt), desc(databaseRowVersions.id))
+    .all()
+    .slice(MAX_ROW_VERSIONS);
+  for (const o of old) {
+    getDb().delete(databaseRowVersions).where(eq(databaseRowVersions.id, o.id)).run();
+  }
+}
+
+export function listRowVersions(
+  ctx: AuthedContext,
+  databaseId: string,
+  rowId: string,
+): RowVersion[] {
+  const keyed = keyOf(ctx, databaseId);
+  const columns = readColumns(ctx, databaseId);
+  return getDb()
+    .select()
+    .from(databaseRowVersions)
+    .where(
+      and(
+        eq(databaseRowVersions.databaseId, databaseId),
+        eq(databaseRowVersions.rowId, rowId),
+      ),
+    )
+    .orderBy(desc(databaseRowVersions.createdAt), desc(databaseRowVersions.id))
+    .all()
+    .map((v) => {
+      const cells = JSON.parse(
+        openRowField(ctx, keyed, "db.rowVersion", v.cellsCt),
+      ) as Record<string, CellValue>;
+      return {
+        id: v.id,
+        actorId: v.actorId,
+        createdAt: v.createdAt,
+        cells: maskSecrets(columns, cells),
+        // What the row was called then, so the list reads as a history of a
+        // thing rather than a column of timestamps.
+        label: labelOf(columns, cells),
+      };
+    });
+}
+
+/**
+ * Put a past state back.
+ *
+ * Restoring is itself an edit, so the state being replaced is recorded first:
+ * going back must be undoable too, or the history becomes a trap where one
+ * click loses the present.
+ */
+export function restoreRowVersion(
+  ctx: AuthedContext,
+  databaseId: string,
+  rowId: string,
+  versionId: string,
+): DbRow {
+  const keyed = writeKey(ctx, databaseId);
+  const version = getDb()
+    .select()
+    .from(databaseRowVersions)
+    .where(
+      and(
+        eq(databaseRowVersions.id, versionId),
+        eq(databaseRowVersions.databaseId, databaseId),
+        eq(databaseRowVersions.rowId, rowId),
+      ),
+    )
+    .get();
+  if (!version) throw NotFound("Version not found");
+
+  const cells = JSON.parse(
+    openRowField(ctx, keyed, "db.rowVersion", version.cellsCt),
+  ) as Record<string, CellValue>;
+
+  const current = readRows(ctx, databaseId).find((r) => r.id === rowId);
+  if (current) {
+    recordRowVersion(ctx, databaseId, rowId, keyed, current.cells);
+    getDb()
+      .update(databaseRows)
+      .set({
+        cellsCt: sealRowField(ctx, keyed, "db.cells", JSON.stringify(cells)),
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(databaseRows.id, rowId))
+      .run();
+  } else {
+    // The row was deleted. It comes back under the same id, at the end.
+    const rows = readRows(ctx, databaseId);
+    getDb()
+      .insert(databaseRows)
+      .values({
+        id: rowId,
+        databaseId,
+        userId: keyed.userId,
+        cellsCt: sealRowField(ctx, keyed, "db.cells", JSON.stringify(cells)),
+        position: rows.length,
+      })
+      .run();
+  }
+  touch(databaseId);
+  return readRows(ctx, databaseId).find((r) => r.id === rowId)!;
+}
+
+/**
+ * A password's past is still a password.
+ *
+ * The history is read into a dialog like any other list, so the values in it
+ * have to be treated exactly like the cell they came from. Replaced by a
+ * marker rather than dropped, so the entry still shows that the value changed
+ * at that point, which is most of what you want history for.
+ */
+function maskSecrets(
+  columns: DbColumn[],
+  cells: Record<string, CellValue>,
+): Record<string, CellValue> {
+  const out: Record<string, CellValue> = { ...cells };
+  for (const c of columns) {
+    if (c.kind !== "password") continue;
+    if (out[c.id] !== undefined && out[c.id] !== null && out[c.id] !== "") {
+      out[c.id] = "••••••••";
+    }
+  }
+  return out;
+}
+
+/** The row's own name: its first text cell, cut short. */
+function labelOf(
+  columns: DbColumn[],
+  cells: Record<string, CellValue>,
+): string | null {
+  for (const c of columns) {
+    if (c.kind !== "text") continue;
+    const v = cells[c.id];
+    if (typeof v === "string" && v.trim()) {
+      return v.length > 60 ? `${v.slice(0, 60)}…` : v;
+    }
+  }
+  return null;
 }
 
 /** Renumber after a drag, in the order given. */

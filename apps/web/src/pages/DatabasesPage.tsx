@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Database, Plus, Share2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { DatabaseBlock } from "../components/DatabaseBlock.js";
 import { dlg } from "../components/dialogs.js";
@@ -21,6 +21,9 @@ export function DatabasesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { id } = useParams<{ id?: string }>();
+  // A link straight to one row, which is what a search hit hands you.
+  const [params] = useSearchParams();
+  const openRowId = params.get("fila");
   const [busy, setBusy] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
 
@@ -56,7 +59,7 @@ export function DatabasesPage() {
         >
           ← {t("db.allDatabases")}
         </button>
-        <DatabaseBlock databaseId={id} />
+        <DatabaseBlock databaseId={id} openRowId={openRowId} />
       </div>
     );
   }
