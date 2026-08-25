@@ -121,6 +121,11 @@ export function DatabaseBlock({
     onSuccess: refresh,
   });
 
+  const reorderColumns = useMutation({
+    mutationFn: (order: string[]) => api.reorderDbColumns(databaseId, order),
+    onSuccess: refresh,
+  });
+
   const rename = useMutation({
     mutationFn: (name: string) => api.renameDatabase(databaseId, name),
     onSuccess: () => {
@@ -306,6 +311,7 @@ export function DatabaseBlock({
         onAddRow={() => addRow.mutate({})}
         onDeleteRow={(id) => removeRow.mutate(id)}
         onReorder={(order) => reorder.mutate(order)}
+        onReorderColumns={(order) => reorderColumns.mutate(order)}
         onColumnChanged={refresh}
       />
     );

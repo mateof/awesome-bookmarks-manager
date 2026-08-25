@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pickColor } from "./colors.js";
 
 /**
  * Inline databases: a small table with typed columns that lives inside a note.
@@ -35,6 +36,16 @@ export const ColumnKindSchema = z.enum([
   "url",
   /** Points at one of your own bookmarks or folders; renders as a chip. */
   "ref",
+  /**
+   * Covered up on screen, revealed and copied on demand.
+   *
+   * The masking is about the room you are in, not about the server: the cell
+   * is sealed exactly like every other one, no better, and anyone who can read
+   * the table can reveal it. Same promise as the hidden-until-clicked mark in
+   * a note. What it does add is that a flattened copy — a public panel, a
+   * group's copy of a note — prints dots and never the value.
+   */
+  "password",
 ]);
 export type ColumnKind = z.infer<typeof ColumnKindSchema>;
 
@@ -272,6 +283,10 @@ export const OPS_BY_KIND: Record<ColumnKind, FilterOp[]> = {
   select: ["equals", "notEquals", "isEmpty", "isNotEmpty"],
   multiSelect: ["hasAny", "isEmpty", "isNotEmpty"],
   ref: ["isEmpty", "isNotEmpty"],
+  // Whether there is one, never what it is. "Contains" over a password column
+  // would be a filter whose own value is a fragment of the secret, typed into
+  // a view that gets saved.
+  password: ["isEmpty", "isNotEmpty"],
 };
 
 /** A blank value of the right shape for a kind, used when adding a row. */
@@ -291,7 +306,7 @@ export function emptyValue(kind: ColumnKind): CellValue {
   }
 }
 
-/** Palette for select options, so two options never look identical. */
+/** Palette for select options, and what the picker in the column menu offers. */
 export const OPTION_COLORS = [
   "#ef4444",
   "#f97316",
@@ -303,6 +318,15 @@ export const OPTION_COLORS = [
   "#ec4899",
   "#64748b",
 ];
+
+/**
+ * The colour a new option gets, drawn from the ones the column is not using
+ * yet. Same rule as tags, and for the same reason: an option that is always
+ * red because it happens to be the first one tells you nothing.
+ */
+export function pickOptionColor(existing: SelectOption[]): string {
+  return pickColor(OPTION_COLORS, existing);
+}
 
 // --- what a view actually shows --------------------------------------------
 

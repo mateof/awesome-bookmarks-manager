@@ -386,6 +386,36 @@ export function updateColumn(
   return readColumns(ctx, databaseId).find((c) => c.id === columnId)!;
 }
 
+/**
+ * Renumber the columns, in the order given.
+ *
+ * Only the order changes. Cells are keyed by column id, not by position, so
+ * moving a column touches no row at all — which is the whole reason this is a
+ * renumbering and not a migration.
+ */
+export function reorderColumns(
+  ctx: AuthedContext,
+  databaseId: string,
+  order: string[],
+): void {
+  // Called for the permission check and to fail the same way every other write
+  // does when the caller may not write here.
+  writeKey(ctx, databaseId);
+  order.forEach((columnId, i) => {
+    getDb()
+      .update(databaseColumns)
+      .set({ position: i })
+      .where(
+        and(
+          eq(databaseColumns.id, columnId),
+          eq(databaseColumns.databaseId, databaseId),
+        ),
+      )
+      .run();
+  });
+  touch(databaseId);
+}
+
 export function deleteColumn(
   ctx: AuthedContext,
   databaseId: string,

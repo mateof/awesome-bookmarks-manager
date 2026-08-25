@@ -27,6 +27,7 @@ export function DatabaseTable({
   onAddRow,
   onDeleteRow,
   onReorder,
+  onReorderColumns,
   onColumnChanged,
   readOnly = false,
 }: {
@@ -37,6 +38,7 @@ export function DatabaseTable({
   onAddRow: () => void;
   onDeleteRow: (rowId: string) => void;
   onReorder: (order: string[]) => void;
+  onReorderColumns: (order: string[]) => void;
   onColumnChanged: () => void;
   readOnly?: boolean;
 }) {
@@ -45,6 +47,8 @@ export function DatabaseTable({
   const [adding, setAdding] = useState(false);
   const dragId = useRef<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const dragCol = useRef<string | null>(null);
+  const [colTarget, setColTarget] = useState<string | null>(null);
 
   // Dragging only makes sense against the stored order. With a sort applied
   // the rows on screen are not the rows in the table, and dropping one "above"
@@ -61,10 +65,46 @@ export function DatabaseTable({
               <th
                 key={c.id}
                 style={c.config.width ? { width: c.config.width } : undefined}
-                className="px-2 py-1.5 text-left font-medium text-slate-500"
+                onDragOver={(e) => {
+                  if (!dragCol.current) return;
+                  e.preventDefault();
+                  setColTarget(c.id);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const from = dragCol.current;
+                  dragCol.current = null;
+                  setColTarget(null);
+                  if (!from || from === c.id) return;
+                  const ids = db.columns
+                    .map((x) => x.id)
+                    .filter((id) => id !== from);
+                  ids.splice(ids.indexOf(c.id), 0, from);
+                  onReorderColumns(ids);
+                }}
+                className={`px-2 py-1.5 text-left font-medium text-slate-500 ${
+                  colTarget === c.id ? "bg-sky-50 dark:bg-sky-950/40" : ""
+                }`}
               >
                 <span className="flex items-center gap-1">
-                  <span className="truncate">{c.name}</span>
+                  {/* The name is the handle. A column is its name, so that is
+                      what you reach for to move it; a separate grip would be a
+                      second target for the same idea in a row of headers that
+                      is already tight. */}
+                  <span
+                    draggable={!readOnly}
+                    onDragStart={() => {
+                      dragCol.current = c.id;
+                    }}
+                    onDragEnd={() => {
+                      dragCol.current = null;
+                      setColTarget(null);
+                    }}
+                    title={readOnly ? undefined : t("db.dragColumn")}
+                    className={`truncate ${readOnly ? "" : "cursor-grab"}`}
+                  >
+                    {c.name}
+                  </span>
                   <span className="text-[10px] uppercase text-slate-400">
                     {t(`db.kind.${c.kind}` as "db.kind.text")}
                   </span>
@@ -201,6 +241,7 @@ export function DatabaseTable({
         <ColumnMenu
           databaseId={db.id}
           column={menuFor}
+          columns={db.columns}
           onClose={() => {
             setMenuFor(null);
             setAdding(false);

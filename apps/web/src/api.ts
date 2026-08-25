@@ -747,6 +747,11 @@ export const api = {
     }),
   deleteDbColumn: (id: string, columnId: string) =>
     request<void>(`/databases/${id}/columns/${columnId}`, { method: "DELETE" }),
+  reorderDbColumns: (id: string, order: string[]) =>
+    request<{ ok: true }>(`/databases/${id}/columns/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ order }),
+    }),
 
   addDbRow: (id: string, cells: DbRow["cells"] = {}) =>
     request<DbRow>(`/databases/${id}/rows`, {

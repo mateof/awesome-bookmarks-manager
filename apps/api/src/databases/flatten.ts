@@ -57,6 +57,13 @@ function renderCell(column: DbColumn, value: CellValue | undefined): string {
       // The reference points at something only the owner can open, so the copy
       // shows nothing rather than a link that 404s for the reader.
       return "";
+    case "password":
+      // Dots, never the value. This function is what builds the copy that goes
+      // into a **public panel** and into a group's copy of a note, where the
+      // reader is by definition not the owner; printing it here would publish
+      // it. The dots still say a value is there, which is the part the reader
+      // may legitimately need to know.
+      return "••••••••";
     default:
       return escapeHtml(String(value));
   }

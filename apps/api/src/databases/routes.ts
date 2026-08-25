@@ -25,6 +25,7 @@ import {
   getDatabase,
   listDatabases,
   renameDatabase,
+  reorderColumns,
   reorderRows,
   updateColumn,
   updateRow,
@@ -114,6 +115,15 @@ export const databaseRoutes: FastifyPluginAsync = async (app) => {
     const { id, childId } = ChildParam.parse(req.params);
     deleteColumn(ctx, id, childId);
     reply.code(204);
+  });
+
+  app.post("/databases/:id/columns/reorder", async (req) => {
+    const ctx = requireAuth(req);
+    const { order } = z
+      .object({ order: z.array(z.string().uuid()).max(200) })
+      .parse(req.body);
+    reorderColumns(ctx, IdParam.parse(req.params).id, order);
+    return { ok: true };
   });
 
   // --- rows ----------------------------------------------------------------

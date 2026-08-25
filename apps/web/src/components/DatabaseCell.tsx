@@ -1,12 +1,13 @@
 import {
-  OPTION_COLORS,
+  pickOptionColor,
   type CellValue,
   type DbColumn,
   type SelectOption,
 } from "@awesome-bookmarks/shared";
 import { AnchoredPopover } from "./AnchoredPopover.js";
+import { CopyButton } from "./CopyButton.js";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ExternalLink, Plus, X } from "lucide-react";
+import { Check, Eye, EyeOff, ExternalLink, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
@@ -95,6 +96,16 @@ export function DatabaseCell({
         </div>
       );
 
+    case "password":
+      return (
+        <PasswordCell
+          value={typeof value === "string" ? value : ""}
+          readOnly={readOnly}
+          label={column.name}
+          onCommit={(v) => onChange(v)}
+        />
+      );
+
     case "select":
       return (
         <SelectCell
@@ -148,12 +159,14 @@ function TextLike({
   type = "text",
   readOnly,
   label,
+  autoComplete,
 }: {
   value: string;
   onCommit: (v: string) => void;
   type?: string;
   readOnly?: boolean;
   label: string;
+  autoComplete?: string;
 }) {
   const [draft, setDraft] = useState(value);
   // Follow the server when it changes underneath, but never while the cell is
@@ -169,6 +182,8 @@ function TextLike({
       value={draft}
       readOnly={readOnly}
       aria-label={label}
+      autoComplete={autoComplete}
+      spellCheck={false}
       onFocus={() => {
         focused.current = true;
       }}
@@ -186,6 +201,67 @@ function TextLike({
       }}
       className="w-full min-w-0 border-0 bg-transparent px-1 py-0.5 text-sm outline-none focus:ring-1 focus:ring-sky-500"
     />
+  );
+}
+
+/**
+ * A value you do not want on screen: covered by default, revealed while you
+ * ask for it, and copyable without ever showing it.
+ *
+ * Revealing is deliberately not sticky. It goes back under cover as soon as
+ * the cell loses focus, because the thing this protects against is the room
+ * you are in, and a table left open on a second monitor is exactly that. The
+ * copy button is what makes that bearable: the common errand is pasting the
+ * value somewhere else, and it never needs to be read to do that.
+ */
+function PasswordCell({
+  value,
+  onCommit,
+  readOnly,
+  label,
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  readOnly?: boolean;
+  label: string;
+}) {
+  const { t } = useTranslation();
+  const [shown, setShown] = useState(false);
+
+  return (
+    <div
+      className="flex items-center gap-0.5"
+      onBlur={(e) => {
+        // Only when focus leaves the cell entirely: moving from the input to
+        // the eye button is still inside it.
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setShown(false);
+        }
+      }}
+    >
+      <TextLike
+        value={value}
+        type={shown ? "text" : "password"}
+        readOnly={readOnly}
+        label={label}
+        // Otherwise the browser reads a `type="password"` input as a login
+        // form and offers to fill it, which in a table of twenty rows means
+        // twenty offers to overwrite a cell with an unrelated saved password.
+        autoComplete="new-password"
+        onCommit={onCommit}
+      />
+      <button
+        type="button"
+        onClick={() => setShown((v) => !v)}
+        title={shown ? t("db.hideValue") : t("db.showValue")}
+        aria-label={shown ? t("db.hideValue") : t("db.showValue")}
+        aria-pressed={shown}
+        className="shrink-0 rounded p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+      >
+        {shown ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+      </button>
+      {value !== "" && <CopyButton text={value} title={t("db.copyValue")} />}
+    </div>
   );
 }
 
@@ -370,11 +446,7 @@ function RefCell({
   );
 }
 
-/** A fresh option, coloured so two never look identical at a glance. */
-export function newOption(name: string, taken: number): SelectOption {
-  return {
-    id: crypto.randomUUID(),
-    name,
-    color: OPTION_COLORS[taken % OPTION_COLORS.length] ?? "#64748b",
-  };
+/** A fresh option, in a colour the column is not already using. */
+export function newOption(name: string, existing: SelectOption[]): SelectOption {
+  return { id: crypto.randomUUID(), name, color: pickOptionColor(existing) };
 }

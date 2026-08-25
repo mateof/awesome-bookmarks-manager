@@ -200,10 +200,33 @@ test("un tag nuevo estrena color en vez de repetir el mismo", async ({
     }).toPass({ timeout: 10_000 });
   }
 
-  // Four tags, four different colours. Picking at random would collide about
-  // half the time by the fourth, which defeats the point of colouring them.
+  // Four tags, four different colours. A plain random draw would collide often
+  // enough to matter, which defeats the point of colouring them at all.
   expect(new Set(colors).size).toBe(colors.length);
 
+  // And not the same four every time. Walking the palette in order also gives
+  // four different colours, so distinctness alone would pass while the first
+  // tag is always red and the second always orange: a counter with a paint job.
+  // A second account starts from an empty palette, so under the old rule it
+  // would get exactly the same sequence.
+  const other = await newUser(browser, {
+    email: "tag.color2.e2e@example.com",
+    nickname: "tagcolor2",
+    password: "TagColour28yyyyy",
+  });
+  const otherColors: string[] = [];
+  for (const name of ["uno", "dos", "tres", "cuatro"]) {
+    const made = await (
+      await other.req.post("/api/tags", { data: { name } })
+    ).json();
+    otherColors.push(made.color.toLowerCase());
+  }
+  expect(new Set(otherColors).size).toBe(otherColors.length);
+  // Four draws from twenty colours: matching all four by chance is about one
+  // in a hundred thousand, which is a price worth paying to catch the order.
+  expect(otherColors).not.toEqual(colors);
+
+  await other.ctx.close();
   await o.ctx.close();
 });
 

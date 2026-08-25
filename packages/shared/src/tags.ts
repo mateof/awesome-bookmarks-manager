@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { pickColor } from "./colors.js";
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
@@ -91,33 +92,12 @@ export const TAG_PALETTE = [
 ];
 
 /**
- * The colour a new tag should get: the one that is least used already.
+ * The colour a new tag gets: drawn at random from the ones no tag is using.
  *
- * Deliberately not random. Random repeats immediately — with twenty colours
- * there is a better than even chance of a collision by the seventh tag — and
- * the whole point of the colour is telling two tags apart at a glance. Going
- * least-used-first means the first twenty tags are all different, and after
- * that it degrades evenly instead of clumping.
- *
- * Ties break by palette order, so the same set of tags always produces the same
- * answer. A colour picked at random is a colour you cannot reason about when
- * somebody asks why two tags look alike.
+ * See [[pickColor]] for why it is neither in palette order (the first tag
+ * would always be red) nor a plain random draw (two tags the same colour
+ * before you have made seven).
  */
 export function pickTagColor(existing: { color?: string | null }[]): string {
-  const used = new Map<string, number>();
-  for (const c of TAG_PALETTE) used.set(c, 0);
-  for (const tag of existing) {
-    const key = tag.color?.toLowerCase();
-    if (key && used.has(key)) used.set(key, (used.get(key) ?? 0) + 1);
-  }
-  let best = TAG_PALETTE[0]!;
-  let bestCount = Number.POSITIVE_INFINITY;
-  for (const c of TAG_PALETTE) {
-    const n = used.get(c) ?? 0;
-    if (n < bestCount) {
-      best = c;
-      bestCount = n;
-    }
-  }
-  return best;
+  return pickColor(TAG_PALETTE, existing);
 }

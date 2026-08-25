@@ -70,8 +70,16 @@ one port.
   attributes so they survive the server's sanitiser and render everywhere the
   HTML does.
 - **Inline databases** — a Notion/SiYuan-style typed table embedded in any
-  description: text, number, checkbox, date, select, multi-select, URL and a
-  **reference** column pointing at your own bookmarks and folders. Three views
+  description: text, number, checkbox, date, select, multi-select, URL, a
+  **reference** column pointing at your own bookmarks and folders, and a
+  **password** column that stays covered until you ask for it and copies with
+  one click. That masking is about the room you are in, not about the server:
+  the cell is sealed like every other one and anyone who can read the table can
+  reveal it. What it does guarantee is that the flattened copy — a public
+  panel, a group's copy of a note — prints dots and never the value. Select
+  columns take a colour per option, chosen from the chip itself, and columns
+  can be dragged into another order by their header (or moved one step at a
+  time from the column menu, for people not using a mouse). Three views
   over the same rows (table, kanban board, gallery), each with its own filters,
   sorting, visible columns and grouping. The note stores only an id; the rows
   live in their own tables, sealed per row, because a description is one
