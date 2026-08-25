@@ -29,7 +29,12 @@ import { fuzzyScoreAny } from "../fuzzy.js";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { opaqueSurface } from "../lib/contrast.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
-import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
+import {
+  COPYABLE_ATTR,
+  HIGHLIGHT_ATTR,
+  SPOILER_ATTR,
+  UNDERLINE_ATTR,
+} from "../lib/richMarks.js";
 import { downloadPanelBookmarks } from "../lib/panelExport.js";
 import { PanelBackground } from "./PanelBackground.js";
 import {
@@ -1082,7 +1087,14 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
   const safe = useMemo(
     () =>
       DOMPurify.sanitize(desc.html, {
-        ADD_ATTR: ["target", "rel", COPYABLE_ATTR, SPOILER_ATTR],
+        ADD_ATTR: [
+          "target",
+          "rel",
+          COPYABLE_ATTR,
+          SPOILER_ATTR,
+          HIGHLIGHT_ATTR,
+          UNDERLINE_ATTR,
+        ],
       }),
     [desc.html],
   );

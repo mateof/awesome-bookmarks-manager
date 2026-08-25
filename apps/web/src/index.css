@@ -675,6 +675,18 @@ body,
   background: rgb(20 83 45) !important;
 }
 
+/* The highlighter. The colour itself is inline (it is a choice, not a theme),
+   so all this adds is the shape of a marker stroke: a little wider than the
+   letters and rounded at the ends. `box-decoration-break: clone` is what keeps
+   that shape when the highlighted passage wraps onto a second line — without
+   it the stroke is left open at the break and closed nowhere. */
+.ab-highlight {
+  border-radius: 0.2em;
+  padding: 0.05em 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 /* Inside the editor the marks must stay legible: you cannot format text you
    cannot see, so the spoiler is only dimmed there, never blurred. */
 .tiptap .ab-spoiler {

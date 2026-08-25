@@ -75,14 +75,21 @@ export function AnchoredPopover({
       if (anchor.current?.contains(target)) return;
       onClose();
     };
+    // Escape closes this panel and stops there. Captured, so it runs before
+    // the dialog's own Escape handler and can keep the event from reaching it:
+    // dismissing a palette by closing the whole editor underneath it takes the
+    // unsaved text with it, which is a steep price for changing your mind
+    // about a colour.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onClose();
     };
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
+    document.addEventListener("keydown", onKey, true);
     return () => {
       document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
     };
   }, [anchor, onClose]);
 

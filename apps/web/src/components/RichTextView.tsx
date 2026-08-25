@@ -9,7 +9,12 @@ import {
   REF_TYPE_ATTR,
 } from "@awesome-bookmarks/shared";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
-import { COPYABLE_ATTR, SPOILER_ATTR } from "../lib/richMarks.js";
+import {
+  COPYABLE_ATTR,
+  HIGHLIGHT_ATTR,
+  SPOILER_ATTR,
+  UNDERLINE_ATTR,
+} from "../lib/richMarks.js";
 import { useRefChips } from "./RefChips.js";
 import { useDatabaseBlocks } from "./RichTextDatabases.js";
 
@@ -38,6 +43,8 @@ export function RichTextView({ html, className }: Props) {
           "rel",
           COPYABLE_ATTR,
           SPOILER_ATTR,
+          HIGHLIGHT_ATTR,
+          UNDERLINE_ATTR,
           REF_TYPE_ATTR,
           REF_ID_ATTR,
           REF_SLUG_ATTR,

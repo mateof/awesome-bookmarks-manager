@@ -1,5 +1,8 @@
 import sanitizeHtml from "sanitize-html";
 
+/** A colour and nothing else: `#rgb`…`#rrggbbaa`, `rgb()` or `rgba()`. */
+const COLOR = [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s.,%]+\)$/];
+
 const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
     "h1",
@@ -44,10 +47,14 @@ const OPTIONS: sanitizeHtml.IOptions = {
       "data-ref-slug",
     ],
     img: ["src", "alt", "title", "width", "height"],
-    // The copyable/spoiler markers ride on spans as data attributes; without
-    // these they would be stripped on the way in and the marks would silently
-    // stop working after a round-trip through the server.
-    span: ["class", "style", "data-copyable", "data-spoiler"],
+    // The copyable/spoiler/highlight markers ride on spans as data attributes;
+    // without these they would be stripped on the way in and the marks would
+    // silently stop working after a round-trip through the server.
+    span: ["class", "style", "data-copyable", "data-spoiler", "data-highlight"],
+    // A coloured underline is a `<u>` carrying its colour twice: in the style
+    // that paints it and in the data attribute that survives a renderer which
+    // drops styles.
+    u: ["data-underline"],
     // An embedded database is a div holding only the id; the rows live in
     // their own tables and are fetched when the note renders.
     div: [
@@ -66,7 +73,12 @@ const OPTIONS: sanitizeHtml.IOptions = {
   // on the way through the server.
   allowedStyles: {
     "*": {
-      color: [/^#[0-9a-f]{3,8}$/i, /^rgba?\([\d\s.,%]+\)$/],
+      color: COLOR,
+      // The highlighter's wash and the colour of an underline. Colours only:
+      // the patterns take a hex or an rgb()/rgba(), so nothing here can carry
+      // a URL, and a declaration that does not match is dropped whole.
+      "background-color": COLOR,
+      "text-decoration-color": COLOR,
       "font-family": [/^[\w\s,'"-]{1,120}$/],
     },
   },

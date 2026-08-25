@@ -9,6 +9,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Highlighter,
   ImagePlus,
   Italic,
   Link as LinkIcon,
@@ -30,6 +31,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+import { DEFAULT_HIGHLIGHT } from "../lib/richColors.js";
 
 /**
  * The editor toolbar, on a phone, sitting on top of the keyboard.
@@ -270,6 +272,18 @@ export function EditorMobileBar({
             icon={<Palette className="h-4 w-4" />}
             label={t("richText.textColor")}
             onClick={() => editor.chain().focus().setColor("#dc2626").run()}
+          />
+          {/* One colour rather than a palette, like the item above it: a grid
+              of swatches on a phone, over the keyboard, is a lot of screen for
+              a decision most notes make once. */}
+          <GridItem
+            icon={<Highlighter className="h-4 w-4" />}
+            label={t("richText.highlight")}
+            onClick={() =>
+              editor.isActive("highlight")
+                ? editor.chain().focus().unsetHighlight().run()
+                : editor.chain().focus().setHighlight(DEFAULT_HIGHLIGHT).run()
+            }
           />
           <GridItem
             icon={<Type className="h-4 w-4" />}

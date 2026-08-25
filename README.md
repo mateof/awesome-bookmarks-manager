@@ -35,10 +35,14 @@ one port.
 ## Features
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
-  (Tiptap editor with headings, underline, section rules, text colour, font
-  family, pasted/dropped **images**, and **click-to-copy** and
-  **hidden-until-clicked** marks for the credentials people actually keep in
-  these notes), custom icons, and tags. Bookmarks with no icon fall back to
+  (Tiptap editor with headings, section rules, text colour, **coloured
+  underlines**, a **highlighter**, font family, pasted/dropped **images**, and
+  **click-to-copy** and **hidden-until-clicked** marks for the credentials
+  people actually keep in these notes), custom icons, and tags. The
+  highlighter's colours are translucent rather than pastel, so the same note
+  reads in light mode, in dark mode and inside a panel that brings its own
+  background: the wash darkens a dark page and lightens a light one instead of
+  being right in exactly one of them. Bookmarks with no icon fall back to
   a coloured letter tile derived from the name. Long descriptions are capped at
   a fixed height and scroll inside it, with a button that opens the whole text
   full-screen, so a wall of notes never pushes a folder's contents off screen;

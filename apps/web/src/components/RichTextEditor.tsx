@@ -3,7 +3,6 @@ import FontFamily from "@tiptap/extension-font-family";
 import ImageExt from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import TextStyle from "@tiptap/extension-text-style";
-import UnderlineExt from "@tiptap/extension-underline";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -15,6 +14,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Highlighter,
   ImagePlus,
   Italic,
   Link as LinkIcon,
@@ -32,7 +32,8 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
-import { RICH_MARKS } from "../lib/richMarks.js";
+import { RICH_COLORS } from "../lib/richColors.js";
+import { ColoredUnderline, RICH_MARKS } from "../lib/richMarks.js";
 import { DatabaseBlock as DatabaseBlockNode } from "../lib/richDatabase.js";
 import { EntityRef } from "../lib/richRefs.js";
 import { dlg } from "./dialogs.js";
@@ -127,7 +128,7 @@ export function RichTextEditor({
       TextStyle,
       Color,
       FontFamily,
-      UnderlineExt,
+      ColoredUnderline,
       ImageExt.configure({ allowBase64: true }),
       EntityRef,
       DatabaseBlockNode,
@@ -322,18 +323,6 @@ export function RichTextEditor({
   );
 }
 
-const TEXT_COLORS = [
-  "#dc2626",
-  "#ea580c",
-  "#d97706",
-  "#16a34a",
-  "#0d9488",
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-  "#64748b",
-];
-
 const FONTS: { key: "sans" | "serif" | "mono"; css: string }[] = [
   { key: "sans", css: "ui-sans-serif, system-ui, sans-serif" },
   { key: "serif", css: "Georgia, 'Times New Roman', serif" },
@@ -361,8 +350,10 @@ function Toolbar({
 }) {
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
+  const [showHighlight, setShowHighlight] = useState(false);
   const imgRef = useRef<HTMLInputElement>(null);
   const colorAnchor = useRef<HTMLSpanElement>(null);
+  const highlightAnchor = useRef<HTMLSpanElement>(null);
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
       <Btn
@@ -500,13 +491,17 @@ function Toolbar({
         <Database className="h-3 w-3" />
       </Btn>
       <Sep />
-      {/* Text colour: a fixed palette rather than a wheel — notes want "make
-          this red", not colorimetry. */}
+      {/* Colour of the letters and colour of the line under them, in one
+          panel: a fixed palette rather than a wheel — notes want "make this
+          red", not colorimetry. */}
       <span ref={colorAnchor} className="inline-flex">
         <Btn
-          active={!!editor.getAttributes("textStyle").color}
+          active={
+            !!editor.getAttributes("textStyle").color ||
+            !!editor.getAttributes("underline").color
+          }
           onClick={() => setShowColors((v) => !v)}
-          title={t("richText.textColor")}
+          title={t("richText.colors")}
         >
           <Palette className="h-3 w-3" />
         </Btn>
@@ -517,32 +512,128 @@ function Toolbar({
           <AnchoredPopover
             anchor={colorAnchor}
             onClose={() => setShowColors(false)}
-            width={168}
+            width={232}
           >
-            <span className="flex flex-wrap items-center gap-1 p-1">
-            {TEXT_COLORS.map((c) => (
+            <span className="block p-1">
+              <SectionLabel>{t("richText.colorSectionText")}</SectionLabel>
+              <span className="flex flex-wrap items-center gap-1">
+                {RICH_COLORS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-label={c.solid}
+                    onClick={() => {
+                      editor.chain().focus().setColor(c.solid).run();
+                      setShowColors(false);
+                    }}
+                    className="h-5 w-5 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: c.solid }}
+                  />
+                ))}
+              </span>
               <button
-                key={c}
                 type="button"
-                aria-label={c}
                 onClick={() => {
-                  editor.chain().focus().setColor(c).run();
+                  editor.chain().focus().unsetColor().run();
                   setShowColors(false);
                 }}
-                className="h-5 w-5 rounded-full ring-1 ring-black/10"
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                editor.chain().focus().unsetColor().run();
-                setShowColors(false);
-              }}
-              className="mt-1 w-full rounded border border-slate-300 px-1 py-0.5 text-[10px] dark:border-slate-600"
-            >
-              {t("richText.clearColor")}
-            </button>
+                className={CLEAR_BTN}
+              >
+                {t("richText.clearColor")}
+              </button>
+
+              <SectionLabel>{t("richText.colorSectionUnderline")}</SectionLabel>
+              <span className="flex flex-wrap items-center gap-1">
+                {RICH_COLORS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-label={t("richText.underlineIn", {
+                      color: t(`richText.colorName.${c.key}` as const),
+                    })}
+                    // Underlines and colours in one go: picking a colour with
+                    // nothing underlined yet would otherwise set a colour on a
+                    // line that is not there, and look like it did nothing.
+                    onClick={() => {
+                      editor
+                        .chain()
+                        .focus()
+                        .setMark("underline", { color: c.solid })
+                        .run();
+                      setShowColors(false);
+                    }}
+                    className="flex h-5 w-5 items-end justify-center rounded border border-slate-200 pb-0.5 dark:border-slate-600"
+                  >
+                    <span
+                      className="block h-[3px] w-3 rounded-full"
+                      style={{ backgroundColor: c.solid }}
+                    />
+                  </button>
+                ))}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  editor
+                    .chain()
+                    .focus()
+                    .setMark("underline", { color: null })
+                    .run();
+                  setShowColors(false);
+                }}
+                className={CLEAR_BTN}
+              >
+                {t("richText.plainUnderline")}
+              </button>
+            </span>
+          </AnchoredPopover>
+        )}
+      </span>
+      {/* Highlighter. Its own control rather than a third row in the panel
+          above: this one paints behind the text, and it is the one people
+          reach for while reading back what they wrote. */}
+      <span ref={highlightAnchor} className="inline-flex">
+        <Btn
+          active={editor.isActive("highlight")}
+          onClick={() => setShowHighlight((v) => !v)}
+          title={t("richText.highlight")}
+        >
+          <Highlighter className="h-3 w-3" />
+        </Btn>
+        {showHighlight && (
+          <AnchoredPopover
+            anchor={highlightAnchor}
+            onClose={() => setShowHighlight(false)}
+            width={232}
+          >
+            <span className="block p-1">
+              <span className="flex flex-wrap items-center gap-1">
+                {RICH_COLORS.map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-label={t("richText.highlightIn", {
+                      color: t(`richText.colorName.${c.key}` as const),
+                    })}
+                    onClick={() => {
+                      editor.chain().focus().setHighlight(c.soft).run();
+                      setShowHighlight(false);
+                    }}
+                    className="h-5 w-5 rounded ring-1 ring-black/10"
+                    style={{ backgroundColor: c.soft }}
+                  />
+                ))}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  editor.chain().focus().unsetHighlight().run();
+                  setShowHighlight(false);
+                }}
+                className={CLEAR_BTN}
+              >
+                {t("richText.clearHighlight")}
+              </button>
             </span>
           </AnchoredPopover>
         )}
@@ -641,4 +732,16 @@ function Btn({
 
 function Sep() {
   return <span className="mx-1 h-4 w-px bg-slate-300 dark:bg-slate-600" />;
+}
+
+const CLEAR_BTN =
+  "mt-1 w-full rounded border border-slate-300 px-1 py-0.5 text-[10px] dark:border-slate-600";
+
+/** Names the row of swatches under it. Two rows without labels are a guess. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mb-1 mt-1 block text-[10px] uppercase tracking-wide text-slate-500 first:mt-0 dark:text-slate-400">
+      {children}
+    </span>
+  );
 }
