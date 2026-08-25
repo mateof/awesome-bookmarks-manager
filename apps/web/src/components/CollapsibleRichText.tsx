@@ -26,7 +26,14 @@ const OVERFLOW_TOLERANCE = 8;
 
 interface Props {
   html: string;
-  /** Cap height in pixels. */
+  /**
+   * Cap height in pixels.
+   *
+   * Lowered from 240 when the section gained a frame and a row of controls:
+   * those cost about fifty pixels, and the whole point of the cap is what sits
+   * *under* the note. Paying for the chrome out of the folder's own contents
+   * would have quietly undone the thing the cap is for.
+   */
   collapsedHeight?: number;
   className?: string;
   /**
@@ -39,7 +46,7 @@ interface Props {
 
 export function CollapsibleRichText({
   html,
-  collapsedHeight = 240,
+  collapsedHeight = 200,
   className,
   onEdit,
 }: Props) {
@@ -85,47 +92,41 @@ export function CollapsibleRichText({
   }, [measure, html]);
 
   /**
-   * A note holding a database starts folded, and opens to its full height.
+   * One set of controls for every note, whatever is in it.
    *
-   * These are the two halves of the same problem. A table is a component you
-   * work with, so once it is open it must not be squeezed into 240 pixels of
-   * scroll: that shows its header, hides every row and reads as broken. But
-   * *always* open was worse in the other direction — a grid is tall, so any
-   * folder with a table in its note pushed its own bookmarks off the screen,
-   * every time you opened it, whether or not you came for the table.
+   * These used to be two different behaviours: a note with a table folded and
+   * unfolded in place, and a note of prose got a button that opened it in a
+   * dialog. That was not a rule, it was two features landing a version apart,
+   * and "this note is long" behaving in two ways depending on whether somebody
+   * embedded a table is the kind of inconsistency you have to explain out loud.
    *
-   * So: folded to a strip until asked, then uncapped. Prose keeps the plain
-   * cap it always had, which is not the same gesture and does not need one.
+   * So both, always: **unfold here** and **open full screen**, and the choice
+   * is the reader's. What does not change is the *default*, which stays
+   * folded. Unfolding in place is exactly what the cap was introduced to stop
+   * — a long note pushes the folder's own contents off the screen — and that
+   * is still true; the difference is that it is now something you ask for
+   * rather than something the note decides for you.
    */
   const hasDatabase = html.includes("data-db-id");
-  const [folded, setFolded] = useState(hasDatabase);
+  const [unfolded, setUnfolded] = useState(false);
   // A different entity's note is a different decision: arriving somewhere new
-  // should start folded again rather than inherit what you did on the last one.
+  // starts folded again rather than inheriting what you did on the last one.
   useEffect(() => {
-    setFolded(hasDatabase);
-  }, [pathname, hasDatabase]);
+    setUnfolded(false);
+  }, [pathname, html]);
 
-  const overflows =
-    !hasDatabase &&
+  const tooTall =
     contentHeight !== null &&
     contentHeight > collapsedHeight + OVERFLOW_TOLERANCE;
+  /** There is something behind the fold, so the controls have a job. */
+  const foldable = hasDatabase || tooTall;
+  const folded = foldable && !unfolded;
 
   return (
     <div className={`group relative ${className ?? ""}`}>
       {/* Always visible rather than hover-only: on a touch screen there is no
           hover to reveal them, and a control nobody finds is not a control. */}
       <span className="absolute right-0 top-0 z-10 flex items-center gap-1">
-        {overflows && (
-          <button
-            type="button"
-            onClick={() => setFull(true)}
-            title={t("richText.viewFull")}
-            aria-label={t("richText.viewFull")}
-            className="rounded border border-slate-300 bg-white/80 p-1 text-slate-400 backdrop-blur hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
-        )}
         {onEdit && (
           <button
             type="button"
@@ -141,46 +142,66 @@ export function CollapsibleRichText({
 
       <div
         data-testid="collapsible-text"
-        // The scrollbar only appears when the cap actually bites, so a short
-        // note renders exactly as before. Folded it is hidden instead of
-        // scrolled: a strip you can scroll invites you to work in it, and this
-        // one is a preview.
+        /*
+         * Folded prose scrolls inside the cap; a folded table does not.
+         *
+         * The one deliberate difference left, and it follows from the content:
+         * you can read text in a 240px window, and a scrollable strip with a
+         * grid in it invites you to work in a window far too small to work in.
+         */
         className={
-          folded ? "overflow-hidden" : overflows ? "overflow-y-auto" : undefined
+          folded && !hasDatabase
+            ? "overflow-y-auto"
+            : folded
+              ? "overflow-hidden"
+              : undefined
         }
-        style={
-          folded || !hasDatabase ? { maxHeight: collapsedHeight } : undefined
-        }
+        style={folded ? { maxHeight: collapsedHeight } : undefined}
       >
         <div ref={innerRef}>
           <RichTextView
             html={html}
-            className={onEdit || overflows ? "[&>*:first-child]:pr-16" : undefined}
+            className={onEdit ? "[&>*:first-child]:pr-16" : undefined}
           />
         </div>
       </div>
 
-      {hasDatabase && (
+      {foldable && (
         <>
           {/* Fades the cut edge, so a folded note looks cut on purpose rather
               than clipped by accident. Click-through, or it would swallow the
-              clicks meant for the text under it. */}
-          {folded && (
+              clicks meant for the text under it. Only over a table: text that
+              scrolls is not cut, it is scrolled. */}
+          {folded && hasDatabase && (
             <div className="pointer-events-none -mt-8 h-8 bg-gradient-to-b from-transparent to-white dark:to-slate-900" />
           )}
-          <button
-            type="button"
-            onClick={() => setFolded((v) => !v)}
-            aria-expanded={!folded}
-            className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-slate-200 py-1 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            {folded ? (
-              <ChevronDown className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronUp className="h-3.5 w-3.5" />
-            )}
-            {folded ? t("richText.unfold") : t("richText.fold")}
-          </button>
+          <div className="mt-1 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setUnfolded((v) => !v)}
+              aria-expanded={unfolded}
+              className="flex flex-1 items-center justify-center gap-1 rounded border border-slate-200 py-1 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              {folded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronUp className="h-3.5 w-3.5" />
+              )}
+              {folded ? t("richText.unfold") : t("richText.fold")}
+            </button>
+            {/* The dialog is the other half: unfolding here is for reading a
+                bit more without leaving the page, and this is for reading it
+                all without the page around it. */}
+            <button
+              type="button"
+              onClick={() => setFull(true)}
+              title={t("richText.viewFull")}
+              aria-label={t("richText.viewFull")}
+              className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </>
       )}
 

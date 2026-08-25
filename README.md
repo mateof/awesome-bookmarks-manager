@@ -44,9 +44,12 @@ one port.
   background: the wash darkens a dark page and lightens a light one instead of
   being right in exactly one of them. Bookmarks with no icon fall back to
   a coloured letter tile derived from the name. Long descriptions are capped at
-  a fixed height and scroll inside it, with a button that opens the whole text
-  full-screen, so a wall of notes never pushes a folder's contents off screen;
-  the controls only appear when the text really overflows. Images pasted into a
+  a fixed height with two ways out, the same two for every note: **unfold it
+  in place** or **open it full screen**. Folded is always the default, because
+  unfolding in place is exactly what the cap exists to prevent; the controls
+  only appear when there is something behind the fold. The section is drawn as
+  a light framed block, so where the note ends and the next section begins is
+  not a guess. Images pasted into a
   note ride inside the note's own encrypted field, resized client-side, so they
   survive the `.abz` export and reach group shares with the text.
 - **Attachments** — real files hanging off a folder or a bookmark, up to 25 MB

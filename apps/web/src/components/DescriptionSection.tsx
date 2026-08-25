@@ -35,6 +35,7 @@ export function DescriptionSection({
     <EntitySection
       icon={<FileText className="h-3.5 w-3.5" />}
       title={t("description.heading")}
+      framed
       // Only when there is nothing yet. With a note written, the pencil that
       // appears over the text is already the way in and sits next to what it
       // edits; a second button in the header would be the same act twice.

@@ -16,6 +16,7 @@ export function EntitySection({
   title,
   count,
   action,
+  framed = false,
   children,
 }: {
   icon: React.ReactNode;
@@ -24,10 +25,27 @@ export function EntitySection({
   count?: number;
   /** The one thing you do here, kept at the far right of the header row. */
   action?: React.ReactNode;
+  /**
+   * Draw a light box around this one instead of only a rule above it.
+   *
+   * Not for every section, which is the same argument as before: three framed
+   * blocks on a page that is mostly a couple of chips looks busier than what
+   * is on it. The description earns one because it is the only section whose
+   * content is a body of text with its own headings, lists and tables, so
+   * without an edge its last line and the next section's label read as one
+   * column of prose.
+   */
+  framed?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-slate-200 pt-3 dark:border-slate-800">
+    <section
+      className={
+        framed
+          ? "rounded-lg border border-slate-200 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-900/40"
+          : "border-t border-slate-200 pt-3 dark:border-slate-800"
+      }
+    >
       <div className="mb-2 flex items-center gap-2">
         <h2 className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
           <span className="text-slate-400">{icon}</span>
