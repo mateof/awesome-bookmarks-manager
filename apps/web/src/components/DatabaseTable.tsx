@@ -424,6 +424,8 @@ export function DatabaseTable({
                     column={c}
                     value={r.cells[c.id]}
                     readOnly={readOnly}
+                    row={r}
+                    columns={db.columns}
                     onChange={(v) => onCell(r.id, c.id, v)}
                   />
                 </td>

@@ -88,6 +88,8 @@ export function DatabaseRowModal({
                 value={row.cells[c.id]}
                 readOnly={readOnly}
                 multiline
+                row={row}
+                columns={columns}
                 onChange={(v) => onCell(c.id, v)}
               />
             </div>

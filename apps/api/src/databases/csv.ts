@@ -1,10 +1,13 @@
 import {
+  computeFormula,
   csvTruthy,
+  formulaText,
   parseCsv,
   pickOptionColor,
   toCsv,
   type CellValue,
   type DbColumn,
+  type DbRow,
   type SelectOption,
 } from "@awesome-bookmarks/shared";
 import { randomUUID } from "node:crypto";
@@ -33,7 +36,19 @@ const SECRET_PLACEHOLDER = "";
 /** How much CSV one import will accept, before it is a different tool. */
 export const MAX_CSV_BYTES = 2_000_000;
 
-function cellToCsv(column: DbColumn, value: CellValue | undefined): string {
+function cellToCsv(
+  column: DbColumn,
+  value: CellValue | undefined,
+  row?: DbRow,
+  columns?: DbColumn[],
+): string {
+  // A formula exports its answer: a spreadsheet expects a value in the cell,
+  // and the expression would mean nothing there anyway. A rollup does not,
+  // because working it out needs a second table this file knows nothing about.
+  if (column.kind === "formula") {
+    return row && columns ? formulaText(computeFormula(column, row, columns)) : "";
+  }
+  if (column.kind === "relation" || column.kind === "rollup") return "";
   if (value === null || value === undefined) return "";
   switch (column.kind) {
     case "password":
@@ -75,7 +90,7 @@ export function exportCsv(
     db.columns.map((c) =>
       c.kind === "password" && includeSecrets
         ? String(r.cells[c.id] ?? "")
-        : cellToCsv(c, r.cells[c.id]),
+        : cellToCsv(c, r.cells[c.id], r, db.columns),
     ),
   );
   return {
@@ -223,6 +238,9 @@ function toCell(
         .map((v) => findOrAddOption(column, v, optionsOf, result))
         .filter((id): id is string => !!id);
     case "ref":
+    case "formula":
+    case "rollup":
+      // Computed or account-local: there is nothing to write back in.
       return null;
     default:
       return value;

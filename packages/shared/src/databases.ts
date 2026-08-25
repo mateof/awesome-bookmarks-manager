@@ -46,6 +46,18 @@ export const ColumnKindSchema = z.enum([
    * group's copy of a note — prints dots and never the value.
    */
   "password",
+  /**
+   * Computed from the other columns of its own row, never stored.
+   *
+   * Nothing to go stale, and changing the expression changes every row at
+   * once. The price is that it cannot be filtered or sorted on, which is said
+   * in `OPS_BY_KIND` rather than half-implemented.
+   */
+  "formula",
+  /** Points at rows of another table of yours. Holds their ids. */
+  "relation",
+  /** Summarises one column of the rows a relation column points at. */
+  "rollup",
 ]);
 export type ColumnKind = z.infer<typeof ColumnKindSchema>;
 
@@ -61,6 +73,22 @@ export const ColumnConfigSchema = z.object({
   options: z.array(SelectOptionSchema).max(60).default([]),
   /** Display width in the table view, in pixels. */
   width: z.number().int().min(80).max(800).optional(),
+  /**
+   * formula only. Columns are named in brackets: `[Cantidad] * [Precio]`.
+   * Names rather than ids because a name is what the person writing it can
+   * see; the cost is that renaming a column breaks the formulas naming it.
+   */
+  formula: z.string().max(500).optional(),
+  /** relation only: the database its rows come from. */
+  targetDatabaseId: z.string().uuid().optional(),
+  /** rollup only: the relation column in *this* table to follow. */
+  relationColumnId: z.string().optional(),
+  /** rollup only: the column of the target table to summarise. */
+  targetColumnId: z.string().optional(),
+  /** rollup only: how to summarise it. */
+  rollupOp: z
+    .enum(["count", "sum", "avg", "min", "max", "list"])
+    .optional(),
 });
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
 
@@ -422,6 +450,65 @@ export function aggregatesFor(kind: ColumnKind): Aggregate[] {
   return common;
 }
 
+/**
+ * The rows another table holds that this row points at.
+ *
+ * Returns an empty list when the target has not been loaded, which is the
+ * normal state for a moment after the page opens: a relation reaches into a
+ * different table and that is a second request.
+ */
+export function relatedRows(
+  relation: DbColumn,
+  row: DbRow,
+  target: { rows: DbRow[] } | null | undefined,
+): DbRow[] {
+  if (!target) return [];
+  const ids = row.cells[relation.id];
+  if (!Array.isArray(ids)) return [];
+  const byId = new Map(target.rows.map((r) => [r.id, r] as const));
+  return ids.map((id) => byId.get(id)).filter((r): r is DbRow => !!r);
+}
+
+/**
+ * Summarise one column of the rows a relation points at.
+ *
+ * Computed rather than stored, like a formula, so it cannot disagree with the
+ * table it summarises. `list` is here because half the time the useful answer
+ * is not a number but the names themselves.
+ */
+export function computeRollup(
+  column: DbColumn,
+  row: DbRow,
+  columns: DbColumn[],
+  target: { columns: DbColumn[]; rows: DbRow[] } | null | undefined,
+): string {
+  const relation = columns.find((c) => c.id === column.config.relationColumnId);
+  if (!relation || !target) return "";
+  const rows = relatedRows(relation, row, target);
+  const op = column.config.rollupOp ?? "count";
+  if (op === "count") return String(rows.length);
+
+  const targetColumn = target.columns.find(
+    (c) => c.id === column.config.targetColumnId,
+  );
+  if (!targetColumn) return "";
+  if (op === "list") {
+    return rows
+      .map((r) => {
+        const v = r.cells[targetColumn.id];
+        if (targetColumn.kind === "select") {
+          return targetColumn.config.options.find((o) => o.id === v)?.name ?? "";
+        }
+        return v === null || v === undefined || typeof v === "object"
+          ? ""
+          : String(v);
+      })
+      .filter(Boolean)
+      .join(", ");
+  }
+  return aggregateValue(op, targetColumn, rows) ?? "";
+}
+
 /** Columns a kind can meaningfully be filtered by, and with which operators. */
 export const OPS_BY_KIND: Record<ColumnKind, FilterOp[]> = {
   text: ["contains", "notContains", "equals", "isEmpty", "isNotEmpty"],
@@ -436,6 +523,12 @@ export const OPS_BY_KIND: Record<ColumnKind, FilterOp[]> = {
   // would be a filter whose own value is a fragment of the secret, typed into
   // a view that gets saved.
   password: ["isEmpty", "isNotEmpty"],
+  relation: ["isEmpty", "isNotEmpty"],
+  // Computed columns store nothing, so there is nothing to compare in the
+  // filter pass. Offering an operator that silently matched nothing would be
+  // worse than offering none.
+  formula: [],
+  rollup: [],
 };
 
 /** A blank value of the right shape for a kind, used when adding a row. */
@@ -449,6 +542,12 @@ export function emptyValue(kind: ColumnKind): CellValue {
     case "date":
     case "select":
     case "ref":
+      return null;
+    case "relation":
+      return [];
+    case "formula":
+    case "rollup":
+      // Computed on the way out, never stored.
       return null;
     default:
       return "";

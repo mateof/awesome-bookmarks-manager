@@ -239,6 +239,8 @@ function Card({
             column={titleCol}
             value={row.cells[titleCol.id]}
             readOnly={readOnly}
+            row={row}
+            columns={db.columns}
             onChange={(v) => onCell(row.id, titleCol.id, v)}
           />
         </div>
@@ -256,6 +258,8 @@ function Card({
                 column={c}
                 value={row.cells[c.id]}
                 readOnly={readOnly}
+                row={row}
+                columns={db.columns}
                 onChange={(v) => onCell(row.id, c.id, v)}
               />
             </dd>

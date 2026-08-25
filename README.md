@@ -111,7 +111,16 @@ one port.
   **duplicate** and delete **in bulk**; and a view can freeze its first column,
   choose its row height, or lay the rows out on a **month** by one of their
   date columns. All of that lives on the view, so it looks the same wherever
-  the table is opened, including for whoever it was shared with.
+  the table is opened, including for whoever it was shared with. Three column
+  kinds are **computed rather than typed**: a **formula** over its own row
+  (`[Cantidad] * [Precio]`, with `si`, `dias`, `concat` and a handful more), a
+  **relation** pointing at rows of another of your tables, and a **rollup**
+  summarising one of their columns through it. None of them stores a value, so
+  none can go stale; the price is that they cannot be filtered or sorted on,
+  which the model states rather than half-implements. A flattened copy carries
+  a formula's answer (it is made of columns the reader is already shown) and
+  prints nothing for a relation or a rollup, which reach into a table that
+  reader may not have.
 - **Embed a table that already exists**, not only a new one: the same database
   can appear in several notes and stay one table. Each embed has its own id, so
   it can be pinned to a single view (rendered without the tab strip) and can own

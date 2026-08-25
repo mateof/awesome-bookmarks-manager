@@ -1,7 +1,13 @@
 import {
+  computeFormula,
+  computeRollup,
+  formulaText,
   pickOptionColor,
+  relatedRows,
+  FORMULA_ERROR,
   type CellValue,
   type DbColumn,
+  type DbRow,
   type SelectOption,
 } from "@awesome-bookmarks/shared";
 import { AnchoredPopover } from "./AnchoredPopover.js";
@@ -29,11 +35,20 @@ export function DatabaseCell({
   onChange,
   readOnly = false,
   multiline = false,
+  row,
+  columns,
 }: {
   column: DbColumn;
   value: CellValue | undefined;
   onChange: (next: CellValue) => void;
   readOnly?: boolean;
+  /**
+   * The row and its table. Only the computed and linked kinds need them: a
+   * formula reads its neighbours, and a relation reaches into another table.
+   * Optional so every existing caller keeps working unchanged.
+   */
+  row?: DbRow;
+  columns?: DbColumn[];
   /**
    * Give text as much height as it needs. Off in the grid, where a row that
    * grows with its longest cell makes the table unreadable, and on in the row
@@ -104,6 +119,26 @@ export function DatabaseCell({
             </a>
           )}
         </div>
+      );
+
+    case "formula":
+      return (
+        <FormulaCell column={column} row={row} columns={columns ?? []} />
+      );
+
+    case "relation":
+      return (
+        <RelationCell
+          column={column}
+          selected={Array.isArray(value) ? value : []}
+          readOnly={readOnly}
+          onChange={(ids) => onChange(ids)}
+        />
+      );
+
+    case "rollup":
+      return (
+        <RollupCell column={column} row={row} columns={columns ?? []} />
       );
 
     case "password":
@@ -339,6 +374,167 @@ function PasswordCell({
         {shown ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
       </button>
       {value !== "" && <CopyButton text={value} title={t("db.copyValue")} />}
+    </div>
+  );
+}
+
+/**
+ * A computed cell: read-only by construction.
+ *
+ * There is nothing to type into, because there is nothing stored. Shown in a
+ * lighter weight than typed values so a column of answers does not read as a
+ * column somebody filled in by hand.
+ */
+function FormulaCell({
+  column,
+  row,
+  columns,
+}: {
+  column: DbColumn;
+  row?: DbRow;
+  columns: DbColumn[];
+}) {
+  const { t } = useTranslation();
+  if (!row) return null;
+  const value = computeFormula(column, row, columns);
+  const broken = value === FORMULA_ERROR;
+  return (
+    <span
+      title={broken ? t("db.formulaBroken") : column.config.formula}
+      className={`block truncate px-1 py-0.5 text-sm ${
+        broken ? "text-red-500" : "text-slate-600 dark:text-slate-300"
+      }`}
+    >
+      {formulaText(value)}
+    </span>
+  );
+}
+
+/** The same, for a rollup: it needs the other table, so it fetches it. */
+function RollupCell({
+  column,
+  row,
+  columns,
+}: {
+  column: DbColumn;
+  row?: DbRow;
+  columns: DbColumn[];
+}) {
+  const relation = columns.find((c) => c.id === column.config.relationColumnId);
+  const targetId = relation?.config.targetDatabaseId;
+  const { data: target } = useQuery({
+    queryKey: ["database", targetId ?? "none", null],
+    queryFn: () => api.getDatabase(targetId!),
+    enabled: !!targetId,
+    staleTime: 30_000,
+  });
+  if (!row) return null;
+  return (
+    <span className="block truncate px-1 py-0.5 text-sm text-slate-600 dark:text-slate-300">
+      {computeRollup(column, row, columns, target ?? null)}
+    </span>
+  );
+}
+
+/**
+ * Rows of another table, picked by name.
+ *
+ * The list is the target table's rows labelled by their first text column,
+ * which is the same thing the row dialog calls a row. A relation stores ids,
+ * so renaming a row over there changes what this cell says without touching
+ * it: that is the point of a link rather than a copy.
+ */
+function RelationCell({
+  column,
+  selected,
+  onChange,
+  readOnly,
+}: {
+  column: DbColumn;
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  readOnly?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const targetId = column.config.targetDatabaseId;
+
+  const { data: target } = useQuery({
+    queryKey: ["database", targetId ?? "none", null],
+    queryFn: () => api.getDatabase(targetId!),
+    enabled: !!targetId,
+    staleTime: 30_000,
+  });
+
+  const labelOf = (r: DbRow): string => {
+    for (const c of target?.columns ?? []) {
+      if (c.kind !== "text") continue;
+      const v = r.cells[c.id];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+    return t("db.rowDetail");
+  };
+
+  const chosen = relatedRows(column, { id: "", cells: { [column.id]: selected }, position: 0 }, target ?? null);
+
+  if (!targetId) {
+    return (
+      <span className="block px-1 text-xs text-slate-400">
+        {t("db.relationNeedsTarget")}
+      </span>
+    );
+  }
+
+  return (
+    <div ref={wrap}>
+      <button
+        type="button"
+        disabled={readOnly}
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full flex-wrap items-center gap-1 rounded px-1 py-0.5 text-left hover:bg-slate-100 disabled:cursor-default dark:hover:bg-slate-800"
+      >
+        {chosen.length === 0 ? (
+          <span className="text-xs text-slate-400">{t("db.empty")}</span>
+        ) : (
+          chosen.map((r) => (
+            <span
+              key={r.id}
+              className="max-w-full truncate rounded bg-slate-100 px-1.5 py-0.5 text-xs dark:bg-slate-800"
+            >
+              {labelOf(r)}
+            </span>
+          ))
+        )}
+      </button>
+
+      {open && (
+        <AnchoredPopover anchor={wrap} onClose={() => setOpen(false)}>
+          {(target?.rows ?? []).length === 0 && (
+            <p className="px-2 py-2 text-xs text-slate-400">{t("db.noRows")}</p>
+          )}
+          {(target?.rows ?? []).map((r) => {
+            const on = selected.includes(r.id);
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() =>
+                  onChange(
+                    on ? selected.filter((id) => id !== r.id) : [...selected, r.id],
+                  )
+                }
+                className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <span className="w-3.5 shrink-0">
+                  {on && <Check className="h-3.5 w-3.5 text-slate-500" />}
+                </span>
+                <span className="min-w-0 truncate">{labelOf(r)}</span>
+              </button>
+            );
+          })}
+        </AnchoredPopover>
+      )}
     </div>
   );
 }

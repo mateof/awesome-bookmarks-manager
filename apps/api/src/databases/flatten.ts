@@ -1,4 +1,10 @@
-import { applyView, type CellValue, type DbColumn } from "@awesome-bookmarks/shared";
+import {
+  applyView,
+  computeFormula,
+  formulaText,
+  type DbColumn,
+  type DbRow,
+} from "@awesome-bookmarks/shared";
 import type { AuthedContext } from "../auth/session.js";
 import { getDatabase } from "./service.js";
 
@@ -28,7 +34,18 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderCell(column: DbColumn, value: CellValue | undefined): string {
+function renderCell(
+  column: DbColumn,
+  row: DbRow,
+  columns: DbColumn[],
+): string {
+  // A formula holds nothing of its own: it is worked out from the row it is
+  // in, so a copy can carry the answer. It is made of columns the reader is
+  // already being shown.
+  if (column.kind === "formula") {
+    return escapeHtml(formulaText(computeFormula(column, row, columns)));
+  }
+  const value = row.cells[column.id];
   if (value === null || value === undefined || value === "") return "";
   switch (column.kind) {
     case "checkbox":
@@ -56,6 +73,13 @@ function renderCell(column: DbColumn, value: CellValue | undefined): string {
     case "ref":
       // The reference points at something only the owner can open, so the copy
       // shows nothing rather than a link that 404s for the reader.
+      return "";
+    case "relation":
+    case "rollup":
+      // Both reach into *another* table, which the reader of a public panel or
+      // a group's copy has no access to and may not even be shared. Same
+      // answer as a reference: nothing, rather than a hole into a table
+      // nobody meant to publish.
       return "";
     case "password":
       // Dots, never the value. This function is what builds the copy that goes
@@ -103,7 +127,7 @@ export function flattenDatabases(
       .map(
         (r) =>
           `<tr>${columns
-            .map((c) => `<td>${renderCell(c, r.cells[c.id])}</td>`)
+            .map((c) => `<td>${renderCell(c, r, db.columns)}</td>`)
             .join("")}</tr>`,
       )
       .join("");

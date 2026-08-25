@@ -7,7 +7,7 @@ import {
   type DbColumn,
   type SelectOption,
 } from "@awesome-bookmarks/shared";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -128,12 +128,54 @@ export function ColumnMenu({
   );
   const [optionDraft, setOptionDraft] = useState("");
   const [err, setErr] = useState<string | null>(null);
+  const [formula, setFormula] = useState(column?.config.formula ?? "");
+  const [targetDb, setTargetDb] = useState(
+    column?.config.targetDatabaseId ?? "",
+  );
+  const [relationCol, setRelationCol] = useState(
+    column?.config.relationColumnId ?? "",
+  );
+  const [targetCol, setTargetCol] = useState(column?.config.targetColumnId ?? "");
+  const [rollupOp, setRollupOp] = useState(column?.config.rollupOp ?? "count");
 
   const wantsOptions = kind === "select" || kind === "multiSelect";
 
+  // The other tables, for a relation to point at. Only fetched when the kind
+  // being edited actually needs them.
+  const others = useQuery({
+    queryKey: ["databases"],
+    queryFn: () => api.listDatabases(),
+    enabled: kind === "relation",
+    staleTime: 30_000,
+  });
+
+  // The relation columns of *this* table, and the columns of whatever they
+  // point at: a rollup is "follow that link, then summarise that column".
+  const relationColumns = columns.filter((c) => c.kind === "relation");
+  const rollupTargetId = relationColumns.find((c) => c.id === relationCol)
+    ?.config.targetDatabaseId;
+  const rollupTarget = useQuery({
+    queryKey: ["database", rollupTargetId ?? "none", null],
+    queryFn: () => api.getDatabase(rollupTargetId!),
+    enabled: kind === "rollup" && !!rollupTargetId,
+    staleTime: 30_000,
+  });
+
   const save = useMutation({
     mutationFn: async () => {
-      const config = wantsOptions ? { options } : {};
+      const config = wantsOptions
+        ? { options }
+        : kind === "formula"
+          ? { formula }
+          : kind === "relation"
+            ? { targetDatabaseId: targetDb || undefined }
+            : kind === "rollup"
+              ? {
+                  relationColumnId: relationCol || undefined,
+                  targetColumnId: targetCol || undefined,
+                  rollupOp,
+                }
+              : {};
       if (column) {
         await api.updateDbColumn(databaseId, column.id, {
           name: name.trim() || column.name,
@@ -274,6 +316,108 @@ export function ColumnMenu({
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
+          </div>
+        )}
+
+        {kind === "formula" && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              {t("db.formula")}
+            </span>
+            <textarea
+              value={formula}
+              aria-label={t("db.formula")}
+              rows={2}
+              onChange={(e) => setFormula(e.target.value)}
+              className="w-full rounded border border-slate-300 px-2 py-1.5 font-mono text-sm dark:border-slate-700 dark:bg-slate-800"
+            />
+            <span className="mt-1 block text-xs text-slate-400">
+              {t("db.formulaHelp")}
+            </span>
+          </label>
+        )}
+
+        {kind === "relation" && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
+              {t("db.relationTarget")}
+            </span>
+            <select
+              value={targetDb}
+              aria-label={t("db.relationTarget")}
+              onChange={(e) => setTargetDb(e.target.value)}
+              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              <option value="">{t("db.pickColumn")}</option>
+              {(others.data ?? [])
+                .filter((d) => d.id !== databaseId)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
+
+        {kind === "rollup" && (
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">
+                {t("db.rollupRelation")}
+              </span>
+              <select
+                value={relationCol}
+                aria-label={t("db.rollupRelation")}
+                onChange={(e) => setRelationCol(e.target.value)}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+              >
+                <option value="">{t("db.pickColumn")}</option>
+                {relationColumns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">
+                {t("db.rollupTarget")}
+              </span>
+              <select
+                value={targetCol}
+                aria-label={t("db.rollupTarget")}
+                onChange={(e) => setTargetCol(e.target.value)}
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+              >
+                <option value="">{t("db.pickColumn")}</option>
+                {(rollupTarget.data?.columns ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-slate-500">
+                {t("db.rollupOp")}
+              </span>
+              <select
+                value={rollupOp}
+                aria-label={t("db.rollupOp")}
+                onChange={(e) =>
+                  setRollupOp(e.target.value as typeof rollupOp)
+                }
+                className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"
+              >
+                <option value="count">{t("db.agg.count")}</option>
+                <option value="sum">{t("db.agg.sum")}</option>
+                <option value="avg">{t("db.agg.avg")}</option>
+                <option value="min">{t("db.agg.min")}</option>
+                <option value="max">{t("db.agg.max")}</option>
+                <option value="list">{t("db.rollupList")}</option>
+              </select>
+            </label>
           </div>
         )}
 
