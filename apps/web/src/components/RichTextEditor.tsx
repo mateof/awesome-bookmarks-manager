@@ -1042,6 +1042,15 @@ function Btn({
     <button
       type="button"
       title={title}
+      // Pressing a toolbar button must not take the caret out of the text.
+      //
+      // Without this the click blurs the editor and every command has to
+      // restore the selection through TipTap's `focus()`, which defers the
+      // real DOM focus to a `requestAnimationFrame`. That is a race, and under
+      // load it loses: the command lands on an editor that has no selection
+      // yet and quietly does nothing. The phone's bar has always done this;
+      // the desktop one was relying on the restore.
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`rounded p-1.5 ${
         active

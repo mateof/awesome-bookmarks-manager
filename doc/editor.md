@@ -32,7 +32,7 @@ con el motivo en cada caso.
 | Separador | ✅ | ✅ | |
 | Imágenes pegadas o arrastradas | ✅ | ✅ | |
 | **Menú `/`** | ✅ | ✅ | |
-| **Emoji con `:`** | ✅ | ✅ | catálogo propio, sin CDN |
+| **Emoji con `:`** | ✅ | ✅ | 565, por pestañas, con recientes |
 | **Buscar y reemplazar en el documento** | ✅ | ✅ | |
 | **Recuento de palabras** | ✅ | ✅ | |
 | Atajos de Markdown al escribir | ✅ | ✅ | ya venían de TipTap |
@@ -110,6 +110,23 @@ reescribiría alegremente el interior de un chip de referencia o el origen de
 una fórmula. "Reemplazar todo" va **del final hacia atrás**, porque reemplazar
 hacia delante invalida todas las posiciones siguientes en cuanto el texto nuevo
 mide distinto que el viejo.
+
+### El selector de emoji
+
+565 emoji en ocho categorías con pestañas, más una pestaña de **recientes** que
+es de verdad: los últimos que se usaron en este navegador, no una lista fija de
+"frecuentes" que es una suposición sobre las costumbres de otro.
+
+**La búsqueda ignora las pestañas.** Buscar solo dentro de la categoría abierta
+sería peor que no buscar: se escribe "casa" precisamente porque no se sabe en
+qué cajón está. Las palabras clave son en español y sin acentos, y la búsqueda
+también quita los acentos de lo que se teclea, para que "arbol" y "árbol"
+encuentren lo mismo sin escribir cada palabra dos veces.
+
+Sigue siendo un catálogo escrito a mano y no todo Unicode. Las mil quinientas
+entradas completas vienen con palabras clave en inglés que habría que traducir
+para que sirvieran de algo, y un selector donde "casa" no encuentra la casa es
+peor que uno más corto donde sí.
 
 ### Avisos destacados (callouts)
 
@@ -214,6 +231,7 @@ fragmentos aparte que solo se descargan cuando una nota los necesita.
 | Instancia propia de DOMPurify | `apps/web/src/lib/purify.ts` |
 | Marcas (copiable, oculto, resaltado, tecla) | `apps/web/src/lib/richMarks.ts` |
 | Avisos destacados | `apps/web/src/lib/richCallout.ts` |
+| Catálogo de emoji | `apps/web/src/lib/emojiCatalog.ts` |
 | Panel «+» del móvil | `apps/web/src/components/EditorMobileBar.tsx` |
 | La lista de acciones que comparten las tres | `apps/web/src/lib/editorActions.ts` |
 | Lo que el servidor deja pasar | `apps/api/src/util/sanitize.ts` |

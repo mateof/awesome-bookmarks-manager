@@ -117,20 +117,43 @@ test("el emoji se abre, se ve entero y escribe en el texto", async ({
   // `absolute top-full`, which needs a positioned ancestor and no scrolling
   // one in between; inside the editor there is neither, so it was drawn
   // somewhere nobody could see and the button looked dead.
-  const escaped = await page.evaluate(() => {
-    const panel = Array.from(document.querySelectorAll("body > div")).find(
+  // Waited for with a locator before measuring: an `evaluate` fired straight
+  // after a click can run before React has committed the panel, and then the
+  // measurement is of a moment that never mattered. That raced once already.
+  await expect(page.getByTestId("emoji-grid")).toBeVisible();
+  const escaped = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("body > div")).some(
       (d) =>
         getComputedStyle(d).position === "fixed" &&
-        !!d.querySelector('input[placeholder]') &&
+        !!d.querySelector("input[placeholder]") &&
         d.querySelectorAll("button").length > 10,
-    );
-    return !!panel;
-  });
+    ),
+  );
   expect(escaped).toBe(true);
 
+  // --- Tabs, and a search that ignores them --------------------------------
+  const grid = page.getByTestId("emoji-grid");
+  await expect(page.getByRole("tablist")).toBeVisible();
+
+  // A category that is not the one open: the food tab, by its own icon.
+  await page.getByRole("tab", { name: "Comida y bebida" }).click();
+  await expect(grid.getByRole("button", { name: "🍕" })).toBeVisible();
+  await expect(grid.getByRole("button", { name: "🏠" })).toHaveCount(0);
+
+  // Searching looks everywhere, which is the point: you type "casa" precisely
+  // because you do not know which drawer it is in. Unaccented, too.
+  await page.getByLabel("Buscar emoji…").fill("casa");
+  await expect(grid.getByRole("button", { name: "🏠" })).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+
   // And it types into the note rather than just looking right.
-  await page.getByRole("button", { name: "🔖" }).first().click();
-  await expect(editor).toContainText("🔖");
+  await grid.getByRole("button", { name: "🏠" }).first().click();
+  await expect(editor).toContainText("🏠");
+
+  // What you just used is waiting in the first tab next time. A static
+  // "frequent" list is a guess about somebody else's habits; this is not.
+  await page.getByRole("button", { name: "Emoji", exact: true }).click();
+  await expect(page.getByTestId("emoji-grid").getByRole("button", { name: "🏠" }).first()).toBeVisible();
 
   await ctx.close();
 });

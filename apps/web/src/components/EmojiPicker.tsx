@@ -1,124 +1,57 @@
-import { Search, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { Clock, Search, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  ALL_EMOJI,
+  DEFAULT_RECENT,
+  EMOJI_CATEGORIES,
+  foldText,
+  type EmojiEntry,
+} from "../lib/emojiCatalog.js";
 
 /**
- * Small emoji picker: a popover with a searchable grid.
+ * The emoji picker: tabs, a search box, and what you used last.
  *
- * The list is curated and bundled rather than pulled from a library or a CDN:
- * the app ships no external assets and the panel pages run under a strict CSP,
- * so a few hundred well-chosen emoji beat a megabyte of dependency. Each entry
- * carries Spanish keywords so searching "casa" or "libro" works.
+ * It used to be seventy-six emoji in five fixed groups, all of them on screen
+ * at once. That is a fine size for a list you scroll and a poor one for a
+ * catalogue: the answer to "there aren't enough" is not a longer scroll, it is
+ * somewhere to look. So the catalogue is in `lib/emojiCatalog.ts`, split into
+ * categories, and this is a tab strip over it.
+ *
+ * **Searching ignores the tabs.** A search that only looked inside the open
+ * category would be a worse search than none: you type "casa" because you do
+ * not know which drawer it is in.
+ *
+ * The recent list is real, kept in this browser. A static "frequent" group is
+ * a guess about somebody else's habits; the last dozen you actually picked is
+ * not a guess.
  */
+const RECENT_KEY = "emoji.recent";
+const RECENT_MAX = 24;
 
-interface Entry {
-  e: string;
-  k: string;
+function readRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const list = raw ? (JSON.parse(raw) as unknown) : null;
+    if (!Array.isArray(list)) return [];
+    return list.filter((x): x is string => typeof x === "string");
+  } catch {
+    // A blocked or full localStorage is not worth failing a picker over.
+    return [];
+  }
 }
 
-const GROUPS: { label: string; items: Entry[] }[] = [
-  {
-    label: "Frecuentes",
-    items: [
-      { e: "🔖", k: "marcador bookmark" },
-      { e: "⭐", k: "estrella favorito" },
-      { e: "🏠", k: "casa inicio home" },
-      { e: "📁", k: "carpeta archivo" },
-      { e: "📚", k: "libros biblioteca" },
-      { e: "💼", k: "trabajo maletin" },
-      { e: "🚀", k: "cohete lanzamiento" },
-      { e: "🔥", k: "fuego popular" },
-      { e: "💡", k: "idea bombilla" },
-      { e: "✅", k: "check hecho ok" },
-      { e: "🎯", k: "diana objetivo" },
-      { e: "🧠", k: "cerebro aprender" },
-    ],
-  },
-  {
-    label: "Trabajo y estudio",
-    items: [
-      { e: "💻", k: "portatil ordenador codigo" },
-      { e: "🖥️", k: "monitor ordenador" },
-      { e: "⌨️", k: "teclado" },
-      { e: "📝", k: "notas escribir" },
-      { e: "📊", k: "grafico datos metricas" },
-      { e: "📈", k: "grafico subida" },
-      { e: "📅", k: "calendario fecha" },
-      { e: "📌", k: "chincheta fijar" },
-      { e: "🗂️", k: "archivador carpetas" },
-      { e: "🔍", k: "lupa buscar" },
-      { e: "🔗", k: "enlace link" },
-      { e: "⚙️", k: "ajustes engranaje config" },
-      { e: "🛠️", k: "herramientas" },
-      { e: "🧪", k: "laboratorio pruebas test" },
-      { e: "🐛", k: "bug error insecto" },
-      { e: "🎓", k: "estudio graduacion universidad" },
-    ],
-  },
-  {
-    label: "Ocio",
-    items: [
-      { e: "🎮", k: "videojuegos juego" },
-      { e: "🎬", k: "cine peliculas" },
-      { e: "🎵", k: "musica nota" },
-      { e: "🎧", k: "auriculares musica podcast" },
-      { e: "📺", k: "television series" },
-      { e: "🍿", k: "palomitas cine" },
-      { e: "⚽", k: "futbol deporte" },
-      { e: "🏋️", k: "gimnasio deporte pesas" },
-      { e: "🍳", k: "cocina recetas huevo" },
-      { e: "🍕", k: "pizza comida" },
-      { e: "☕", k: "cafe bebida" },
-      { e: "🌱", k: "planta jardin" },
-      { e: "✈️", k: "viajes avion" },
-      { e: "🏖️", k: "playa vacaciones" },
-      { e: "🎨", k: "arte diseño pintura" },
-      { e: "📷", k: "camara fotos" },
-    ],
-  },
-  {
-    label: "Símbolos",
-    items: [
-      { e: "❤️", k: "corazon amor" },
-      { e: "🧡", k: "corazon naranja" },
-      { e: "💙", k: "corazon azul" },
-      { e: "💚", k: "corazon verde" },
-      { e: "💜", k: "corazon morado" },
-      { e: "⚡", k: "rayo rapido energia" },
-      { e: "🌟", k: "estrella brillo" },
-      { e: "🌈", k: "arcoiris" },
-      { e: "🌍", k: "mundo tierra global" },
-      { e: "🔒", k: "candado privado seguro" },
-      { e: "🔑", k: "llave acceso" },
-      { e: "🏷️", k: "etiqueta tag" },
-      { e: "📦", k: "caja paquete" },
-      { e: "🗝️", k: "llave antigua" },
-      { e: "♻️", k: "reciclar" },
-      { e: "🧩", k: "puzzle pieza" },
-    ],
-  },
-  {
-    label: "Animales y naturaleza",
-    items: [
-      { e: "🐉", k: "dragon" },
-      { e: "🐱", k: "gato" },
-      { e: "🐶", k: "perro" },
-      { e: "🦊", k: "zorro" },
-      { e: "🐧", k: "pinguino" },
-      { e: "🐢", k: "tortuga" },
-      { e: "🐠", k: "pez pecera" },
-      { e: "🦉", k: "buho" },
-      { e: "🌵", k: "cactus" },
-      { e: "🌸", k: "flor sakura" },
-      { e: "🍁", k: "hoja otoño" },
-      { e: "🌙", k: "luna noche" },
-      { e: "☀️", k: "sol dia" },
-      { e: "⛅", k: "nube tiempo" },
-      { e: "❄️", k: "nieve frio" },
-      { e: "🌊", k: "ola mar oceano" },
-    ],
-  },
-];
+function pushRecent(emoji: string): void {
+  try {
+    const next = [emoji, ...readRecent().filter((e) => e !== emoji)].slice(
+      0,
+      RECENT_MAX,
+    );
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function EmojiPicker({
   value,
@@ -145,19 +78,36 @@ export function EmojiPicker({
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState("");
+  const [tab, setTab] = useState("recent");
+  const [recent, setRecent] = useState<string[]>([]);
   const boxRef = useRef<HTMLDivElement>(null);
 
-  const results = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return GROUPS;
-    const filtered = GROUPS.map((g) => ({
-      label: g.label,
-      items: g.items.filter(
-        (it) => it.k.includes(query) || it.e === query,
-      ),
-    })).filter((g) => g.items.length > 0);
-    return filtered;
-  }, [q]);
+  useEffect(() => {
+    const stored = readRecent();
+    setRecent(stored.length > 0 ? stored : DEFAULT_RECENT);
+  }, []);
+
+  const searching = q.trim().length > 0;
+
+  const shown: EmojiEntry[] = useMemo(() => {
+    if (searching) {
+      const needle = foldText(q);
+      return ALL_EMOJI.filter(
+        (it) => foldText(it.k).includes(needle) || it.e === q.trim(),
+      );
+    }
+    if (tab === "recent") {
+      const byChar = new Map(ALL_EMOJI.map((it) => [it.e, it] as const));
+      return recent.map((e) => byChar.get(e) ?? { e, k: "" });
+    }
+    return EMOJI_CATEGORIES.find((c) => c.id === tab)?.items ?? [];
+  }, [q, tab, recent, searching]);
+
+  const choose = (emoji: string) => {
+    pushRecent(emoji);
+    onPick(emoji);
+    onClose();
+  };
 
   return (
     <div
@@ -165,7 +115,7 @@ export function EmojiPicker({
       className={
         plain
           ? "w-full p-1"
-          : "absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+          : "absolute right-0 top-full z-30 mt-1 w-80 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800"
       }
     >
       <div className="mb-2 flex items-center gap-1 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
@@ -175,6 +125,7 @@ export function EmojiPicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("panels.emojiSearch")}
+          aria-label={t("panels.emojiSearch")}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none"
         />
         <button
@@ -188,37 +139,79 @@ export function EmojiPicker({
         </button>
       </div>
 
-      <div className="max-h-56 overflow-y-auto">
-        {results.length === 0 && (
+      {/* Hidden while searching: the tabs would be lying about what is on
+          screen, since a search deliberately looks everywhere. */}
+      {!searching && (
+        <div
+          role="tablist"
+          aria-label={t("panels.emojiCategories")}
+          className="mb-1 flex items-center gap-0.5 border-b border-slate-200 pb-1 dark:border-slate-700"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "recent"}
+            onClick={() => setTab("recent")}
+            title={t("panels.emojiRecent")}
+            aria-label={t("panels.emojiRecent")}
+            className={`rounded p-1 ${
+              tab === "recent"
+                ? "bg-slate-200 dark:bg-slate-700"
+                : "hover:bg-slate-100 dark:hover:bg-slate-700"
+            }`}
+          >
+            <Clock className="h-3.5 w-3.5 text-slate-500" />
+          </button>
+          {EMOJI_CATEGORIES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === c.id}
+              onClick={() => setTab(c.id)}
+              title={t(`panels.emojiCat.${c.id}` as "panels.emojiCat.faces")}
+              aria-label={t(`panels.emojiCat.${c.id}` as "panels.emojiCat.faces")}
+              className={`rounded px-1 py-0.5 text-base leading-none ${
+                tab === c.id
+                  ? "bg-slate-200 dark:bg-slate-700"
+                  : "hover:bg-slate-100 dark:hover:bg-slate-700"
+              }`}
+            >
+              {c.tab}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="max-h-56 overflow-y-auto" data-testid="emoji-grid">
+        {shown.length === 0 && (
           <div className="px-1 py-4 text-center text-xs text-slate-400">
             {t("panels.emojiNoResults")}
           </div>
         )}
-        {results.map((g) => (
-          <div key={g.label} className="mb-2">
-            <div className="px-1 pb-1 text-[10px] uppercase tracking-wide text-slate-400">
-              {g.label}
-            </div>
-            <div className="grid grid-cols-8 gap-0.5">
-              {g.items.map((it) => (
-                <button
-                  key={it.e}
-                  type="button"
-                  title={it.k.split(" ")[0]}
-                  onClick={() => {
-                    onPick(it.e);
-                    onClose();
-                  }}
-                  className={`rounded p-1 text-lg leading-none hover:bg-slate-100 dark:hover:bg-slate-700 ${
-                    value === it.e ? "bg-slate-200 dark:bg-slate-600" : ""
-                  }`}
-                >
-                  {it.e}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
+        <div className="grid grid-cols-8 gap-0.5">
+          {shown.map((it) => (
+            <button
+              key={it.e}
+              type="button"
+              title={it.k.split(" ")[0] ?? it.e}
+              onClick={() => choose(it.e)}
+              className={`rounded p-1 text-lg leading-none hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                value === it.e ? "bg-slate-200 dark:bg-slate-600" : ""
+              }`}
+            >
+              {it.e}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Says how many there are, which is the answer to "is this all of
+          them?" without making anybody count. */}
+      <div className="pt-1 text-right text-[10px] text-slate-400">
+        {searching
+          ? t("panels.emojiCount", { count: shown.length })
+          : t("panels.emojiTotal", { count: ALL_EMOJI.length })}
       </div>
     </div>
   );
