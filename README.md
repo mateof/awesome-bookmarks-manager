@@ -41,8 +41,8 @@ one port.
   underlines**, a **highlighter**, superscript/subscript, `<kbd>`, alignment,
   font family, pasted/dropped **images**, **task lists** you can tick from the
   note itself, **code blocks** with syntax highlighting and a copy button,
-  plain **tables**, **formulas** (KaTeX) and **diagrams** (Mermaid), a **`/`
-  menu** to insert any of it, `:` for emoji, **find and replace**, a word
+  plain **tables**, **formulas** (KaTeX), **diagrams** (Mermaid) and
+  **callouts** in five kinds, a **`/` menu** to insert any of it, `:` for emoji, **find and replace**, a word
   count, and **click-to-copy** and **hidden-until-clicked** marks for the
   credentials people actually keep in these notes), custom icons, and tags.
   Formulas and diagrams store their **source** and are drawn when the note is

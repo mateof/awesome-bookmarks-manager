@@ -28,6 +28,7 @@ con el motivo en cada caso.
 | **Tablas** | ✅ | ✅ | además de las bases de datos embebidas |
 | **Fórmulas (KaTeX)** | ✅ | ✅ | en línea y en bloque |
 | **Diagramas (Mermaid)** | ✅ | ✅ | |
+| **Avisos destacados (callouts)** | ~ | ✅ | ver la nota de abajo |
 | Separador | ✅ | ✅ | |
 | Imágenes pegadas o arrastradas | ✅ | ✅ | |
 | **Menú `/`** | ✅ | ✅ | |
@@ -110,6 +111,28 @@ una fórmula. "Reemplazar todo" va **del final hacia atrás**, porque reemplazar
 hacia delante invalida todas las posiciones siguientes en cuanto el texto nuevo
 mide distinto que el viejo.
 
+### Avisos destacados (callouts)
+
+Cinco tipos: nota, información, consejo, aviso y peligro. Se envuelve la
+selección y, estando dentro de uno, elegir otro tipo **cambia** el que hay en
+vez de anidar una caja dentro de otra.
+
+Una corrección al informe original, que los omitió sin decirlo: SiYuan **no
+lleva callouts de serie**. Se consiguen con atributos de bloque y CSS del tema,
+y quien los da por hechos suele venir de Obsidian, donde sí son un bloque de
+primera clase. Aquí son de primera clase, como en Obsidian, porque el
+equivalente por temas obliga a que cada usuario se pinte su propio CSS.
+
+El tipo se guarda como **palabra** (`data-callout="warning"`), no como color.
+Un callout guardado como "el verde" no lo puede reestilar un tema, no lo puede
+leer un lector de pantalla y no significa nada en una copia que aterrice en
+otra paleta; la palabra sobrevive a las tres cosas. La marca visual es un
+emoji puesto desde CSS, que además no hay que traducir.
+
+El contenido es `block+` y no un párrafo: lo que la gente mete en un aviso es
+una frase **y** la lista de qué hacer al respecto, y una caja de una sola línea
+deja esa lista fuera del recuadro al que pertenece.
+
 ## Lo que se copió distinto
 
 **El diálogo del origen.** La primera versión pedía la fórmula con
@@ -123,6 +146,14 @@ y una caja vacía sin ejemplo es una función que se prueba una vez.
 dentro de un bloque de código se descartaba en silencio. Las fórmulas y los
 diagramas se insertan después del bloque que contiene el cursor, que además es
 donde los espera quien pidió una fórmula mientras escribía código.
+
+**El panel «+» del móvil va por categorías.** No es cosmética: esa rejilla se
+escribió cuando había nueve cosas que insertar y se quedó plana y con nueve
+mientras el editor ganaba tablas, listas de tareas, código, fórmulas, diagramas
+y avisos. En un teléfono, media aplicación había dejado de ser alcanzable, sin
+error y sin hueco vacío: nada que notar. Ahora las secciones se generan de una
+lista de datos, y hay un test que comprueba que los bloques nuevos se alcanzan
+desde el móvil, para que la próxima vez el olvido tenga dónde saltar.
 
 **El saneador de la app es suyo.** DOMPurify exporta una instancia **global** y
 las bibliotecas registran hooks en ella; Mermaid registra dos en cuanto se
@@ -167,4 +198,6 @@ fragmentos aparte que solo se descargan cuando una nota los necesita.
 | Dibujado al leer (KaTeX, Mermaid, código, índice) | `apps/web/src/lib/richRender.ts` |
 | Instancia propia de DOMPurify | `apps/web/src/lib/purify.ts` |
 | Marcas (copiable, oculto, resaltado, tecla) | `apps/web/src/lib/richMarks.ts` |
+| Avisos destacados | `apps/web/src/lib/richCallout.ts` |
+| Panel «+» del móvil | `apps/web/src/components/EditorMobileBar.tsx` |
 | Lo que el servidor deja pasar | `apps/api/src/util/sanitize.ts` |

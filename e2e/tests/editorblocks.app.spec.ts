@@ -124,6 +124,48 @@ test("bloques nuevos: tareas, código, tabla, fórmula y diagrama", async ({
   await ctx.close();
 });
 
+test("un aviso destacado guarda de qué tipo es", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "editor.callout.e2e@example.com",
+    nickname: "editorcallout",
+    password: "EditorCallout26xx",
+  });
+  const req = page.request;
+
+  const folder = await (
+    await req.post("/api/folders", {
+      data: { name: "Avisos", description: "<p>Ojo con el DNS</p>" },
+    })
+  ).json();
+
+  const editor = await openEditor(page, folder.id);
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.getByRole("button", { name: "Aviso destacado" }).click();
+  await page.getByRole("button", { name: "Peligro" }).click();
+  await expect(editor.locator('div[data-callout="danger"]')).toHaveCount(1);
+
+  // Choosing another kind changes the box rather than nesting a second one
+  // inside the first, which is what a plain toggle would do.
+  await page.getByRole("button", { name: "Aviso destacado" }).click();
+  await page.getByRole("button", { name: "Consejo" }).click();
+  await expect(editor.locator("div[data-callout]")).toHaveCount(1);
+  await expect(editor.locator('div[data-callout="tip"]')).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Guardar y cerrar" }).click();
+  await expect(async () => {
+    const saved = await (await req.get(`/api/folders/${folder.id}`)).json();
+    // The kind is stored as a word: a colour would not survive a theme, a
+    // screen reader, or a copy that lands somewhere with another palette.
+    expect(saved.description).toContain('data-callout="tip"');
+    expect(saved.description).toContain("Ojo con el DNS");
+  }).toPass({ timeout: 10_000 });
+
+  await ctx.close();
+});
+
 test("una casilla se marca desde la nota, sin abrir el editor", async ({
   browser,
 }) => {

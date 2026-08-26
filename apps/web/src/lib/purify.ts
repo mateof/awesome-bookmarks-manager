@@ -31,6 +31,7 @@ export const NOTE_DATA_ATTRS = [
   "data-math",
   "data-math-block",
   "data-mermaid",
+  "data-callout",
   "data-checked",
   "data-type",
   "data-ref",

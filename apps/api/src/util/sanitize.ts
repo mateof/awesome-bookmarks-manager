@@ -98,6 +98,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
       // somebody wrote, never the picture built from it.
       "data-math-block",
       "data-mermaid",
+      // Which kind of callout this is, as a word. A colour would not survive a
+      // theme, a screen reader or a copy that lands somewhere else.
+      "data-callout",
     ],
     "*": ["class", "style"],
   },

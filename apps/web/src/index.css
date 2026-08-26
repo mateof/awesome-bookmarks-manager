@@ -1037,3 +1037,111 @@ body,
   pointer-events: none;
   color: rgb(148 163 184);
 }
+
+/* ---- Callouts ------------------------------------------------------------
+   A box that raises its voice. The kind is stored as a word (`data-callout`)
+   and the colour is decided here, so a theme can restyle every callout in the
+   app without touching a single note, and a copy that lands somewhere with a
+   different palette still says "warning" rather than "the yellow one". */
+.ab-callout {
+  border-left: 3px solid rgb(148 163 184);
+  background: rgb(248 250 252);
+  border-radius: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  margin: 0.75rem 0;
+}
+.dark .ab-callout {
+  background: rgb(30 41 59 / 0.6);
+}
+/* The label above the text, built from the kind so nothing has to be typed
+   into the note itself. Set per language by the `content` overrides below. */
+.ab-callout::before {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+  color: rgb(100 116 139);
+}
+.ab-callout > :first-child {
+  margin-top: 0;
+}
+.ab-callout > :last-child {
+  margin-bottom: 0;
+}
+
+.ab-callout-note {
+  border-left-color: rgb(148 163 184);
+}
+.ab-callout-note::before {
+  content: "📝";
+}
+.ab-callout-info {
+  border-left-color: rgb(56 189 248);
+  background: rgb(240 249 255);
+}
+.dark .ab-callout-info {
+  background: rgb(12 74 110 / 0.35);
+}
+.ab-callout-info::before {
+  content: "ℹ️";
+}
+.ab-callout-tip {
+  border-left-color: rgb(52 211 153);
+  background: rgb(240 253 244);
+}
+.dark .ab-callout-tip {
+  background: rgb(6 78 59 / 0.35);
+}
+.ab-callout-tip::before {
+  content: "💡";
+}
+.ab-callout-warning {
+  border-left-color: rgb(251 191 36);
+  background: rgb(255 251 235);
+}
+.dark .ab-callout-warning {
+  background: rgb(120 53 15 / 0.35);
+}
+.ab-callout-warning::before {
+  content: "⚠️";
+}
+.ab-callout-danger {
+  border-left-color: rgb(248 113 113);
+  background: rgb(254 242 242);
+}
+.dark .ab-callout-danger {
+  background: rgb(127 29 29 / 0.35);
+}
+.ab-callout-danger::before {
+  content: "⛔";
+}
+
+/* The swatch in the editor's kind picker: the same colours, small. */
+.ab-callout-dot {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 0.2rem;
+  border-left: 3px solid;
+  border-left-color: inherit;
+}
+.ab-callout-dot.ab-callout-note {
+  background: rgb(148 163 184);
+}
+.ab-callout-dot.ab-callout-info {
+  background: rgb(56 189 248);
+}
+.ab-callout-dot.ab-callout-tip {
+  background: rgb(52 211 153);
+}
+.ab-callout-dot.ab-callout-warning {
+  background: rgb(251 191 36);
+}
+.ab-callout-dot.ab-callout-danger {
+  background: rgb(248 113 113);
+}
+.ab-callout-dot::before {
+  content: none;
+}

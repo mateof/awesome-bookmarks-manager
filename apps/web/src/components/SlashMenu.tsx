@@ -8,6 +8,7 @@ import {
   Heading2,
   Heading3,
   Image as ImageIcon,
+  Info,
   List,
   ListOrdered,
   Minus,
@@ -95,6 +96,13 @@ export function useSlashItems(
         keywords: "tareas checklist todo casillas",
         icon: <CheckSquare className="h-4 w-4" />,
         run: () => editor.chain().focus().toggleTaskList().run(),
+      },
+      {
+        id: "callout",
+        label: t("richText.callout"),
+        keywords: "aviso nota callout destacado atencion",
+        icon: <Info className="h-4 w-4" />,
+        run: () => editor.chain().focus().toggleCallout("info").run(),
       },
       {
         id: "quote",

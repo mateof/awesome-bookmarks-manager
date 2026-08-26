@@ -93,6 +93,15 @@ describe("sanitizeRichText", () => {
     expect(html).toContain("<kbd>");
   });
 
+  it("keeps a callout, and what kind it is", () => {
+    const html = sanitizeRichText(
+      '<div data-callout="warning" class="ab-callout ab-callout-warning">' +
+        "<p>Ojo con esto</p></div>",
+    );
+    expect(html).toContain('data-callout="warning"');
+    expect(html).toContain("ab-callout-warning");
+  });
+
   it("still refuses a form control, checklist or not", () => {
     // The tick is an attribute and the box is drawn in CSS on purpose: text
     // that arrives from a share has no business carrying inputs.

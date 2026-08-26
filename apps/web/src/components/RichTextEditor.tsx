@@ -42,6 +42,7 @@ import {
   Heading2,
   Heading3,
   Highlighter,
+  Info,
   ImagePlus,
   Italic,
   Link as LinkIcon,
@@ -61,6 +62,7 @@ import {
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import type { DbTemplate } from "@awesome-bookmarks/shared";
 import { RICH_COLORS } from "../lib/richColors.js";
+import { Callout, CALLOUT_KINDS, type CalloutKind } from "../lib/richCallout.js";
 import { DiagramBlock } from "../lib/richDiagram.js";
 import { MathBlock, MathInline } from "../lib/richMath.js";
 import { ColoredUnderline, RICH_MARKS } from "../lib/richMarks.js";
@@ -236,6 +238,7 @@ export function RichTextEditor({
       MathInline,
       MathBlock,
       DiagramBlock,
+      Callout,
       CharacterCount,
       Placeholder.configure({
         placeholder: ({ node }) =>
@@ -757,9 +760,11 @@ function Toolbar({
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
+  const [showCallouts, setShowCallouts] = useState(false);
   const imgRef = useRef<HTMLInputElement>(null);
   const colorAnchor = useRef<HTMLSpanElement>(null);
   const highlightAnchor = useRef<HTMLSpanElement>(null);
+  const calloutAnchor = useRef<HTMLSpanElement>(null);
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
       <Btn
@@ -1123,6 +1128,41 @@ function Toolbar({
         <option value="serif">{t("richText.fontSerif")}</option>
         <option value="mono">{t("richText.fontMono")}</option>
       </select>
+      <span ref={calloutAnchor} className="inline-flex">
+        <Btn
+          active={editor.isActive("callout")}
+          onClick={() => setShowCallouts((v) => !v)}
+          title={t("richText.callout")}
+        >
+          <Info className="h-3 w-3" />
+        </Btn>
+        {showCallouts && (
+          <AnchoredPopover
+            anchor={calloutAnchor}
+            onClose={() => setShowCallouts(false)}
+            width={188}
+          >
+            <span className="block p-1">
+              {CALLOUT_KINDS.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().toggleCallout(kind).run();
+                    setShowCallouts(false);
+                  }}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                    editor.isActive("callout", { kind }) ? "font-medium" : ""
+                  }`}
+                >
+                  <span className={`ab-callout-dot ab-callout-${kind}`} />
+                  {t(`richText.calloutKind.${kind}` as "richText.calloutKind.info")}
+                </button>
+              ))}
+            </span>
+          </AnchoredPopover>
+        )}
+      </span>
       <Btn
         active={false}
         onClick={() => onInsertMath(true)}
