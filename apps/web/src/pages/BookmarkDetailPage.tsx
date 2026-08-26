@@ -258,6 +258,11 @@ export function BookmarkDetailPage() {
         html={b.description}
         canEdit={b.canWrite}
         onEdit={() => setEditDescription(true)}
+        onTaskToggle={(description) =>
+          void api
+            .updateBookmark(b.id, { description, baseRev: b.rev })
+            .then(() => qc.invalidateQueries({ queryKey: ["bookmarks"] }))
+        }
       />
 
       <Attachments entity="bookmark" id={b.id} canEdit={b.canWrite} />

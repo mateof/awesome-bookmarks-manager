@@ -19,10 +19,13 @@ export function DescriptionSection({
   html,
   canEdit,
   onEdit,
+  onTaskToggle,
 }: {
   html: string | null;
   canEdit: boolean;
   onEdit: () => void;
+  /** Ticking a checkbox writes the note back without opening the editor. */
+  onTaskToggle?: (html: string) => void;
 }) {
   const { t } = useTranslation();
   const has = !!html && html.trim().length > 0;
@@ -51,6 +54,7 @@ export function DescriptionSection({
         <CollapsibleRichText
           html={html!}
           {...(canEdit ? { onEdit } : {})}
+          {...(canEdit && onTaskToggle ? { onTaskToggle } : {})}
         />
       ) : (
         <button

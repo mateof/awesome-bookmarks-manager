@@ -810,3 +810,230 @@ body,
 .ab-db-block.ProseMirror-selectednode:active {
   opacity: 0.6;
 }
+
+/* ---- Editor blocks that arrive as source ---------------------------------
+   Checklists, code, formulas, diagrams and prose tables. Written here rather
+   than as utility classes for the same reason as the marks above: the HTML is
+   produced by TipTap and re-inserted from a sanitised string, so Tailwind
+   never sees these class names. */
+
+/* Task lists. The box is drawn in CSS from `data-checked` instead of being an
+   <input> in the stored HTML: allowing form controls in text that arrives from
+   a share is a door with no reason to be open. */
+.tiptap ul[data-type="taskList"],
+.prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+.tiptap ul[data-type="taskList"] li,
+.prose ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.tiptap ul[data-type="taskList"] li > label,
+.prose ul[data-type="taskList"] li > label {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+/* Read-only copies keep no <input>, so the box is a square drawn before the
+   text, ticked from the attribute. */
+.prose ul[data-type="taskList"] li::before {
+  content: "";
+  margin-top: 0.35em;
+  width: 0.9em;
+  height: 0.9em;
+  flex-shrink: 0;
+  border: 1px solid rgb(148 163 184);
+  border-radius: 0.2em;
+}
+.prose ul[data-type="taskList"] li[data-checked="true"]::before {
+  background: rgb(100 116 139);
+  /* The tick, as a mask so it takes the border colour in either theme. */
+  box-shadow: inset 0 0 0 2px white;
+}
+.dark .prose ul[data-type="taskList"] li[data-checked="true"]::before {
+  box-shadow: inset 0 0 0 2px rgb(15 23 42);
+}
+.prose ul[data-type="taskList"] li[data-checked="true"] {
+  color: rgb(100 116 139);
+  text-decoration: line-through;
+}
+
+/* Code blocks: a copy button in the corner, and the highlighter's colours. */
+.ab-pre {
+  position: relative;
+}
+.ab-code-copy {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  border-radius: 0.25rem;
+  border: 1px solid rgb(71 85 105);
+  background: rgb(30 41 59);
+  color: rgb(226 232 240);
+  padding: 0.05rem 0.4rem;
+  font-size: 0.65rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ab-pre:hover .ab-code-copy,
+.ab-code-copy:focus-visible {
+  opacity: 1;
+}
+/* One palette for both themes: a code block is dark in both, like every code
+   block anyone has read on the web. */
+.hljs-comment,
+.hljs-quote {
+  color: #94a3b8;
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag {
+  color: #c084fc;
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: #86efac;
+}
+.hljs-number,
+.hljs-built_in,
+.hljs-symbol,
+.hljs-attr {
+  color: #fdba74;
+}
+.hljs-title,
+.hljs-section,
+.hljs-name {
+  color: #7dd3fc;
+}
+.hljs-type,
+.hljs-class .hljs-title {
+  color: #fde68a;
+}
+.hljs-deletion {
+  color: #fca5a5;
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* Formulas. The block one gets its own line and scrolls sideways rather than
+   overflowing the note: a long derivation is wider than any column. */
+.ab-math-block {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.ab-math {
+  white-space: nowrap;
+}
+
+/* Diagrams, centred, with their source shown when Mermaid could not parse it. */
+.ab-diagram {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  text-align: center;
+}
+.ab-diagram[data-ab-error] {
+  text-align: left;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  border-left: 2px solid rgb(248 113 113);
+  padding-left: 0.5rem;
+  color: rgb(148 163 184);
+}
+
+/* A key, as a key. */
+.tiptap kbd,
+.prose kbd {
+  border: 1px solid rgb(203 213 225);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  padding: 0.05em 0.35em;
+  font-size: 0.85em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgb(248 250 252);
+  color: rgb(15 23 42);
+}
+.dark .tiptap kbd,
+.dark .prose kbd {
+  border-color: rgb(71 85 105);
+  background: rgb(30 41 59);
+  color: rgb(226 232 240);
+}
+
+/* Prose tables: the ones written in the note, not the embedded databases. */
+.tiptap table,
+.prose table.ab-table,
+.prose > table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+  table-layout: fixed;
+}
+.tiptap th,
+.tiptap td,
+.prose > table th,
+.prose > table td {
+  border: 1px solid rgb(226 232 240);
+  padding: 0.3rem 0.5rem;
+  vertical-align: top;
+}
+.dark .tiptap th,
+.dark .tiptap td,
+.dark .prose > table th,
+.dark .prose > table td {
+  border-color: rgb(51 65 85);
+}
+.tiptap th,
+.prose > table th {
+  background: rgb(248 250 252);
+  font-weight: 600;
+  text-align: left;
+}
+.dark .tiptap th,
+.dark .prose > table th {
+  background: rgb(30 41 59);
+}
+/* The handle you drag to resize a column, and the cell selection. */
+.tiptap .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(14 165 233 / 0.12);
+  pointer-events: none;
+}
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgb(14 165 233);
+  cursor: col-resize;
+}
+.tiptap table {
+  position: relative;
+}
+.tiptap td,
+.tiptap th {
+  position: relative;
+}
+
+/* The placeholder that tells you the slash menu exists. Only on an empty
+   document: a hint repeated on every blank line is noise. */
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: rgb(148 163 184);
+}

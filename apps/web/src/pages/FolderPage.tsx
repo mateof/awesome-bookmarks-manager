@@ -765,6 +765,11 @@ export function FolderPage() {
           html={folder.description}
           canEdit={canWrite}
           onEdit={() => setEditDescription(true)}
+          onTaskToggle={(description) =>
+            void api
+              .updateFolder(folder.id, { description, baseRev: folder.rev })
+              .then(() => qc.invalidateQueries({ queryKey: ["folders"] }))
+          }
         />
       )}
 

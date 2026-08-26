@@ -48,6 +48,60 @@ describe("sanitizeRichText", () => {
     expect(html).not.toContain("tracker.invalid");
   });
 
+  it("keeps a checklist, with its ticks", () => {
+    const html = sanitizeRichText(
+      '<ul data-type="taskList"><li data-type="taskItem" data-checked="true">' +
+        "<div><p>Comprar pan</p></div></li></ul>",
+    );
+    expect(html).toContain('data-type="taskList"');
+    expect(html).toContain('data-checked="true"');
+  });
+
+  it("keeps a code block's language, which is what colours it", () => {
+    const html = sanitizeRichText(
+      '<pre><code class="language-python">print(1)</code></pre>',
+    );
+    expect(html).toContain('class="language-python"');
+  });
+
+  it("keeps the source of a formula and of a diagram", () => {
+    const html = sanitizeRichText(
+      '<p><span data-math="E = mc^2">E = mc^2</span></p>' +
+        '<div data-math-block="\\int_0^1 x">…</div>' +
+        '<div data-mermaid="graph TD; A-->B;">…</div>',
+    );
+    expect(html).toContain("data-math=");
+    expect(html).toContain("data-math-block=");
+    expect(html).toContain("data-mermaid=");
+  });
+
+  it("keeps a table's spans and a paragraph's alignment", () => {
+    const html = sanitizeRichText(
+      '<table><tbody><tr><td colspan="2" rowspan="1">x</td></tr></tbody></table>' +
+        '<p style="text-align: center">centrado</p>',
+    );
+    expect(html).toContain('colspan="2"');
+    expect(html).toContain("text-align:center");
+  });
+
+  it("keeps sub, sup and kbd", () => {
+    const html = sanitizeRichText(
+      "<p>H<sub>2</sub>O, x<sup>2</sup>, <kbd>Ctrl</kbd></p>",
+    );
+    expect(html).toContain("<sub>");
+    expect(html).toContain("<sup>");
+    expect(html).toContain("<kbd>");
+  });
+
+  it("still refuses a form control, checklist or not", () => {
+    // The tick is an attribute and the box is drawn in CSS on purpose: text
+    // that arrives from a share has no business carrying inputs.
+    const html = sanitizeRichText(
+      '<ul data-type="taskList"><li><input type="checkbox" checked> x</li></ul>',
+    );
+    expect(html).not.toContain("<input");
+  });
+
   it("still strips scripts and javascript: links", () => {
     const html = sanitizeRichText(
       '<p><script>alert(1)</script><a href="javascript:alert(1)">x</a></p>',

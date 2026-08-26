@@ -25,6 +25,12 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "hr",
     "span",
     "div",
+    // Formulas and diagrams store their source as text inside a marker, and
+    // these three carry meaning no other tag does: a key you press, and the
+    // two halves of a chemical formula or an exponent.
+    "kbd",
+    "sub",
+    "sup",
     "img",
     "table",
     "thead",
@@ -50,7 +56,29 @@ const OPTIONS: sanitizeHtml.IOptions = {
     // The copyable/spoiler/highlight markers ride on spans as data attributes;
     // without these they would be stripped on the way in and the marks would
     // silently stop working after a round-trip through the server.
-    span: ["class", "style", "data-copyable", "data-spoiler", "data-highlight"],
+    span: [
+      "class",
+      "style",
+      "data-copyable",
+      "data-spoiler",
+      "data-highlight",
+      // The LaTeX source of an inline formula. The rendered formula is never
+      // stored: it is built when the note is drawn, from this.
+      "data-math",
+    ],
+    // Checklists are `li[data-checked]` inside `ul[data-type="taskList"]`, and
+    // the box is drawn in CSS. Deliberately not an `<input>`: allowing form
+    // controls in text that arrives from a share is a door this app has no
+    // reason to open.
+    ul: ["class", "data-type"],
+    ol: ["class", "data-type", "start"],
+    li: ["class", "data-type", "data-checked"],
+    // The language class is what tells the renderer which grammar to colour
+    // with, so it has to survive the round trip like any other content.
+    code: ["class"],
+    pre: ["class"],
+    th: ["class", "style", "colspan", "rowspan", "colwidth"],
+    td: ["class", "style", "colspan", "rowspan", "colwidth"],
     // A coloured underline is a `<u>` carrying its colour twice: in the style
     // that paints it and in the data attribute that survives a renderer which
     // drops styles.
@@ -66,6 +94,10 @@ const OPTIONS: sanitizeHtml.IOptions = {
       "data-db-view",
       "data-db-height",
       "data-db-mode",
+      // Sources, same as the inline formula above: what is stored is the text
+      // somebody wrote, never the picture built from it.
+      "data-math-block",
+      "data-mermaid",
     ],
     "*": ["class", "style"],
   },
@@ -82,6 +114,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
       "background-color": COLOR,
       "text-decoration-color": COLOR,
       "font-family": [/^[\w\s,'"-]{1,120}$/],
+      // Written by the alignment buttons. A keyword list rather than a
+      // pattern: there are four of them and no reason to accept a fifth.
+      "text-align": [/^(left|center|right|justify)$/],
     },
   },
   allowedSchemes: ["http", "https", "mailto", "data"],

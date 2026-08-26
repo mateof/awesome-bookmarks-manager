@@ -42,6 +42,8 @@ interface Props {
    * nothing and gets no button.
    */
   onEdit?: () => void;
+  /** Saving a checkbox ticked in the note itself. */
+  onTaskToggle?: (html: string) => void;
 }
 
 export function CollapsibleRichText({
@@ -49,6 +51,7 @@ export function CollapsibleRichText({
   collapsedHeight = 200,
   className,
   onEdit,
+  onTaskToggle,
 }: Props) {
   const { t } = useTranslation();
   const innerRef = useRef<HTMLDivElement>(null);
@@ -162,6 +165,7 @@ export function CollapsibleRichText({
           <RichTextView
             html={html}
             className={onEdit ? "[&>*:first-child]:pr-16" : undefined}
+            {...(onTaskToggle ? { onTaskToggle } : {})}
           />
         </div>
       </div>

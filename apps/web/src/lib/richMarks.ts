@@ -28,6 +28,9 @@ declare module "@tiptap/core" {
       setHighlight: (color: string) => ReturnType;
       unsetHighlight: () => ReturnType;
     };
+    kbd: {
+      toggleKbd: () => ReturnType;
+    };
   }
 }
 
@@ -179,4 +182,33 @@ export const ColoredUnderline = UnderlineExt.extend({
   },
 });
 
-export const RICH_MARKS = [Copyable, Spoiler, Highlight];
+/**
+ * A key you are meant to press.
+ *
+ * A `<kbd>` rather than inline code, because they are different claims: code
+ * is something you type into a program, a key is something you press on a
+ * keyboard, and notes about an app are full of the second kind.
+ */
+export const Kbd = Mark.create({
+  name: "kbd",
+  excludes: "kbd code",
+
+  parseHTML() {
+    return [{ tag: "kbd" }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return ["kbd", mergeAttributes(HTMLAttributes), 0];
+  },
+
+  addCommands() {
+    return {
+      toggleKbd:
+        () =>
+        ({ commands }) =>
+          commands.toggleMark(this.name),
+    };
+  },
+});
+
+export const RICH_MARKS = [Copyable, Spoiler, Highlight, Kbd];

@@ -1,12 +1,39 @@
+import CharacterCount from "@tiptap/extension-character-count";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Color from "@tiptap/extension-color";
+import Placeholder from "@tiptap/extension-placeholder";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Table from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
+import TextAlign from "@tiptap/extension-text-align";
 import FontFamily from "@tiptap/extension-font-family";
 import ImageExt from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import TextStyle from "@tiptap/extension-text-style";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { createLowlight } from "lowlight";
 import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   Bold,
+  CheckSquare,
+  Code2,
+  Eraser,
+  Keyboard,
+  Search,
+  Sigma,
+  Smile,
+  Subscript as SubIcon,
+  Superscript as SupIcon,
+  Table as TableIcon,
+  Workflow,
   ClipboardCopy,
   Code,
   Eye,
@@ -34,11 +61,17 @@ import {
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import type { DbTemplate } from "@awesome-bookmarks/shared";
 import { RICH_COLORS } from "../lib/richColors.js";
+import { DiagramBlock } from "../lib/richDiagram.js";
+import { MathBlock, MathInline } from "../lib/richMath.js";
 import { ColoredUnderline, RICH_MARKS } from "../lib/richMarks.js";
 import { DatabaseBlock as DatabaseBlockNode } from "../lib/richDatabase.js";
 import { EntityRef } from "../lib/richRefs.js";
 import { dlg } from "./dialogs.js";
+import { EditorFindReplace } from "./EditorFindReplace.js";
+import { EditorSourceDialog } from "./EditorSourceDialog.js";
 import { EditorMobileBar } from "./EditorMobileBar.js";
+import { EmojiPicker } from "./EmojiPicker.js";
+import { SlashMenu, useSlashItems, type SlashItem } from "./SlashMenu.js";
 import { RefPicker, type PickedRef } from "./RefPicker.js";
 import {
   DatabasePicker,
@@ -46,8 +79,35 @@ import {
 } from "./DatabasePicker.js";
 import { api } from "../api.js";
 import { AnchoredPopover } from "./AnchoredPopover.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+
+/**
+ * The text between the caret and the `/` that opened the menu.
+ *
+ * Returns null when there is no longer a slash to filter under, which is what
+ * closes the menu: deleting it, moving the caret off the line, or typing a
+ * space (a slash in the middle of a sentence is a slash, not a command).
+ */
+function slashQueryAt(editor: Editor): string | null {
+  const { $from, empty } = editor.state.selection;
+  if (!empty) return null;
+  const before = $from.parent.textBetween(
+    0,
+    $from.parentOffset,
+    undefined,
+    "\uFFFC",
+  );
+  const at = before.lastIndexOf("/");
+  if (at === -1) return null;
+  const query = before.slice(at + 1);
+  if (/\s/.test(query)) return null;
+  // Only a slash that starts a word opens a menu, same rule as when it fired.
+  const preceding = at === 0 ? "" : before[at - 1];
+  if (preceding && !/\s/.test(preceding)) return null;
+  return query;
+}
 
 interface Props {
   value: string;
@@ -91,10 +151,35 @@ export function RichTextEditor({
   onMaximisedChange,
 }: Props) {
   const { t } = useTranslation();
+  // Read once for the extension config, which is built before the editor and
+  // does not re-read it: a note whose placeholder changed language mid-session
+  // is not worth re-creating the editor for.
+  const placeholderHint = t("richText.slashPlaceholder");
   const [redactSensitive, setRedactSensitive] = useState(false);
   const [maximised, setMaximised] = useState(false);
   const [picking, setPicking] = useState<"entity" | "asset" | null>(null);
   const [pickingDatabase, setPickingDatabase] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [emoji, setEmoji] = useState(false);
+  /** The formula or diagram whose source is being written. */
+  const [source, setSource] = useState<{
+    kind: "mathInline" | "mathBlock" | "diagram";
+    initial: string;
+  } | null>(null);
+  /** Open while a `/` is being typed: what follows filters the menu. */
+  const [slash, setSlash] = useState<{
+    query: string;
+    at: { x: number; y: number };
+  } | null>(null);
+  /**
+   * The file input the slash menu opens.
+   *
+   * A second one, next to the toolbar's: a file input has to be in the tree to
+   * be clicked, the toolbar's belongs to the toolbar, and reaching into
+   * another component's ref to fake a click is worse than one more hidden
+   * input.
+   */
+  const slashImage = useRef<HTMLInputElement>(null);
   const toggleMaximised = (next: boolean) => {
     setMaximised(next);
     onMaximisedChange?.(next);
@@ -116,10 +201,45 @@ export function RichTextEditor({
     return () => document.removeEventListener("keydown", onKey, true);
   }, [maximised]);
 
+  /**
+   * The highlighter starts empty and learns its grammars in the background.
+   *
+   * `lowlight`'s common set is six hundred kilobytes of language definitions.
+   * Bundled with the app it made the main script forty per cent heavier for
+   * everyone, including the majority of pages that never open an editor. So
+   * the instance is created empty, the grammars are registered when they
+   * arrive, and the editor is nudged to repaint. Until then a code block is
+   * black and white, which is what it was yesterday.
+   */
+  const lowlight = useMemo(() => createLowlight(), []);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Replaced below by the highlighting one, which is the same node with
+        // a language attribute and a paint job.
+        codeBlock: false,
+      }),
+      CodeBlockLowlight.configure({ lowlight }),
+      // Checklists. `nested` because a checklist that cannot have a sub-item
+      // is a list of one level pretending to be an outline.
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Subscript,
+      Superscript,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      MathInline,
+      MathBlock,
+      DiagramBlock,
+      CharacterCount,
+      Placeholder.configure({
+        placeholder: ({ node }) =>
+          node.type.name === "paragraph" ? placeholderHint : "",
       }),
       Link.configure({
         openOnClick: false,
@@ -136,7 +256,15 @@ export function RichTextEditor({
       ...RICH_MARKS,
     ],
     content: value || "",
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+      setSlash((open) => {
+        if (!open) return open;
+        const query = slashQueryAt(editor);
+        // The slash was deleted, or the caret walked away from it.
+        return query === null ? null : { ...open, query };
+      });
+    },
     editorProps: {
       attributes: {
         class:
@@ -159,9 +287,24 @@ export function RichTextEditor({
       // middle of a sentence must stay typeable. Returning true consumes the
       // character, so no stray trigger is left behind to delete later.
       handleTextInput: (view, from, _to, text) => {
-        if (text !== "@" && text !== "#") return false;
+        if (text !== "@" && text !== "#" && text !== "/" && text !== ":") {
+          return false;
+        }
         const before = from > 0 ? view.state.doc.textBetween(from - 1, from) : "";
         if (before && !/\s/.test(before)) return false;
+        if (text === "/") {
+          // The slash *stays* in the text and the menu filters on what follows
+          // it, so typing "/tab" narrows and Escape leaves a normal slash
+          // behind. The other triggers consume their character because their
+          // pickers are dialogs, not a filter over the text you are typing.
+          const box = view.coordsAtPos(from);
+          setSlash({ query: "", at: { x: box.left, y: box.bottom } });
+          return false;
+        }
+        if (text === ":") {
+          setEmoji(true);
+          return true;
+        }
         setPicking(text === "@" ? "entity" : "asset");
         return true;
       },
@@ -251,6 +394,66 @@ export function RichTextEditor({
   const applyDatabase = (picked: PickedDatabase) =>
     embed(picked.id, picked.name, picked.viewId);
 
+  /**
+   * Asked for as text, because that is what a formula and a diagram are.
+   *
+   * A dialog with a live preview would be nicer and is a different piece of
+   * work; a prompt gets the source in, and the source is what both of these
+   * store. Editing one again reopens it with what it said.
+   */
+  const askMath = (block: boolean) => {
+    if (!editor) return;
+    setSource({
+      kind: block ? "mathBlock" : "mathInline",
+      initial:
+        (editor.getAttributes(block ? "mathBlock" : "mathInline")
+          .latex as string) ?? "",
+    });
+  };
+
+  const askDiagram = () => {
+    if (!editor) return;
+    setSource({
+      kind: "diagram",
+      initial:
+        (editor.getAttributes("diagramBlock").source as string) ||
+        "graph TD;\n  A[Inicio] --> B[Fin];",
+    });
+  };
+
+  /**
+   * Run a menu item, having first deleted the `/` and whatever was typed after
+   * it. Done in one transaction with the command itself so a single undo puts
+   * back exactly what was there.
+   */
+  const runSlash = (item: SlashItem) => {
+    if (!editor) return;
+    const { $from } = editor.state.selection;
+    const before = $from.parent.textBetween(0, $from.parentOffset);
+    const at = before.lastIndexOf("/");
+    setSlash(null);
+    if (at >= 0) {
+      const from = $from.start() + at;
+      editor.chain().focus().deleteRange({ from, to: $from.pos }).run();
+    }
+    item.run();
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { common } = await import("lowlight");
+      if (cancelled) return;
+      lowlight.register(common);
+      // An empty transaction is enough: the plugin recomputes its decorations
+      // from the instance it already holds.
+      editor?.view.dispatch(editor.state.tr);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editor, lowlight]);
+
   useEffect(() => {
     if (!editor) return;
     if (editor.getHTML() !== value) editor.commands.setContent(value || "");
@@ -280,7 +483,15 @@ export function RichTextEditor({
         onInsertImage={insertImage}
         onPickRef={setPicking}
         onInsertDatabase={() => setPickingDatabase(true)}
+        onInsertMath={askMath}
+        onInsertDiagram={askDiagram}
+        onEmoji={() => setEmoji(true)}
+        finding={finding}
+        onToggleFind={() => setFinding((v) => !v)}
       />
+      {finding && (
+        <EditorFindReplace editor={editor} onClose={() => setFinding(false)} />
+      )}
       {/* With `fill`, this is the only thing that scrolls: the toolbar above
           and whatever the dialog puts below stay where they are. */}
       <div
@@ -295,6 +506,39 @@ export function RichTextEditor({
           aria-label={placeholder ?? t("richText.descriptionAria")}
         />
       </div>
+      {/* The status line: how much is written, and — when the caret is in a
+          code block — which grammar is colouring it. SiYuan puts document
+          stats in the same place, and the language picker has nowhere better
+          to live: it belongs to one block, not to the whole toolbar. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-200 px-2 py-1 text-[11px] text-slate-400 dark:border-slate-700">
+        {editor.isActive("codeBlock") && (
+          <select
+            value={(editor.getAttributes("codeBlock").language as string) ?? ""}
+            aria-label={t("richText.codeLanguage")}
+            onChange={(e) =>
+              editor
+                .chain()
+                .focus()
+                .updateAttributes("codeBlock", { language: e.target.value })
+                .run()
+            }
+            className="h-5 rounded border border-slate-300 bg-transparent px-1 text-[11px] dark:border-slate-600"
+          >
+            <option value="">auto</option>
+            {CODE_LANGUAGES.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        )}
+        <span className="ml-auto">
+          {t("richText.words", {
+            words: editor.storage.characterCount.words(),
+            chars: editor.storage.characterCount.characters(),
+          })}
+        </span>
+      </div>
       <EditorMobileBar
         editor={editor}
         onInsertImage={insertImage}
@@ -308,6 +552,58 @@ export function RichTextEditor({
           onClose={() => setPickingDatabase(false)}
         />
       )}
+      {slash && editor && (
+        <SlashMenuHost
+          editor={editor}
+          state={slash}
+          onPick={runSlash}
+          onClose={() => setSlash(null)}
+          onInsertImage={() => slashImage.current?.click()}
+          onInsertDatabase={() => setPickingDatabase(true)}
+          onInsertMath={() => askMath(true)}
+          onInsertDiagram={askDiagram}
+        />
+      )}
+
+      {source && editor && (
+        <EditorSourceDialog
+          title={
+            source.kind === "diagram"
+              ? t("richText.diagram")
+              : t("richText.mathBlock")
+          }
+          hint={
+            source.kind === "diagram"
+              ? t("richText.diagramPrompt")
+              : t("richText.mathPrompt")
+          }
+          initial={source.initial}
+          rows={source.kind === "diagram" ? 8 : 3}
+          onClose={() => setSource(null)}
+          onSave={(text) => {
+            const kind = source.kind;
+            setSource(null);
+            if (kind === "diagram") {
+              editor.chain().focus().insertDiagram(text).run();
+            } else if (kind === "mathBlock") {
+              editor.chain().focus().insertMathBlock(text).run();
+            } else {
+              editor.chain().focus().insertMath(text).run();
+            }
+          }}
+        />
+      )}
+
+      {emoji && (
+        <EmojiPicker
+          onPick={(e) => {
+            setEmoji(false);
+            editor?.chain().focus().insertContent(e).run();
+          }}
+          onClose={() => setEmoji(false)}
+        />
+      )}
+
       {picking && (
         <RefPicker
           mode={picking}
@@ -315,6 +611,18 @@ export function RichTextEditor({
           onClose={() => setPicking(null)}
         />
       )}
+      <input
+        ref={slashImage}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) void insertImage(f);
+        }}
+      />
+
       {maximised && actions && (
         <div className="shrink-0 border-t border-slate-200 p-2 dark:border-slate-700">
           {actions}
@@ -324,11 +632,98 @@ export function RichTextEditor({
   );
 }
 
+/**
+ * The languages offered for a code block.
+ *
+ * The ones `lowlight`'s common set already knows, which is what the renderer
+ * loads: offering a grammar that is not there would colour nothing and look
+ * like a bug in the block rather than a missing import.
+ */
+const CODE_LANGUAGES = [
+  "bash",
+  "c",
+  "cpp",
+  "csharp",
+  "css",
+  "diff",
+  "go",
+  "graphql",
+  "html",
+  "ini",
+  "java",
+  "javascript",
+  "json",
+  "kotlin",
+  "less",
+  "lua",
+  "makefile",
+  "markdown",
+  "objectivec",
+  "perl",
+  "php",
+  "python",
+  "r",
+  "ruby",
+  "rust",
+  "scss",
+  "shell",
+  "sql",
+  "swift",
+  "typescript",
+  "vbnet",
+  "xml",
+  "yaml",
+];
+
 const FONTS: { key: "sans" | "serif" | "mono"; css: string }[] = [
   { key: "sans", css: "ui-sans-serif, system-ui, sans-serif" },
   { key: "serif", css: "Georgia, 'Times New Roman', serif" },
   { key: "mono", css: "ui-monospace, SFMono-Regular, Menlo, monospace" },
 ];
+
+/**
+ * Builds the menu's items and renders it.
+ *
+ * Its own component because `useSlashItems` is a hook and the editor is null
+ * until TipTap has mounted: a hook cannot live after the early return that
+ * handles that, and moving the early return would mean rendering a toolbar
+ * against an editor that does not exist yet.
+ */
+function SlashMenuHost({
+  editor,
+  state,
+  onPick,
+  onClose,
+  onInsertImage,
+  onInsertDatabase,
+  onInsertMath,
+  onInsertDiagram,
+}: {
+  editor: Editor;
+  state: { query: string; at: { x: number; y: number } };
+  onPick: (item: SlashItem) => void;
+  onClose: () => void;
+  onInsertImage: () => void;
+  onInsertDatabase: () => void;
+  onInsertMath: () => void;
+  onInsertDiagram: () => void;
+}) {
+  const items = useSlashItems(editor, {
+    onInsertImage,
+    onInsertDatabase,
+    onInsertMath,
+    onInsertDiagram,
+  });
+  return (
+    <SlashMenu
+      items={items}
+      query={state.query}
+      at={state.at}
+      onPick={onPick}
+      onClose={onClose}
+    />
+  );
+}
 
 function Toolbar({
   editor,
@@ -339,6 +734,11 @@ function Toolbar({
   onInsertImage,
   onPickRef,
   onInsertDatabase,
+  onInsertMath,
+  onInsertDiagram,
+  onEmoji,
+  finding,
+  onToggleFind,
 }: {
   editor: Editor;
   redactSensitive: boolean;
@@ -348,6 +748,11 @@ function Toolbar({
   onInsertImage: (file: File) => Promise<void>;
   onPickRef: (mode: "entity" | "asset") => void;
   onInsertDatabase: () => void;
+  onInsertMath: (block: boolean) => void;
+  onInsertDiagram: () => void;
+  onEmoji: () => void;
+  finding: boolean;
+  onToggleFind: () => void;
 }) {
   const { t } = useTranslation();
   const [showColors, setShowColors] = useState(false);
@@ -391,6 +796,36 @@ function Toolbar({
         title={t("richText.underline")}
       >
         <UnderlineIcon className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("superscript")}
+        onClick={() => editor.chain().focus().toggleSuperscript().run()}
+        title={t("richText.superscript")}
+      >
+        <SupIcon className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("subscript")}
+        onClick={() => editor.chain().focus().toggleSubscript().run()}
+        title={t("richText.subscript")}
+      >
+        <SubIcon className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("kbd")}
+        onClick={() => editor.chain().focus().toggleKbd().run()}
+        title={t("richText.kbd")}
+      >
+        <Keyboard className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={false}
+        // Marks only: turning a heading back into a paragraph is a different
+        // decision and one people rarely mean by "clear formatting".
+        onClick={() => editor.chain().focus().unsetAllMarks().run()}
+        title={t("richText.clearFormat")}
+      >
+        <Eraser className="h-3 w-3" />
       </Btn>
       <Sep />
       <Btn
@@ -436,11 +871,40 @@ function Toolbar({
         <ListOrdered className="h-3 w-3" />
       </Btn>
       <Btn
+        active={editor.isActive("taskList")}
+        onClick={() => editor.chain().focus().toggleTaskList().run()}
+        title={t("richText.taskList")}
+      >
+        <CheckSquare className="h-3 w-3" />
+      </Btn>
+      <Btn
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
         title={t("richText.quote")}
       >
         <Quote className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("codeBlock")}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        title={t("richText.codeBlock")}
+      >
+        <Code2 className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive("table")}
+        onClick={() =>
+          editor.isActive("table")
+            ? editor.chain().focus().deleteTable().run()
+            : editor
+                .chain()
+                .focus()
+                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                .run()
+        }
+        title={editor.isActive("table") ? t("richText.tableDelete") : t("richText.table")}
+      >
+        <TableIcon className="h-3 w-3" />
       </Btn>
       <Sep />
       <Btn
@@ -659,6 +1123,45 @@ function Toolbar({
         <option value="serif">{t("richText.fontSerif")}</option>
         <option value="mono">{t("richText.fontMono")}</option>
       </select>
+      <Btn
+        active={false}
+        onClick={() => onInsertMath(true)}
+        title={t("richText.mathBlock")}
+      >
+        <Sigma className="h-3 w-3" />
+      </Btn>
+      <Btn active={false} onClick={onInsertDiagram} title={t("richText.diagram")}>
+        <Workflow className="h-3 w-3" />
+      </Btn>
+      <Btn active={false} onClick={onEmoji} title={t("richText.emoji")}>
+        <Smile className="h-3 w-3" />
+      </Btn>
+      <Sep />
+      <Btn
+        active={editor.isActive({ textAlign: "left" })}
+        onClick={() => editor.chain().focus().setTextAlign("left").run()}
+        title={t("richText.alignLeft")}
+      >
+        <AlignLeft className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive({ textAlign: "center" })}
+        onClick={() => editor.chain().focus().setTextAlign("center").run()}
+        title={t("richText.alignCenter")}
+      >
+        <AlignCenter className="h-3 w-3" />
+      </Btn>
+      <Btn
+        active={editor.isActive({ textAlign: "right" })}
+        onClick={() => editor.chain().focus().setTextAlign("right").run()}
+        title={t("richText.alignRight")}
+      >
+        <AlignRight className="h-3 w-3" />
+      </Btn>
+      <Sep />
+      <Btn active={finding} onClick={onToggleFind} title={t("richText.findReplace")}>
+        <Search className="h-3 w-3" />
+      </Btn>
       <Btn
         active={false}
         onClick={() => imgRef.current?.click()}

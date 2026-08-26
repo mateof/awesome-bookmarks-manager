@@ -27,6 +27,13 @@ import type { PanelScheme } from "../lib/panelScheme.js";
 import { PanelSchemeToggle } from "./PanelSchemeToggle.js";
 import { fuzzyScoreAny } from "../fuzzy.js";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
+import { sanitizeNote } from "../lib/purify.js";
+import {
+  bindCodeCopy,
+  renderCode,
+  renderDiagrams,
+  renderMath,
+} from "../lib/richRender.js";
 import { opaqueSurface } from "../lib/contrast.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
 import {
@@ -1084,20 +1091,7 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
   // by default, so listing them is belt and braces rather than a fix: it says
   // they are load-bearing, so a future `USE_PROFILES` here (which flips that
   // default off) does not silently strip the marks.
-  const safe = useMemo(
-    () =>
-      DOMPurify.sanitize(desc.html, {
-        ADD_ATTR: [
-          "target",
-          "rel",
-          COPYABLE_ATTR,
-          SPOILER_ATTR,
-          HIGHLIGHT_ATTR,
-          UNDERLINE_ATTR,
-        ],
-      }),
-    [desc.html],
-  );
+  const safe = useMemo(() => sanitizeNote(desc.html), [desc.html]);
 
   // Same behaviour as the app: click to copy, click to reveal and click again
   // to copy. Shared implementation, so the two cannot drift.
@@ -1109,6 +1103,27 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
       reveal: tr("richText.clickToReveal"),
       copied: tr("richText.copied"),
     });
+  }, [tr, safe]);
+
+  /**
+   * Formulas, diagrams and highlighted code, here too.
+   *
+   * A panel is where a note is read by people who are not the author, and a
+   * note whose formulas render for its owner and show raw LaTeX to everybody
+   * else is the kind of split nobody notices until somebody publishes.
+   */
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    void renderMath(el);
+    void renderCode(el);
+    void renderDiagrams(el);
+  }, [safe]);
+
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    return bindCodeCopy(el, tr("richText.copyCode"), tr("richText.copiedCode"));
   }, [tr, safe]);
   // Lock the page behind the modal so a drag on mobile doesn't scroll it.
   useEffect(() => {

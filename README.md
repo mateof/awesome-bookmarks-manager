@@ -26,6 +26,8 @@ one port.
   screenshots. In Spanish.
 - [Browser extension](doc/extension.md) — install on Chrome, Opera and Firefox,
   configure it, pick a save folder and create folders from the popup. In Spanish.
+- [Editor](doc/editor.md) — what the note editor can do, compared with SiYuan's,
+  and the reasoning behind each answer. In Spanish.
 - [Themes](doc/temas.md) — the ten built-in themes and how to write your own.
   In Spanish.
 - [HTTP API & MCP](doc/README.md) — programmatic access for apps, scripts and AI.
@@ -36,9 +38,17 @@ one port.
 
 - **Folders & bookmarks** with arbitrary nesting, rich-text descriptions
   (Tiptap editor with headings, section rules, text colour, **coloured
-  underlines**, a **highlighter**, font family, pasted/dropped **images**, and
-  **click-to-copy** and **hidden-until-clicked** marks for the credentials
-  people actually keep in these notes), custom icons, and tags. The
+  underlines**, a **highlighter**, superscript/subscript, `<kbd>`, alignment,
+  font family, pasted/dropped **images**, **task lists** you can tick from the
+  note itself, **code blocks** with syntax highlighting and a copy button,
+  plain **tables**, **formulas** (KaTeX) and **diagrams** (Mermaid), a **`/`
+  menu** to insert any of it, `:` for emoji, **find and replace**, a word
+  count, and **click-to-copy** and **hidden-until-clicked** marks for the
+  credentials people actually keep in these notes), custom icons, and tags.
+  Formulas and diagrams store their **source** and are drawn when the note is
+  read, so a note stays readable anywhere and its libraries load only when a
+  note actually uses them. See [doc/editor.md](doc/editor.md) for what was
+  taken from SiYuan's editor, what was done differently and what was left out. The
   highlighter's colours are translucent rather than pastel, so the same note
   reads in light mode, in dark mode and inside a panel that brings its own
   background: the wash darkens a dark page and lightens a light one instead of
