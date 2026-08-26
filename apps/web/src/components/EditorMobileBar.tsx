@@ -43,7 +43,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { DEFAULT_HIGHLIGHT } from "../lib/richColors.js";
+import {
+  groupedActionsFor,
+  type EditorActionContext,
+} from "../lib/editorActions.js";
 
 /**
  * The editor toolbar, on a phone, sitting on top of the keyboard.
@@ -94,300 +97,18 @@ function useIsNarrow(): boolean {
 }
 
 
-/**
- * What the "+" panel holds, in the order somebody looks for it.
- *
- * Defined outside the component and driven by data rather than written out as
- * JSX per item: this list is the one that fell behind for three versions while
- * the editor grew, and a list is far harder to forget to update than twenty
- * hand-written blocks.
- */
-interface MobileAction {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  run: () => void;
-}
-
-interface MobileHelpers {
-  onPickRef: (mode: "entity" | "asset") => void;
-  onInsertDatabase: () => void;
-  onInsertImage: () => void;
-  close: () => void;
-}
-
-const SECTIONS: {
-  title: string;
-  items: (editor: Editor, h: MobileHelpers) => MobileAction[];
-}[] = [
-  {
-    title: "richText.groupText",
-    items: (editor) => [
-      {
-        id: "bold",
-        label: "richText.bold",
-        icon: <Bold className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleBold().run(),
-      },
-      {
-        id: "italic",
-        label: "richText.italic",
-        icon: <Italic className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleItalic().run(),
-      },
-      {
-        id: "strike",
-        label: "richText.strike",
-        icon: <Strikethrough className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleStrike().run(),
-      },
-      {
-        id: "underline",
-        label: "richText.underline",
-        icon: <UnderlineIcon className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleUnderline().run(),
-      },
-      {
-        id: "code",
-        label: "richText.code",
-        icon: <Code className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleCode().run(),
-      },
-      {
-        id: "sup",
-        label: "richText.superscript",
-        icon: <SupIcon className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleSuperscript().run(),
-      },
-      {
-        id: "sub",
-        label: "richText.subscript",
-        icon: <SubIcon className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleSubscript().run(),
-      },
-      {
-        id: "kbd",
-        label: "richText.kbd",
-        icon: <Keyboard className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleKbd().run(),
-      },
-      {
-        id: "color",
-        label: "richText.textColor",
-        icon: <Palette className="h-4 w-4" />,
-        run: () => editor.chain().focus().setColor("#dc2626").run(),
-      },
-      {
-        id: "highlight",
-        label: "richText.highlight",
-        icon: <Highlighter className="h-4 w-4" />,
-        run: () =>
-          editor.isActive("highlight")
-            ? editor.chain().focus().unsetHighlight().run()
-            : editor.chain().focus().setHighlight(DEFAULT_HIGHLIGHT).run(),
-      },
-      {
-        id: "clear",
-        label: "richText.clearFormat",
-        icon: <Eraser className="h-4 w-4" />,
-        run: () => editor.chain().focus().unsetAllMarks().run(),
-      },
-      {
-        id: "mono",
-        label: "richText.fontMono",
-        icon: <Type className="h-4 w-4" />,
-        run: () =>
-          editor
-            .chain()
-            .focus()
-            .setFontFamily("ui-monospace, SFMono-Regular, Menlo, monospace")
-            .run(),
-      },
-    ],
-  },
-  {
-    title: "richText.groupBlocks",
-    items: (editor) => [
-      {
-        id: "h1",
-        label: "richText.heading1",
-        icon: <Heading1 className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-      },
-      {
-        id: "h2",
-        label: "richText.heading",
-        icon: <Heading2 className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-      },
-      {
-        id: "h3",
-        label: "richText.heading3",
-        icon: <Heading3 className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-      },
-      {
-        id: "bullet",
-        label: "richText.list",
-        icon: <List className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleBulletList().run(),
-      },
-      {
-        id: "ordered",
-        label: "richText.orderedList",
-        icon: <ListOrdered className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleOrderedList().run(),
-      },
-      {
-        id: "task",
-        label: "richText.taskList",
-        icon: <CheckSquare className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleTaskList().run(),
-      },
-      {
-        id: "quote",
-        label: "richText.quote",
-        icon: <Quote className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleBlockquote().run(),
-      },
-      {
-        id: "callout",
-        label: "richText.callout",
-        icon: <Info className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleCallout("info").run(),
-      },
-      {
-        id: "codeblock",
-        label: "richText.codeBlock",
-        icon: <Code2 className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleCodeBlock().run(),
-      },
-      {
-        id: "table",
-        label: "richText.table",
-        icon: <TableIcon className="h-4 w-4" />,
-        run: () =>
-          editor
-            .chain()
-            .focus()
-            .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-            .run(),
-      },
-      {
-        id: "rule",
-        label: "richText.rule",
-        icon: <Minus className="h-4 w-4" />,
-        run: () => editor.chain().focus().setHorizontalRule().run(),
-      },
-      {
-        id: "copyable",
-        label: "richText.copyable",
-        icon: <ClipboardCopy className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleCopyable().run(),
-      },
-      {
-        id: "spoiler",
-        label: "richText.spoiler",
-        icon: <EyeOff className="h-4 w-4" />,
-        run: () => editor.chain().focus().toggleSpoiler().run(),
-      },
-    ],
-  },
-  {
-    title: "richText.groupInsert",
-    items: (editor, h) => [
-      {
-        id: "link",
-        label: "richText.link",
-        icon: <LinkIcon className="h-4 w-4" />,
-        run: () => {
-          const url = prompt("https://");
-          if (url)
-            editor
-              .chain()
-              .focus()
-              .extendMarkRange("link")
-              .setLink({ href: url })
-              .run();
-        },
-      },
-      {
-        id: "entity",
-        label: "refs.insertEntity",
-        icon: <AtSign className="h-4 w-4" />,
-        run: () => {
-          h.close();
-          h.onPickRef("entity");
-        },
-      },
-      {
-        id: "asset",
-        label: "refs.insertAsset",
-        icon: <Paperclip className="h-4 w-4" />,
-        run: () => {
-          h.close();
-          h.onPickRef("asset");
-        },
-      },
-      {
-        id: "database",
-        label: "db.insert",
-        icon: <Database className="h-4 w-4" />,
-        run: () => {
-          h.close();
-          h.onInsertDatabase();
-        },
-      },
-      {
-        id: "image",
-        label: "richText.insertImage",
-        icon: <ImagePlus className="h-4 w-4" />,
-        run: h.onInsertImage,
-      },
-    ],
-  },
-  {
-    title: "richText.groupAlign",
-    items: (editor) => [
-      {
-        id: "left",
-        label: "richText.alignLeft",
-        icon: <AlignLeft className="h-4 w-4" />,
-        run: () => editor.chain().focus().setTextAlign("left").run(),
-      },
-      {
-        id: "center",
-        label: "richText.alignCenter",
-        icon: <AlignCenter className="h-4 w-4" />,
-        run: () => editor.chain().focus().setTextAlign("center").run(),
-      },
-      {
-        id: "right",
-        label: "richText.alignRight",
-        icon: <AlignRight className="h-4 w-4" />,
-        run: () => editor.chain().focus().setTextAlign("right").run(),
-      },
-    ],
-  },
-];
-
 export function EditorMobileBar({
   editor,
-  onInsertImage,
-  onPickRef,
-  onInsertDatabase,
+  ctx,
 }: {
   editor: Editor;
-  onInsertImage: (file: File) => Promise<void>;
-  onPickRef: (mode: "entity" | "asset") => void;
-  onInsertDatabase: () => void;
+  ctx: EditorActionContext;
 }) {
   const { t } = useTranslation();
   const narrow = useIsNarrow();
   const inset = useKeyboardInset();
   const [focused, setFocused] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const imgRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<number | null>(null);
 
   useEffect(() => {
@@ -486,25 +207,29 @@ export function EditorMobileBar({
          * the twelfth item.
          */
         <div className="max-h-[55vh] overflow-y-auto border-b border-slate-700 p-3">
-          {SECTIONS.map((section) => (
-            <div key={section.title} className="mb-3 last:mb-0">
+          {groupedActionsFor("mobile").map((section) => (
+            <div key={section.group} className="mb-3 last:mb-0">
               <div className="mb-1 px-1 text-[10px] uppercase tracking-wide text-slate-500">
-                {t(section.title as "richText.groupText")}
+                {t(section.label as "richText.groupText")}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {section.items(editor, {
-                  onPickRef,
-                  onInsertDatabase,
-                  onInsertImage: () => imgRef.current?.click(),
-                  close: () => setExpanded(false),
-                }).map((item) => (
-                  <GridItem
-                    key={item.id}
-                    icon={item.icon}
-                    label={t(item.label as "richText.bold")}
-                    onClick={item.run}
-                  />
-                ))}
+                {section.items.map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <GridItem
+                      key={action.id}
+                      icon={<Icon className="h-4 w-4" />}
+                      label={t(action.label as "richText.bold")}
+                      onClick={() =>
+                        action.run(editor, {
+                          ...ctx,
+                          // "Close" here means this panel, not the `/` menu.
+                          close: () => setExpanded(false),
+                        })
+                      }
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -569,17 +294,6 @@ export function EditorMobileBar({
         />
       </div>
 
-      <input
-        ref={imgRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = "";
-          if (f) void onInsertImage(f);
-        }}
-      />
     </div>,
     document.body,
   );

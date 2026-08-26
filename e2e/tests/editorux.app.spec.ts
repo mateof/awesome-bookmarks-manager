@@ -40,6 +40,12 @@ test("menú de barra, buscar y reemplazar, y contador", async ({ browser }) => {
   await page.keyboard.type("/");
   const menu = page.getByTestId("slash-menu");
   await expect(menu).toBeVisible();
+  // Everything at once: the whole point of the menu is seeing what there is,
+  // and a single column of sixteen items is a scroll instead of a look.
+  const shown = await menu.getByRole("button").count();
+  expect(shown).toBeGreaterThanOrEqual(14);
+  const box = (await menu.boundingBox())!;
+  expect(box.width).toBeGreaterThan(400);
   // What follows the slash filters it, and the slash itself stays in the text
   // until something is chosen: Escape has to leave a normal slash behind.
   await page.keyboard.type("tab");
@@ -75,6 +81,56 @@ test("menú de barra, buscar y reemplazar, y contador", async ({ browser }) => {
     expect(saved.description).toContain("<table");
     expect(saved.description).toContain("y también");
   }).toPass({ timeout: 10_000 });
+
+  await ctx.close();
+});
+
+test("el emoji se abre, se ve entero y escribe en el texto", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "editor.emoji.e2e@example.com",
+    nickname: "editoremoji",
+    password: "EditorEmoji26xxx",
+  });
+  const req = page.request;
+
+  const folder = await (
+    await req.post("/api/folders", {
+      data: { name: "Emoji", description: "<p>Hola</p>" },
+    })
+  ).json();
+
+  await page.goto(`/folder/${folder.id}`);
+  await page.getByRole("button", { name: "Editar el texto" }).click();
+  const editor = page.locator(".tiptap.ProseMirror");
+  await expect(editor).toBeVisible({ timeout: 20_000 });
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+End");
+
+  await page.getByRole("button", { name: "Emoji", exact: true }).click();
+
+  // Outside the dialog by construction. The picker places itself with
+  // `absolute top-full`, which needs a positioned ancestor and no scrolling
+  // one in between; inside the editor there is neither, so it was drawn
+  // somewhere nobody could see and the button looked dead.
+  const escaped = await page.evaluate(() => {
+    const panel = Array.from(document.querySelectorAll("body > div")).find(
+      (d) =>
+        getComputedStyle(d).position === "fixed" &&
+        !!d.querySelector('input[placeholder]') &&
+        d.querySelectorAll("button").length > 10,
+    );
+    return !!panel;
+  });
+  expect(escaped).toBe(true);
+
+  // And it types into the note rather than just looking right.
+  await page.getByRole("button", { name: "🔖" }).first().click();
+  await expect(editor).toContainText("🔖");
 
   await ctx.close();
 });

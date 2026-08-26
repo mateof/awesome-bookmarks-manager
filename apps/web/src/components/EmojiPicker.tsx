@@ -124,10 +124,24 @@ export function EmojiPicker({
   value,
   onPick,
   onClose,
+  plain = false,
 }: {
   value?: string;
   onPick: (emoji: string) => void;
   onClose: () => void;
+  /**
+   * Drop the absolute positioning and the frame, for a caller that provides
+   * both.
+   *
+   * The default places itself under the button it belongs to with
+   * `absolute top-full`, which needs a positioned ancestor and no `overflow`
+   * in between. Inside the editor there is neither: the toolbar sits in a
+   * dialog that scrolls, so the panel was clipped away and the button looked
+   * dead. That caller wraps it in an `AnchoredPopover` instead, which escapes
+   * every container by construction — and then this frame would be the second
+   * box drawn around the same list.
+   */
+  plain?: boolean;
 }) {
   const { t } = useTranslation();
   const [q, setQ] = useState("");
@@ -148,7 +162,11 @@ export function EmojiPicker({
   return (
     <div
       ref={boxRef}
-      className="absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+      className={
+        plain
+          ? "w-full p-1"
+          : "absolute right-0 top-full z-30 mt-1 w-72 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800"
+      }
     >
       <div className="mb-2 flex items-center gap-1 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
         <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />

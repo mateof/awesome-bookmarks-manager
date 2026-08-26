@@ -147,6 +147,21 @@ dentro de un bloque de código se descartaba en silencio. Las fórmulas y los
 diagramas se insertan después del bloque que contiene el cursor, que además es
 donde los espera quien pidió una fórmula mientras escribía código.
 
+**Una sola lista de acciones para las tres entradas.** El editor se alcanza de
+tres maneras (la barra del escritorio, el menú `/` y el panel «+» del móvil) y
+durante un tiempo fueron tres listas escritas a mano. Eso no es un problema de
+orden, es un modo de fallo con historial: la del móvil se escribió con nueve
+entradas y se quedó en nueve mientras el editor ganaba seis bloques. Ahora la
+lista vive en `lib/editorActions.ts` y cada superficie declara qué parte
+enseña; añadir un bloque es una entrada, y olvidarse de una superficie cuesta
+trabajo deliberado.
+
+Lo que **no** está en esa lista es el puñado de controles que no son una sola
+orden: las dos paletas de color, los tipos de aviso, el selector de tipo de
+letra, buscar, ocultar y maximizar. Cada uno tiene estado o un panel propio, y
+meterlos en la lista obligaría a un campo `kind` y un `switch` en cada sitio que
+la lee: la abstracción sin ganar nada.
+
 **El panel «+» del móvil va por categorías.** No es cosmética: esa rejilla se
 escribió cuando había nueve cosas que insertar y se quedó plana y con nueve
 mientras el editor ganaba tablas, listas de tareas, código, fórmulas, diagramas
@@ -200,4 +215,5 @@ fragmentos aparte que solo se descargan cuando una nota los necesita.
 | Marcas (copiable, oculto, resaltado, tecla) | `apps/web/src/lib/richMarks.ts` |
 | Avisos destacados | `apps/web/src/lib/richCallout.ts` |
 | Panel «+» del móvil | `apps/web/src/components/EditorMobileBar.tsx` |
+| La lista de acciones que comparten las tres | `apps/web/src/lib/editorActions.ts` |
 | Lo que el servidor deja pasar | `apps/api/src/util/sanitize.ts` |

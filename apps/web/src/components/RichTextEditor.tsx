@@ -61,6 +61,10 @@ import {
 } from "lucide-react";
 import { imageFileToDataUrl, isImageFile } from "../lib/pasteImage.js";
 import type { DbTemplate } from "@awesome-bookmarks/shared";
+import {
+  groupedActionsFor,
+  type EditorActionContext,
+} from "../lib/editorActions.js";
 import { RICH_COLORS } from "../lib/richColors.js";
 import { Callout, CALLOUT_KINDS, type CalloutKind } from "../lib/richCallout.js";
 import { DiagramBlock } from "../lib/richDiagram.js";
@@ -73,7 +77,7 @@ import { EditorFindReplace } from "./EditorFindReplace.js";
 import { EditorSourceDialog } from "./EditorSourceDialog.js";
 import { EditorMobileBar } from "./EditorMobileBar.js";
 import { EmojiPicker } from "./EmojiPicker.js";
-import { SlashMenu, useSlashItems, type SlashItem } from "./SlashMenu.js";
+import { SlashMenu } from "./SlashMenu.js";
 import { RefPicker, type PickedRef } from "./RefPicker.js";
 import {
   DatabasePicker,
@@ -182,6 +186,8 @@ export function RichTextEditor({
    * input.
    */
   const slashImage = useRef<HTMLInputElement>(null);
+  /** The emoji panel hangs off the toolbar's button, wherever it ends up. */
+  const emojiAnchor = useRef<HTMLSpanElement>(null);
   const toggleMaximised = (next: boolean) => {
     setMaximised(next);
     onMaximisedChange?.(next);
@@ -425,11 +431,38 @@ export function RichTextEditor({
   };
 
   /**
-   * Run a menu item, having first deleted the `/` and whatever was typed after
-   * it. Done in one transaction with the command itself so a single undo puts
-   * back exactly what was there.
+   * What every surface (toolbar, `/` menu, phone panel) needs in order to run
+   * an action that opens something else. Built once and handed to all three,
+   * so an action cannot behave differently depending on where it was pressed.
    */
-  const runSlash = (item: SlashItem) => {
+  const actionContext: EditorActionContext = {
+    onPickRef: setPicking,
+    onInsertDatabase: () => setPickingDatabase(true),
+    onInsertImage: () => slashImage.current?.click(),
+    onInsertMath: askMath,
+    onInsertDiagram: askDiagram,
+    onEmoji: () => setEmoji(true),
+    onLink: () => {
+      if (!editor) return;
+      const prev = editor.getAttributes("link").href as string | undefined;
+      const url = prompt(t("richText.linkPrompt"), prev ?? "https://");
+      if (url === null) return;
+      if (url === "") {
+        editor.chain().focus().extendMarkRange("link").unsetLink().run();
+        return;
+      }
+      editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    },
+    close: () => setSlash(null),
+  };
+
+  /**
+   * Delete the `/` and whatever was typed after it, then run the action.
+   *
+   * Both in the same transaction as the command itself, so a single undo puts
+   * back exactly what was there rather than leaving the trigger behind.
+   */
+  const runSlash = (run: () => void) => {
     if (!editor) return;
     const { $from } = editor.state.selection;
     const before = $from.parent.textBetween(0, $from.parentOffset);
@@ -439,7 +472,7 @@ export function RichTextEditor({
       const from = $from.start() + at;
       editor.chain().focus().deleteRange({ from, to: $from.pos }).run();
     }
-    item.run();
+    run();
   };
 
   useEffect(() => {
@@ -479,16 +512,12 @@ export function RichTextEditor({
     >
       <Toolbar
         editor={editor}
+        ctx={actionContext}
+        emojiAnchor={emojiAnchor}
         redactSensitive={redactSensitive}
         onToggleRedact={() => setRedactSensitive((r) => !r)}
         maximised={maximised}
         onToggleMaximise={() => toggleMaximised(!maximised)}
-        onInsertImage={insertImage}
-        onPickRef={setPicking}
-        onInsertDatabase={() => setPickingDatabase(true)}
-        onInsertMath={askMath}
-        onInsertDiagram={askDiagram}
-        onEmoji={() => setEmoji(true)}
         finding={finding}
         onToggleFind={() => setFinding((v) => !v)}
       />
@@ -542,12 +571,7 @@ export function RichTextEditor({
           })}
         </span>
       </div>
-      <EditorMobileBar
-        editor={editor}
-        onInsertImage={insertImage}
-        onPickRef={setPicking}
-        onInsertDatabase={() => setPickingDatabase(true)}
-      />
+      <EditorMobileBar editor={editor} ctx={actionContext} />
       {pickingDatabase && (
         <DatabasePicker
           onPick={applyDatabase}
@@ -556,15 +580,13 @@ export function RichTextEditor({
         />
       )}
       {slash && editor && (
-        <SlashMenuHost
+        <SlashMenu
           editor={editor}
-          state={slash}
-          onPick={runSlash}
+          ctx={actionContext}
+          query={slash.query}
+          at={slash.at}
+          onPicked={runSlash}
           onClose={() => setSlash(null)}
-          onInsertImage={() => slashImage.current?.click()}
-          onInsertDatabase={() => setPickingDatabase(true)}
-          onInsertMath={() => askMath(true)}
-          onInsertDiagram={askDiagram}
         />
       )}
 
@@ -598,13 +620,23 @@ export function RichTextEditor({
       )}
 
       {emoji && (
-        <EmojiPicker
-          onPick={(e) => {
-            setEmoji(false);
-            editor?.chain().focus().insertContent(e).run();
-          }}
+        /* Anchored to the toolbar's button and portalled out of the dialog:
+           the picker's own placement assumes a positioned parent and no
+           scrolling ancestor, and the editor gives it neither. */
+        <AnchoredPopover
+          anchor={emojiAnchor}
           onClose={() => setEmoji(false)}
-        />
+          width={288}
+        >
+          <EmojiPicker
+            plain
+            onPick={(e) => {
+              setEmoji(false);
+              editor?.chain().focus().insertContent(e).run();
+            }}
+            onClose={() => setEmoji(false)}
+          />
+        </AnchoredPopover>
       )}
 
       {picking && (
@@ -685,75 +717,35 @@ const FONTS: { key: "sans" | "serif" | "mono"; css: string }[] = [
 ];
 
 /**
- * Builds the menu's items and renders it.
+ * The desktop toolbar.
  *
- * Its own component because `useSlashItems` is a hook and the editor is null
- * until TipTap has mounted: a hook cannot live after the early return that
- * handles that, and moving the early return would mean rendering a toolbar
- * against an editor that does not exist yet.
+ * Most of it is rendered from the shared action list, so a block added once is
+ * here, in the `/` menu and in the phone's panel without three edits. What
+ * stays hand-written is the handful of controls that are not a single command
+ * — the two colour palettes, the callout kinds, the font select, find, redact
+ * and maximise — because each owns a popover or a piece of state, and forcing
+ * them into the list would mean a `kind` field and a switch wherever it is
+ * read: the abstraction earning nothing.
  */
-function SlashMenuHost({
-  editor,
-  state,
-  onPick,
-  onClose,
-  onInsertImage,
-  onInsertDatabase,
-  onInsertMath,
-  onInsertDiagram,
-}: {
-  editor: Editor;
-  state: { query: string; at: { x: number; y: number } };
-  onPick: (item: SlashItem) => void;
-  onClose: () => void;
-  onInsertImage: () => void;
-  onInsertDatabase: () => void;
-  onInsertMath: () => void;
-  onInsertDiagram: () => void;
-}) {
-  const items = useSlashItems(editor, {
-    onInsertImage,
-    onInsertDatabase,
-    onInsertMath,
-    onInsertDiagram,
-  });
-  return (
-    <SlashMenu
-      items={items}
-      query={state.query}
-      at={state.at}
-      onPick={onPick}
-      onClose={onClose}
-    />
-  );
-}
-
 function Toolbar({
   editor,
+  ctx,
+  emojiAnchor,
   redactSensitive,
   onToggleRedact,
   maximised,
   onToggleMaximise,
-  onInsertImage,
-  onPickRef,
-  onInsertDatabase,
-  onInsertMath,
-  onInsertDiagram,
-  onEmoji,
   finding,
   onToggleFind,
 }: {
   editor: Editor;
+  ctx: EditorActionContext;
+  /** The emoji panel hangs off its button, wherever the list puts it. */
+  emojiAnchor: React.RefObject<HTMLSpanElement>;
   redactSensitive: boolean;
   onToggleRedact: () => void;
   maximised: boolean;
   onToggleMaximise: () => void;
-  onInsertImage: (file: File) => Promise<void>;
-  onPickRef: (mode: "entity" | "asset") => void;
-  onInsertDatabase: () => void;
-  onInsertMath: (block: boolean) => void;
-  onInsertDiagram: () => void;
-  onEmoji: () => void;
   finding: boolean;
   onToggleFind: () => void;
 }) {
@@ -761,206 +753,42 @@ function Toolbar({
   const [showColors, setShowColors] = useState(false);
   const [showHighlight, setShowHighlight] = useState(false);
   const [showCallouts, setShowCallouts] = useState(false);
-  const imgRef = useRef<HTMLInputElement>(null);
   const colorAnchor = useRef<HTMLSpanElement>(null);
   const highlightAnchor = useRef<HTMLSpanElement>(null);
   const calloutAnchor = useRef<HTMLSpanElement>(null);
+
+  const groups = groupedActionsFor("toolbar");
+  const renderGroup = (group: string) => {
+    const found = groups.find((g) => g.group === group);
+    if (!found) return null;
+    return found.items.map((action) => {
+      const Icon = action.icon;
+      const button = (
+        <Btn
+          key={action.id}
+          active={action.isActive?.(editor) ?? false}
+          onClick={() => action.run(editor, ctx)}
+          title={t(action.label as "richText.bold")}
+        >
+          <Icon className="h-3 w-3" />
+        </Btn>
+      );
+      // The emoji panel is anchored to its own button, and the button's place
+      // in the row is decided by the list rather than by this file.
+      return action.id === "emoji" ? (
+        <span key={action.id} ref={emojiAnchor} className="inline-flex">
+          {button}
+        </span>
+      ) : (
+        button
+      );
+    });
+  };
+
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800">
-      <Btn
-        active={editor.isActive("bold")}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        title={t("richText.bold")}
-      >
-        <Bold className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("italic")}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        title={t("richText.italic")}
-      >
-        <Italic className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("strike")}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        title={t("richText.strike")}
-      >
-        <Strikethrough className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("code")}
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        title={t("richText.code")}
-      >
-        <Code className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("underline")}
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        title={t("richText.underline")}
-      >
-        <UnderlineIcon className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("superscript")}
-        onClick={() => editor.chain().focus().toggleSuperscript().run()}
-        title={t("richText.superscript")}
-      >
-        <SupIcon className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("subscript")}
-        onClick={() => editor.chain().focus().toggleSubscript().run()}
-        title={t("richText.subscript")}
-      >
-        <SubIcon className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("kbd")}
-        onClick={() => editor.chain().focus().toggleKbd().run()}
-        title={t("richText.kbd")}
-      >
-        <Keyboard className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={false}
-        // Marks only: turning a heading back into a paragraph is a different
-        // decision and one people rarely mean by "clear formatting".
-        onClick={() => editor.chain().focus().unsetAllMarks().run()}
-        title={t("richText.clearFormat")}
-      >
-        <Eraser className="h-3 w-3" />
-      </Btn>
-      <Sep />
-      <Btn
-        active={editor.isActive("heading", { level: 1 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        title={t("richText.heading1")}
-      >
-        <Heading1 className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("heading", { level: 2 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        title={t("richText.heading")}
-      >
-        <Heading2 className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("heading", { level: 3 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        title={t("richText.heading3")}
-      >
-        <Heading3 className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={false}
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        title={t("richText.rule")}
-      >
-        <Minus className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("bulletList")}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        title={t("richText.list")}
-      >
-        <List className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("orderedList")}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        title={t("richText.orderedList")}
-      >
-        <ListOrdered className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("taskList")}
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
-        title={t("richText.taskList")}
-      >
-        <CheckSquare className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("blockquote")}
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        title={t("richText.quote")}
-      >
-        <Quote className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("codeBlock")}
-        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        title={t("richText.codeBlock")}
-      >
-        <Code2 className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("table")}
-        onClick={() =>
-          editor.isActive("table")
-            ? editor.chain().focus().deleteTable().run()
-            : editor
-                .chain()
-                .focus()
-                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                .run()
-        }
-        title={editor.isActive("table") ? t("richText.tableDelete") : t("richText.table")}
-      >
-        <TableIcon className="h-3 w-3" />
-      </Btn>
-      <Sep />
-      <Btn
-        active={editor.isActive("copyable")}
-        onClick={() => editor.chain().focus().toggleCopyable().run()}
-        title={t("richText.copyable")}
-      >
-        <ClipboardCopy className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive("spoiler")}
-        onClick={() => editor.chain().focus().toggleSpoiler().run()}
-        title={t("richText.spoiler")}
-      >
-        <EyeOff className="h-3 w-3" />
-      </Btn>
-      <Sep />
-      <Btn
-        active={editor.isActive("link")}
-        onClick={() => {
-          const prev = editor.getAttributes("link").href as string | undefined;
-          const url = prompt(t("richText.linkPrompt"), prev ?? "https://");
-          if (url === null) return;
-          if (url === "") {
-            editor.chain().focus().extendMarkRange("link").unsetLink().run();
-            return;
-          }
-          editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-        }}
-        title={t("richText.link")}
-      >
-        <LinkIcon className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={false}
-        onClick={() => onPickRef("entity")}
-        title={t("refs.insertEntity")}
-      >
-        <AtSign className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={false}
-        onClick={() => onPickRef("asset")}
-        title={t("refs.insertAsset")}
-      >
-        <Paperclip className="h-3 w-3" />
-      </Btn>
-      <Btn active={false} onClick={onInsertDatabase} title={t("db.insert")}>
-        <Database className="h-3 w-3" />
-      </Btn>
-      <Sep />
+      {renderGroup("text")}
+
       {/* Colour of the letters and colour of the line under them, in one
           panel: a fixed palette rather than a wheel — notes want "make this
           red", not colorimetry. */}
@@ -976,9 +804,6 @@ function Toolbar({
           <Palette className="h-3 w-3" />
         </Btn>
         {showColors && (
-          /* In a portal, like every other panel that hangs off a control: the
-             toolbar sits inside a dialog that scrolls, and an absolutely
-             positioned palette was cut off at its edge. */
           <AnchoredPopover
             anchor={colorAnchor}
             onClose={() => setShowColors(false)}
@@ -1044,11 +869,7 @@ function Toolbar({
               <button
                 type="button"
                 onClick={() => {
-                  editor
-                    .chain()
-                    .focus()
-                    .setMark("underline", { color: null })
-                    .run();
+                  editor.chain().focus().setMark("underline", { color: null }).run();
                   setShowColors(false);
                 }}
                 className={CLEAR_BTN}
@@ -1059,9 +880,9 @@ function Toolbar({
           </AnchoredPopover>
         )}
       </span>
+
       {/* Highlighter. Its own control rather than a third row in the panel
-          above: this one paints behind the text, and it is the one people
-          reach for while reading back what they wrote. */}
+          above: this one paints behind the text. */}
       <span ref={highlightAnchor} className="inline-flex">
         <Btn
           active={editor.isActive("highlight")}
@@ -1108,26 +929,12 @@ function Toolbar({
           </AnchoredPopover>
         )}
       </span>
-      <select
-        value={
-          FONTS.find(
-            (f) => f.css === editor.getAttributes("textStyle").fontFamily,
-          )?.key ?? ""
-        }
-        onChange={(e) => {
-          const f = FONTS.find((x) => x.key === e.target.value);
-          if (f) editor.chain().focus().setFontFamily(f.css).run();
-          else editor.chain().focus().unsetFontFamily().run();
-        }}
-        title={t("richText.fontFamily")}
-        aria-label={t("richText.fontFamily")}
-        className="h-6 rounded border border-slate-300 bg-white px-1 text-[11px] dark:border-slate-600 dark:bg-slate-700"
-      >
-        <option value="">{t("richText.fontDefault")}</option>
-        <option value="sans">{t("richText.fontSans")}</option>
-        <option value="serif">{t("richText.fontSerif")}</option>
-        <option value="mono">{t("richText.fontMono")}</option>
-      </select>
+
+      <Sep />
+      {renderGroup("blocks")}
+
+      {/* The five kinds of callout behind one button: five buttons in the row
+          would be a fifth of the toolbar spent on one block. */}
       <span ref={calloutAnchor} className="inline-flex">
         <Btn
           active={editor.isActive("callout")}
@@ -1163,64 +970,37 @@ function Toolbar({
           </AnchoredPopover>
         )}
       </span>
-      <Btn
-        active={false}
-        onClick={() => onInsertMath(true)}
-        title={t("richText.mathBlock")}
-      >
-        <Sigma className="h-3 w-3" />
-      </Btn>
-      <Btn active={false} onClick={onInsertDiagram} title={t("richText.diagram")}>
-        <Workflow className="h-3 w-3" />
-      </Btn>
-      <Btn active={false} onClick={onEmoji} title={t("richText.emoji")}>
-        <Smile className="h-3 w-3" />
-      </Btn>
+
       <Sep />
-      <Btn
-        active={editor.isActive({ textAlign: "left" })}
-        onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        title={t("richText.alignLeft")}
+      {renderGroup("insert")}
+
+      <Sep />
+      <select
+        value={
+          FONTS.find(
+            (f) => f.css === editor.getAttributes("textStyle").fontFamily,
+          )?.key ?? ""
+        }
+        onChange={(e) => {
+          const f = FONTS.find((x) => x.key === e.target.value);
+          if (f) editor.chain().focus().setFontFamily(f.css).run();
+          else editor.chain().focus().unsetFontFamily().run();
+        }}
+        title={t("richText.fontFamily")}
+        aria-label={t("richText.fontFamily")}
+        className="h-6 rounded border border-slate-300 bg-white px-1 text-[11px] dark:border-slate-600 dark:bg-slate-700"
       >
-        <AlignLeft className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive({ textAlign: "center" })}
-        onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        title={t("richText.alignCenter")}
-      >
-        <AlignCenter className="h-3 w-3" />
-      </Btn>
-      <Btn
-        active={editor.isActive({ textAlign: "right" })}
-        onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        title={t("richText.alignRight")}
-      >
-        <AlignRight className="h-3 w-3" />
-      </Btn>
+        <option value="">{t("richText.fontDefault")}</option>
+        <option value="sans">{t("richText.fontSans")}</option>
+        <option value="serif">{t("richText.fontSerif")}</option>
+        <option value="mono">{t("richText.fontMono")}</option>
+      </select>
+      {renderGroup("align")}
+
       <Sep />
       <Btn active={finding} onClick={onToggleFind} title={t("richText.findReplace")}>
         <Search className="h-3 w-3" />
       </Btn>
-      <Btn
-        active={false}
-        onClick={() => imgRef.current?.click()}
-        title={t("richText.insertImage")}
-      >
-        <ImagePlus className="h-3 w-3" />
-      </Btn>
-      <input
-        ref={imgRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = "";
-          if (f) void onInsertImage(f);
-        }}
-      />
-      <Sep />
       <Btn
         active={redactSensitive}
         onClick={onToggleRedact}
