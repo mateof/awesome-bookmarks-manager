@@ -91,8 +91,12 @@ export function parseNetscapeHtml(html: string): ImportNode[] {
   // The bookmark a following <DD> would describe.
   let lastBookmark: ImportNode | null = null;
 
+  // The `<DD>` arm reads plain text up to the next tag rather than "anything
+  // until the next <DT>". Written the second way, a file with a `<DD>` and no
+  // following `<DT>` makes the engine rescan to the end of the file for every
+  // match, which on a few megabytes takes seconds.
   const TOKEN =
-    /(<dl\b[^>]*>)|(<\/dl\s*>)|<h3\b[^>]*>([\s\S]*?)<\/h3>|<a\b([^>]*)>([\s\S]*?)<\/a>|<dd>([\s\S]*?)(?=<dt|<\/dl|<dd|$)/gi;
+    /(<dl\b[^>]*>)|(<\/dl\s*>)|<h3\b[^>]*>([\s\S]*?)<\/h3>|<a\b([^>]*)>([\s\S]*?)<\/a>|<dd>([^<]*)/gi;
   const HREF_RE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
   const attr = (attrs: string, name: string): string | undefined => {
     const re = new RegExp(
@@ -191,6 +195,8 @@ const CSV_FIELDS = {
     "date_added",
     "added",
     "published date",
+    "creation date",
+    "creation_date",
   ],
   favorite: ["favorite", "favourite", "starred", "is_starred", "star"],
   status: ["status", "state", "is_archived", "archived", "read"],
@@ -208,6 +214,7 @@ function headerIndex(header: string[]): Record<keyof typeof CSV_FIELDS, number> 
 /** Which app a set of headers looks like, for the message, not for the parsing. */
 function csvApp(header: string[]): string {
   const set = new Set(header.map((h) => h.trim().toLowerCase()));
+  if (set.has("mime type") && set.has("creation date")) return "wallabag";
   if (set.has("time_added") && set.has("status")) return "Pocket";
   if (set.has("excerpt") && set.has("folder")) return "Raindrop.io";
   if (set.has("selection") && set.has("timestamp")) return "Instapaper";
@@ -485,21 +492,44 @@ function generic(rows: Json[]): { app: string; items: FlatItem[] } {
 // Detection and normalisation
 // ---------------------------------------------------------------------------
 
-/** What the file is, decided by its content and not by its extension. */
+/**
+ * What the file is, decided by its content and not by its extension.
+ *
+ * **Order matters, and getting it wrong is silent.** The HTML test is a sniff
+ * — "does this look like it has links in it" — and half of these exports carry
+ * a saved copy of every article, HTML and all, inside a JSON string or a CSV
+ * cell. A wallabag export whose first article contains an `<a href=` was read
+ * as a bookmarks page and yielded nothing at all.
+ *
+ * So the two formats that can be recognised by *structure* go first, and each
+ * only claims the file if it really parses. The HTML sniff, which cannot fail,
+ * goes last of the three.
+ */
 export function detectAndParse(bytes: Buffer): ParsedImport {
   const text = bytes.toString("utf8");
   const head = text.slice(0, 4096).trimStart();
 
-  if (/^<!DOCTYPE\s+NETSCAPE-Bookmark/i.test(head) || /<dl\b|<a\s[^>]*href=/i.test(head)) {
-    const tree = parseNetscapeHtml(text);
-    return { app: netscapeApp(head), tree };
-  }
   if (head.startsWith("{") || head.startsWith("[")) {
     const { app, items } = parseJsonExport(text);
-    return { app, tree: itemsToTree(items) };
+    // Only JSON that yielded something counts; a `[` that turns out not to
+    // parse falls through to the other readers rather than importing nothing.
+    if (items.length > 0) return { app, tree: itemsToTree(items) };
   }
-  const { app, items } = parseCsvExport(text);
-  return { app, tree: itemsToTree(items) };
+
+  if (/^<!DOCTYPE\s+NETSCAPE-Bookmark/i.test(head)) {
+    return { app: netscapeApp(head), tree: parseNetscapeHtml(text) };
+  }
+
+  // A CSV is decided by its header line, not by looking for commas: the header
+  // is on the first line, before any cell has had a chance to contain a whole
+  // web page.
+  const csv = parseCsvExport(text);
+  if (csv.items.length > 0) return { app: csv.app, tree: itemsToTree(csv.items) };
+
+  if (/<dl\b|<a\s[^>]*href=/i.test(head)) {
+    return { app: netscapeApp(head), tree: parseNetscapeHtml(text) };
+  }
+  return { app: csv.app, tree: [] };
 }
 
 /** Is this a zip? Pocket and Omnivore both hand out one. */
@@ -631,11 +661,44 @@ function truthy(v: unknown): boolean {
   return s === "true" || s === "yes" || s === "1" || s === "archive" || s === "archived";
 }
 
-/** Seconds, milliseconds, or an ISO date: all three turn up. */
+/** Seconds, milliseconds, an ISO date, or `31/12/2024`: all four turn up. */
 function parseWhen(raw: string): number | undefined {
   const s = raw.trim();
   if (!s) return undefined;
   if (/^\d+$/.test(s)) return normalizeEpoch(Number(s));
+
+  /**
+   * Day first, before `Date.parse` gets a say.
+   *
+   * wallabag's CSV writes `d/m/Y h:i:s`. Left to `Date.parse`, `05/04/2024` is
+   * read as the American 4 May and `27/08/2024` is not a date at all, so the
+   * whole column would be lost or wrong. When both numbers are 12 or less the
+   * two readings are genuinely indistinguishable and this takes the European
+   * one, which is what the apps that use slashes here write.
+   *
+   * The hour is taken as written. wallabag formats it with PHP's `h`, which is
+   * 12-hour and carries no am/pm, so half of them are unrecoverable by
+   * anybody; the day, which is what a date on a bookmark is for, survives.
+   */
+  const slash = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+  if (slash) {
+    const [, a, b, y, hh, mm, ss] = slash;
+    const first = Number(a);
+    const second = Number(b);
+    const dayFirst = first > 12 || second <= 12;
+    const day = dayFirst ? first : second;
+    const month = dayFirst ? second : first;
+    const ms = Date.UTC(
+      Number(y),
+      month - 1,
+      day,
+      Number(hh ?? 0),
+      Number(mm ?? 0),
+      Number(ss ?? 0),
+    );
+    return Number.isFinite(ms) ? normalizeEpoch(Math.floor(ms / 1000)) : undefined;
+  }
+
   const parsed = Date.parse(s);
   if (Number.isFinite(parsed)) return Math.floor(parsed / 1000);
   return undefined;

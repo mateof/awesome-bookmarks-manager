@@ -21,7 +21,12 @@ const wallabag = JSON.stringify([
     is_starred: 0,
     created_at: "2021-04-05T10:00:00+0200",
     tags: ["prensa", "leer"],
-    content: "<p>El cuerpo entero del artículo, que no debe acabar en la nota.</p>",
+    // With a link inside, on purpose. wallabag saves a copy of the article,
+    // and a real 6.8 MB export was read as an HTML bookmarks page because the
+    // first thing its content had in it was an `<a href=`.
+    content:
+      '<p>El cuerpo entero del artículo, que no debe acabar en la nota, con' +
+      ' <a href="https://dentro-del-articulo.example/">un enlace dentro</a>.</p>',
   },
   {
     id: 2,
@@ -114,6 +119,12 @@ test("importar desde otras aplicaciones: wallabag y Pocket", async ({
     expect(uno.description ?? "").toBe("");
     // Saved in 2021, not this afternoon.
     expect(String(uno.createdAt)).toContain("2021-04-05");
+    // And the link that was inside the article is not a bookmark.
+    expect(
+      marcadores.some(
+        (b: { url: string }) => b.url === "https://dentro-del-articulo.example/",
+      ),
+    ).toBe(false);
   }).toPass({ timeout: 30_000 });
 
   // The same screen, a different app, into a folder of its own.

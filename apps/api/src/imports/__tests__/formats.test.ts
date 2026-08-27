@@ -315,6 +315,70 @@ describe("JSON", () => {
   });
 });
 
+/**
+ * The exports that carry a saved copy of the article.
+ *
+ * This is the bug a real 6.8 MB wallabag export found: the reader sniffed for
+ * HTML *first*, and the first article's `content` had an `<a href=` in it, so
+ * the whole file was read as a bookmarks page and produced nothing. Both of
+ * these files are mostly HTML by weight; what decides them is their structure.
+ */
+describe("ficheros con el artículo entero dentro", () => {
+  const articulo =
+    '<p>Un artículo con <a href="https://enlace.example/dentro">un enlace</a> y' +
+    ' <dl><dt>hasta una lista</dt></dl> dentro del texto.</p>';
+
+  it("wallabag JSON: el HTML del contenido no lo convierte en HTML", () => {
+    const json = JSON.stringify([
+      {
+        is_archived: 0,
+        is_starred: 0,
+        tags: ["receta"],
+        id: 186,
+        title: "Pan bao casero",
+        url: "https://bonviveur.example/es/recetas/pan-bao",
+        content: articulo,
+        created_at: "2026-07-11T10:29:34+0200",
+      },
+    ]);
+    const { app, tree } = parse(json);
+    expect(app).toBe("wallabag");
+    const items = flatten(tree);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.url).toBe("https://bonviveur.example/es/recetas/pan-bao");
+    // And not the link that was inside the article.
+    expect(items[0]?.name).toBe("Pan bao casero");
+  });
+
+  it("wallabag CSV: sus columnas, su fecha en d/m/Y y su artículo", () => {
+    // Headers exactly as wallabag writes them: Title, URL, Content, Tags,
+    // MIME Type, Language, Creation date.
+    const csv =
+      'Title,URL,Content,Tags,MIME Type,Language,Creation date\n' +
+      `"Pan bao casero","https://bonviveur.example/es/recetas/pan-bao","${articulo}",` +
+      '"receta, pan","text/html","es","27/08/2026 10:29:34"';
+    const { app, tree } = parse(csv);
+    expect(app).toBe("wallabag");
+    const items = flatten(tree);
+    expect(items).toHaveLength(1);
+    expect(items[0]?.url).toBe("https://bonviveur.example/es/recetas/pan-bao");
+    expect(items[0]?.tags).toEqual(["receta", "pan"]);
+    // 27 is not a month: read as American this date is thrown away.
+    expect(items[0]?.createdAt).toBe(
+      Math.floor(Date.UTC(2026, 7, 27, 10, 29, 34) / 1000),
+    );
+    // The article is not the description, here either.
+    expect(items[0]?.description).toBeUndefined();
+  });
+
+  it("un JSON que no parsea no se traga el fichero", () => {
+    // It starts with `[`, so JSON gets first refusal — but it must hand the
+    // file back rather than reporting "nothing found".
+    const html = `[esto no es json]\n<DL><p><DT><A HREF="https://x.example/">x</A></DL><p>`;
+    expect(flatten(parse(html).tree)[0]?.url).toBe("https://x.example/");
+  });
+});
+
 describe("fechas", () => {
   it("segundos, milisegundos e ISO; y lo imposible se descarta", () => {
     const rows = [
@@ -323,6 +387,8 @@ describe("fechas", () => {
       { url: "https://d.example/3", title: "iso", created: "2023-11-14T22:13:20Z" },
       { url: "https://d.example/4", title: "cero", created: "0" },
       { url: "https://d.example/5", title: "futuro", created: "99999999999" },
+      { url: "https://d.example/6", title: "dia primero", created: "27/08/2024" },
+      { url: "https://d.example/7", title: "ambiguo", created: "05/04/2024" },
     ];
     const items = flatten(parse(JSON.stringify(rows)).tree);
     expect(items[0]?.createdAt).toBe(1700000000);
@@ -330,5 +396,9 @@ describe("fechas", () => {
     expect(items[2]?.createdAt).toBe(1700000000);
     expect(items[3]?.createdAt).toBeUndefined();
     expect(items[4]?.createdAt).toBeUndefined();
+    expect(items[5]?.createdAt).toBe(Math.floor(Date.UTC(2024, 7, 27) / 1000));
+    // Both readings are possible; the European one wins, which is what the
+    // apps that write dates with slashes here use.
+    expect(items[6]?.createdAt).toBe(Math.floor(Date.UTC(2024, 3, 5) / 1000));
   });
 });

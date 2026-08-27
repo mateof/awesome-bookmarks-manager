@@ -121,15 +121,23 @@ test("el emoji se abre, se ve entero y escribe en el texto", async ({
   // after a click can run before React has committed the panel, and then the
   // measurement is of a moment that never mattered. That raced once already.
   await expect(page.getByTestId("emoji-grid")).toBeVisible();
-  const escaped = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("body > div")).some(
-      (d) =>
-        getComputedStyle(d).position === "fixed" &&
-        !!d.querySelector("input[placeholder]") &&
-        d.querySelectorAll("button").length > 10,
-    ),
-  );
-  expect(escaped).toBe(true);
+  // Polled rather than measured once. The panel is visible before it is
+  // *placed*: the popover positions itself in an effect, so a single
+  // `evaluate` right after the grid appears sometimes reads the frame before
+  // that ran and sees a panel that has not become `fixed` yet. It failed that
+  // way roughly one run in ten, which is worse than failing always.
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll("body > div")).some(
+          (d) =>
+            getComputedStyle(d).position === "fixed" &&
+            !!d.querySelector("input[placeholder]") &&
+            d.querySelectorAll("button").length > 10,
+        ),
+      ),
+    )
+    .toBe(true);
 
   // --- Only the grid scrolls -----------------------------------------------
   const grid = page.getByTestId("emoji-grid");

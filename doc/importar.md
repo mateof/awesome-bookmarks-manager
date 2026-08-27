@@ -20,7 +20,7 @@ determina qué se puede importar y qué se pierde por el camino.
 
 | Aplicación | Qué es | Exporta | Estado |
 |---|---|---|---|
-| **wallabag** | Read-later autoalojado, el más veterano | JSON (también CSV, XML, EPUB…) | ✅ Admitido |
+| **wallabag** | Read-later autoalojado, el más veterano | JSON y CSV (también XML, EPUB…) | ✅ Admitidos los dos |
 | **Pocket** | El read-later de Mozilla | ZIP con CSV (antes HTML) | ✅ Admitido, incluido el zip. **Cerró en julio de 2025** |
 | **Raindrop.io** | Gestor de marcadores comercial, el más usado | CSV y HTML | ✅ Admitido, con colecciones anidadas |
 | **Pinboard** | Marcadores minimalistas de pago | JSON | ✅ Admitido |
@@ -48,10 +48,19 @@ Por el contenido, en este orden:
    Omnivore en `metadata_*.json` de veinte: obligar a descomprimir e importar
    uno a uno, en orden, no es importar. Las copias de `__MACOSX` se ignoran,
    que si no se importa todo dos veces.
-2. **HTML** (`<!DOCTYPE NETSCAPE-Bookmark-file-1>`, o simplemente `<DL>` y
-   enlaces): el formato de los navegadores.
-3. **JSON**: se mira la forma de los objetos para saber de quién es.
-4. **CSV**: se miran los nombres de las columnas.
+2. **JSON**: si el fichero empieza por `{` o `[` y parsea, es JSON, y la forma
+   de sus objetos dice de quién es.
+3. **CSV**: se miran los nombres de las columnas de la **primera línea**.
+4. **HTML**: el `<!DOCTYPE NETSCAPE-Bookmark-file-1>`, o en su defecto que
+   parezca una página con enlaces.
+
+**El orden es el que es por una razón.** wallabag, Pocket y Omnivore guardan
+una copia del artículo entero, con su HTML, dentro de un campo JSON o de una
+celda CSV. Mirar primero «¿esto tiene pinta de tener enlaces dentro?» hace que
+una exportación de wallabag de siete megas se lea como si fuera una página de
+marcadores y no salga ni uno. Por eso van delante los dos formatos que se
+reconocen por **estructura**, y cada uno solo se queda el fichero si de verdad
+lo entiende; el que no puede fallar, el HTML, va al final.
 
 El nombre del fichero y su extensión **no** se usan para decidir. La gente
 renombra descargas, y la mitad de estas aplicaciones te dan un `.zip` con lo
@@ -101,9 +110,15 @@ Las rarezas que sí hay que saberse de memoria están escritas donde se usan:
 | Favorito / estrella (`is_starred`, `favorite`) | Favorito |
 | Archivado / por leer | Tags `archivado` y `por leer` (opcional, ver abajo) |
 
-Las fechas llegan en segundos, en milisegundos o en ISO, según quién escriba.
-Se aceptan las tres, y se descarta lo imposible: un cero, o una fecha del año
-5138, son un hueco sin rellenar, no una fecha.
+Las fechas llegan en segundos, en milisegundos, en ISO o en `27/08/2026`, según
+quién escriba. Se aceptan las cuatro, y se descarta lo imposible: un cero, o una
+fecha del año 5138, son un hueco sin rellenar, no una fecha.
+
+Con las barras se lee **día primero**, que es como las escribe wallabag en su
+CSV. Cuando los dos números son 12 o menos las dos lecturas son igual de
+válidas y no hay forma de saberlo; se elige la europea. (La hora de wallabag,
+además, va en formato de 12 sin am/pm, así que esa parte no la puede recuperar
+nadie; el día, que es para lo que sirve una fecha aquí, sí.)
 
 ### Archivado y «por leer»
 
