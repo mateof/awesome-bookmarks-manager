@@ -3,6 +3,7 @@ import type { Bookmark, Folder } from "@awesome-bookmarks/shared";
 import {
   ArrowUp,
   Check,
+  CheckSquare,
   ClipboardCopy,
   FileArchive,
   Copy,
@@ -25,7 +26,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { dlg } from "../components/dialogs.js";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -91,6 +92,19 @@ import {
 
 
 
+
+/** Inputs where Ctrl+A has nothing of its own to select. */
+const NON_TEXT_INPUTS = new Set([
+  "checkbox",
+  "radio",
+  "button",
+  "submit",
+  "reset",
+  "file",
+  "range",
+  "color",
+  "image",
+]);
 
 export function FolderPage() {
   const { t } = useTranslation();
@@ -207,6 +221,63 @@ export function FolderPage() {
     });
   };
   const clearSelection = () => setSelection(new Set());
+
+  /**
+   * "Everything" is everything on screen, folders included.
+   *
+   * Not everything in the library and not everything in the subtree: the
+   * selection bar acts on what you can see, so selecting all of it has to mean
+   * the same list you are looking at, or the count would refer to items you
+   * never chose and cannot check.
+   */
+  const visibleKeys: SelectionKey[] = [
+    ...subfolders.map((f) => `folder:${f.id}` as SelectionKey),
+    ...items.map((b) => `bookmark:${b.id}` as SelectionKey),
+  ];
+  const allSelected =
+    visibleKeys.length > 0 && visibleKeys.every((k) => selection.has(k));
+  const selectAll = () => setSelection(new Set(visibleKeys));
+
+  // Read by the keyboard shortcut, which is registered once and would
+  // otherwise keep selecting the contents of whichever folder was open when it
+  // was set up.
+  const visibleKeysRef = useRef<SelectionKey[]>(visibleKeys);
+  visibleKeysRef.current = visibleKeys;
+
+  /**
+   * Ctrl/Cmd+A selects the items, always.
+   *
+   * The first version only did it once something was already selected, and
+   * fell back to the browser's select-the-text otherwise. That is backwards:
+   * on a page that is a list of things, Ctrl+A means "all the things" — it is
+   * what a file manager does, and selecting the page's text is not something
+   * anybody comes here to do. Having to tick one card first to unlock the
+   * shortcut for the rest is exactly the work the shortcut exists to save.
+   *
+   * Inside a text field it still selects the text, or renaming a folder would
+   * stop being editable.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "a") return;
+      // Only where there is text to select. "Any input" is too wide: the
+      // checkbox on a card is an input, and it keeps the focus after you tick
+      // it, so the very next Ctrl+A — the one you press *because* you just
+      // selected something — went nowhere.
+      const el = e.target as HTMLElement | null;
+      const typing =
+        !!el &&
+        (el.isContentEditable ||
+          el.tagName === "TEXTAREA" ||
+          (el.tagName === "INPUT" &&
+            !NON_TEXT_INPUTS.has((el as HTMLInputElement).type)));
+      if (typing) return;
+      e.preventDefault();
+      setSelection(new Set(visibleKeysRef.current));
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
   // Navigating to another folder starts a fresh selection. The page component
   // stays mounted across /folder/:id changes, so without this the action bar
@@ -595,6 +666,19 @@ export function FolderPage() {
                 },
               ]
             : []),
+          // Reachable without having ticked anything first, and without
+          // knowing the shortcut: the selection bar only exists once there is
+          // a selection, so until now "select everything" lived behind
+          // "select one thing".
+          ...(visibleKeys.length > 0
+            ? [
+                {
+                  label: t("folder.selectionAll"),
+                  icon: <CheckSquare className="h-4 w-4" />,
+                  onClick: selectAll,
+                },
+              ]
+            : []),
           {
             label: t("folder.exportButton"),
             icon: <Download className="h-4 w-4" />,
@@ -793,9 +877,34 @@ export function FolderPage() {
 
       {selection.size > 0 && (
         <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <span className="text-sm font-medium">
+          {/* One control for both directions, with the half-filled state for
+              "some". Two separate buttons would mean one of them is always the
+              one that does nothing. */}
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = !allSelected && selection.size > 0;
+              }}
+              onChange={() => (allSelected ? clearSelection() : selectAll())}
+              aria-label={
+                allSelected
+                  ? t("folder.selectionNone")
+                  : t("folder.selectionAll")
+              }
+              title={
+                allSelected
+                  ? t("folder.selectionNone")
+                  : t("folder.selectionAll")
+              }
+              className="h-4 w-4 accent-slate-700"
+            />
             {t("folder.selectionCount", { count: selection.size })}
-          </span>
+            <span className="text-xs font-normal text-slate-500">
+              {t("folder.selectionOfVisible", { total: visibleKeys.length })}
+            </span>
+          </label>
           <button
             onClick={openSelectionInTabs}
             className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"

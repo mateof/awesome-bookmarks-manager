@@ -34,6 +34,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 21. [Registro de seguridad](#21-registro-de-seguridad)
 22. [Texto copiable y texto oculto](#22-texto-copiable-y-texto-oculto)
 23. [Copias en la nube](#23-copias-en-la-nube)
+23b. [Marcar todo de una vez](#23b-marcar-todo-de-una-vez)
 24. [Copiar una selección como lista](#24-copiar-una-selección-como-lista)
 25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
 26. [Ficheros adjuntos](#26-ficheros-adjuntos)
@@ -846,6 +847,29 @@ archivos que hay en él con su fecha y tamaño. Desde ahí puedes:
 
 Una copia solo se puede restaurar en la cuenta que la hizo: las filas van
 selladas con tu clave.
+
+---
+
+## 23b. Marcar todo de una vez
+
+Hay tres formas, y ninguna te obliga a marcar uno antes:
+
+- **Ctrl+A** (Cmd+A en Mac) marca todos los elementos de la carpeta, como en un
+  gestor de archivos. No selecciona el texto de la página: esto es una lista de
+  cosas, y «todo» son las cosas. Dentro de una caja de texto sigue
+  seleccionando el texto, o renombrar una carpeta dejaría de funcionar como en
+  todas partes.
+- **Menú de la carpeta → Seleccionar todo**, para cuando no te sabes el atajo.
+- **La casilla de la barra de selección**, que aparece en cuanto hay algo
+  marcado y vale para las dos direcciones: si no está todo marcado, marca todo;
+  si ya lo está, lo **desmarca**. Con algo marcado pero no todo se ve a medias,
+  que es lo que pasa en realidad. Al lado dice cuántos llevas de cuántos hay a
+  la vista.
+
+«Todo» es **lo que se ve en esa carpeta**, carpetas y enlaces, no toda la
+biblioteca ni el contenido de las subcarpetas: la barra actúa sobre lo que
+tienes delante, así que marcar todo tiene que significar la misma lista que
+estás mirando.
 
 ---
 
