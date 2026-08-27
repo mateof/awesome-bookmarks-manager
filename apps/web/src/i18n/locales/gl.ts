@@ -1348,6 +1348,8 @@ const gl = {
     title: "Escoller cartafol",
     search: "Buscar un cartafol…",
     noResults: "Ningún cartafol coincide.",
+    newFolderIn: "Novo cartafol dentro de {{name}}",
+    newFolderName: "Nome do cartafol",
     expand: "Despregar",
     collapse: "Pregar",
   },

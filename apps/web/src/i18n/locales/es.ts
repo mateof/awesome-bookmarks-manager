@@ -1346,6 +1346,8 @@ const es = {
     title: "Elegir carpeta",
     search: "Buscar una carpeta…",
     noResults: "Ninguna carpeta coincide.",
+    newFolderIn: "Nueva carpeta dentro de {{name}}",
+    newFolderName: "Nombre de la carpeta",
     expand: "Desplegar",
     collapse: "Replegar",
   },

@@ -614,6 +614,17 @@ busca en toda la biblioteca (sin distinguir mayúsculas ni acentos). Cada
 resultado enseña debajo su ruta completa, que es lo que distingue dos carpetas
 llamadas *Facturas*. Si ya había una carpeta elegida, su rama aparece abierta.
 
+**Y se pueden crear carpetas ahí mismo.** Cada fila del árbol tiene a la
+derecha un botón de carpeta nueva, y también lo tiene *Inicio* para crearla en
+la raíz. Sale una línea con el nombre justo donde va a quedar: Enter la crea,
+`Esc` se arrepiente (y cierra solo esa línea, no el diálogo). Guardar un enlace
+es precisamente cuando descubres que la carpeta que querías no existe todavía,
+y salir a crearla significa perder lo que estabas compartiendo.
+
+La carpeta recién creada **no queda elegida sola**. Aparece en su sitio, dentro
+de la rama que la contiene, y se elige con un toque. Elegirla cierra el
+diálogo, así que hacerlo automáticamente sería no llegar a verla nunca.
+
 Si la sesión está cerrada, el enlace compartido sobrevive al inicio de sesión:
 te devuelve a la misma pantalla con los datos puestos.
 

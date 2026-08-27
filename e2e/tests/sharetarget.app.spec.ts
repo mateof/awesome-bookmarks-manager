@@ -43,7 +43,9 @@ test("guardar un enlace llegado desde el menú de compartir", async ({
   await page.getByRole("button", { name: "Carpeta" }).click();
   await page
     .getByTestId("folder-picker")
-    .getByRole("button", { name: "Entrada" })
+    // Exact: the row also has a "Nueva carpeta dentro de Entrada" button next
+    // to it, and a loose match would find the name in that label as well.
+    .getByRole("button", { name: "Entrada", exact: true })
     .click();
   await page.getByRole("button", { name: "Guardar bookmark" }).click();
   await expect(page.getByRole("heading", { name: "Guardado" })).toBeVisible();

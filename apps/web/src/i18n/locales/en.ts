@@ -1345,6 +1345,8 @@ const en = {
     title: "Choose a folder",
     search: "Search for a folder…",
     noResults: "No folder matches.",
+    newFolderIn: "New folder inside {{name}}",
+    newFolderName: "Folder name",
     expand: "Expand",
     collapse: "Collapse",
   },

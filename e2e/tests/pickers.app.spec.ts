@@ -44,12 +44,17 @@ test("elegir carpeta: árbol que se despliega y búsqueda que lo ignora", async 
   const picker = page.getByTestId("folder-picker");
   await expect(picker).toBeVisible({ timeout: 20_000 });
 
+  // `exact` throughout: every row also carries a "Nueva carpeta dentro de X"
+  // button, and a loose match would find the folder's name in that label too.
+  const row = (name: string) =>
+    picker.getByRole("button", { name, exact: true });
+
   // Closed to begin with: a tree that opens everything is the flat list again.
-  await expect(picker.getByRole("button", { name: "Contratos" })).toHaveCount(0);
+  await expect(row("Contratos")).toHaveCount(0);
   await picker.getByRole("button", { name: "Desplegar" }).first().click();
-  await expect(picker.getByRole("button", { name: "Proveedores" })).toBeVisible();
+  await expect(row("Proveedores")).toBeVisible();
   await picker.getByRole("button", { name: "Desplegar" }).first().click();
-  await expect(picker.getByRole("button", { name: "Contratos" })).toBeVisible();
+  await expect(row("Contratos")).toBeVisible();
 
   // And the search ignores the tree: you type the name because you do not
   // remember which branch it is on. It shows the path, which is what tells two
@@ -129,6 +134,81 @@ test("tags: flechas para elegir una sugerencia y Enter para añadirla", async ({
     );
     expect(applied).toEqual([names[1]]);
   }).toPass({ timeout: 10_000 });
+
+  await ctx.close();
+});
+
+/**
+ * Making the folder from inside the picker.
+ *
+ * Filing a link is exactly when you find out the folder you wanted does not
+ * exist yet, and leaving to go and make it means losing the link you were
+ * sharing.
+ */
+test("elegir carpeta: crear una dentro de otra sin salir del diálogo", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  await seedSpanish(ctx);
+  const page = await ctx.newPage();
+  await signup(page, {
+    email: "folder.create.e2e@example.com",
+    nickname: "foldercreate",
+    password: "FolderCreate27xx",
+  });
+  const req = page.request;
+
+  const raiz = await (
+    await req.post("/api/folders", { data: { name: "Trabajo" } })
+  ).json();
+  const media = await (
+    await req.post("/api/folders", {
+      data: { name: "Proveedores", parentId: raiz.id },
+    })
+  ).json();
+
+  await page.goto("/share-target?url=https%3A%2F%2Fejemplo.invalid%2F&title=Dos");
+  await page.getByRole("button", { name: "Inicio" }).click();
+  const picker = page.getByTestId("folder-picker");
+  await expect(picker).toBeVisible({ timeout: 20_000 });
+  await picker.getByRole("button", { name: "Desplegar" }).first().click();
+
+  // Giving up on the name closes the line and nothing else. Escape reaches
+  // `document`, where the dialog listens, so without stopping it there the
+  // whole picker would go with it.
+  await picker
+    .getByRole("button", { name: "Nueva carpeta dentro de Proveedores" })
+    .click();
+  await expect(page.getByTestId("new-folder-row")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("new-folder-row")).toHaveCount(0);
+  await expect(picker).toBeVisible();
+
+  await picker
+    .getByRole("button", { name: "Nueva carpeta dentro de Proveedores" })
+    .click();
+  await page.getByLabel("Nombre de la carpeta").fill("Contratos 2026");
+  await page.keyboard.press("Enter");
+
+  // It is created where it was asked for, not at the root.
+  await expect(async () => {
+    const all = await (await req.get("/api/folders")).json();
+    const hecha = all.find((f: { name: string }) => f.name === "Contratos 2026");
+    expect(hecha).toBeTruthy();
+    expect(hecha.parentId).toBe(media.id);
+  }).toPass({ timeout: 10_000 });
+
+  // And it shows up in the tree, in its branch, ready to be chosen: created is
+  // not the same as chosen, so it takes one tap.
+  const nueva = picker.getByRole("button", {
+    name: "Contratos 2026",
+    exact: true,
+  });
+  await expect(nueva).toBeVisible();
+  await nueva.click();
+  await expect(
+    page.getByRole("button", { name: /Trabajo \/ Proveedores \/ Contratos 2026/ }),
+  ).toBeVisible();
 
   await ctx.close();
 });
