@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Check,
+  ChevronDown,
   Cloud as CloudIcon,
   Copy,
   BarChart3,
   Clock,
   Download,
   Fingerprint,
+  FolderClosed,
   HardDrive,
   HelpCircle,
   MonitorSmartphone,
@@ -32,6 +34,8 @@ import { fmtDateTime } from "../lib/date.js";
 import { registerPasskey, passkeysSupported } from "../webauthn.js";
 import { TwoFactorEnroll } from "../components/TwoFactorEnroll.js";
 import { CloudSetupHelp } from "../components/CloudSetupHelp.js";
+import { FolderPickerDialog } from "../components/FolderPickerDialog.js";
+import { buildFolderPath } from "../hooks.js";
 import { Modal } from "../components/Modal.js";
 import { WebDAVFolderPicker } from "../components/WebDAVFolderPicker.js";
 import { AdminStorage, MyStorage } from "../components/StorageSettings.js";
@@ -1054,10 +1058,6 @@ function ImportExport() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
-  const folderOptions = useMemo(
-    () => buildFolderOptions(folders.data ?? []),
-    [folders.data],
-  );
 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -1069,9 +1069,16 @@ function ImportExport() {
   // alternative is throwing away which links were archived or still to read.
   const [stateTags, setStateTags] = useState<boolean>(true);
   const [parentId, setParentId] = useState<string>("");
-  const [wrapperName, setWrapperName] = useState<string>(
-    `Import ${new Date().toISOString().slice(0, 10)}`,
-  );
+  const [pickingFolder, setPickingFolder] = useState(false);
+
+  /** Where the import is going, spelled out on the button that opens the tree. */
+  const destPath = useMemo(() => {
+    if (!parentId) return t("settings.importExport.destRoot");
+    const path = buildFolderPath(folders.data ?? [], parentId).map((p) => p.name);
+    return path.length > 0
+      ? path.join(" / ")
+      : t("settings.importExport.destRoot");
+  }, [folders.data, parentId, t]);
 
   const watchImport = (jobId: string) => {
     const start = Date.now();
@@ -1114,7 +1121,6 @@ function ImportExport() {
         fetchSnapshots,
         stateTags,
         parentId: parentId || null,
-        wrapperFolderName: wrapperName.trim() || undefined,
       });
       const parts = [
         // What was recognised, before anything else: a Pocket export read as
@@ -1126,11 +1132,12 @@ function ImportExport() {
         }),
         t("settings.importExport.jobEnqueued", { jobId: r.jobId }),
         fetchSnapshots ? "" : t("settings.importExport.withoutSnapshots"),
-        wrapperName.trim()
-          ? t("settings.importExport.insideWrapper", { name: wrapperName.trim() })
-          : parentId
-            ? t("settings.importExport.inSelectedFolder")
-            : t("settings.importExport.inRoot"),
+        // The destination by name rather than "the selected folder": after
+        // choosing it in a tree of two hundred, being told which one it was is
+        // the whole point of saying anything.
+        parentId
+          ? t("settings.importExport.intoFolder", { name: destPath })
+          : t("settings.importExport.inRoot"),
       ].filter(Boolean);
       setMsg(parts.join(" — "));
       watchImport(r.jobId);
@@ -1149,44 +1156,30 @@ function ImportExport() {
         subtitle={t("settings.importExport.description")}
       />
       <div className="space-y-4">
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs text-slate-500">
+        <div className="block text-sm">
+          <span id="import-dest-label" className="mb-1 block text-xs text-slate-500">
             {t("settings.importExport.destFolderLabel")}
           </span>
-          <select
-            value={parentId}
-            onChange={(e) => setParentId(e.target.value)}
+          {/* The same tree as everywhere else, rather than a flat `<select>`
+              listing two hundred folders with their whole path in front. It
+              also creates folders, which is what the separate "wrapper folder"
+              field used to be for. */}
+          <button
+            type="button"
+            id="import-dest-button"
+            aria-labelledby="import-dest-label import-dest-button"
+            onClick={() => setPickingFolder(true)}
             disabled={busy}
-            className={`${inputCls} max-w-sm`}
+            className={`${inputCls} flex max-w-sm items-center gap-2 text-left disabled:opacity-50`}
           >
-            <option value="">{t("settings.importExport.destRoot")}</option>
-            {folderOptions.map((o) => (
-              <option key={o.id} value={o.id}>
-                {"— ".repeat(o.depth)}
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1 block text-xs text-slate-500">
-            {t("settings.importExport.wrapperLabel")}
-          </span>
-          <input
-            value={wrapperName}
-            onChange={(e) => setWrapperName(e.target.value)}
-            disabled={busy}
-            maxLength={256}
-            placeholder={t("settings.importExport.wrapperPlaceholder", {
-              date: "2026-05-06",
-            })}
-            className={`${inputCls} max-w-sm`}
-          />
+            <FolderClosed className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="min-w-0 flex-1 truncate">{destPath}</span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          </button>
           <span className="mt-1 block text-xs text-slate-500">
-            {t("settings.importExport.wrapperHint")}
+            {t("settings.importExport.destHint")}
           </span>
-        </label>
+        </div>
 
         <label className="flex items-start gap-3 text-sm">
           <input
@@ -1232,39 +1225,22 @@ function ImportExport() {
             {t("settings.importExport.supported")}
           </p>
         </div>
+
+        {pickingFolder && (
+          <FolderPickerDialog
+            folders={folders.data ?? []}
+            value={parentId || null}
+            onPick={(id) => {
+              setParentId(id ?? "");
+              setPickingFolder(false);
+            }}
+            onClose={() => setPickingFolder(false)}
+          />
+        )}
         {msg && <div className="text-sm text-slate-500">{msg}</div>}
       </div>
     </Card>
   );
-}
-
-interface FolderOpt {
-  id: string;
-  name: string;
-  depth: number;
-}
-
-function buildFolderOptions(
-  flat: Array<{ id: string; name: string; parentId: string | null }>,
-): FolderOpt[] {
-  const byParent = new Map<string | null, typeof flat>();
-  for (const f of flat) {
-    const list = byParent.get(f.parentId) ?? [];
-    list.push(f);
-    byParent.set(f.parentId, list);
-  }
-  for (const list of byParent.values()) {
-    list.sort((a, b) => a.name.localeCompare(b.name));
-  }
-  const out: FolderOpt[] = [];
-  const walk = (parentId: string | null, depth: number) => {
-    for (const f of byParent.get(parentId) ?? []) {
-      out.push({ id: f.id, name: f.name, depth });
-      walk(f.id, depth + 1);
-    }
-  };
-  walk(null, 0);
-  return out;
 }
 
 /* ------------------------------------------------------------------ */

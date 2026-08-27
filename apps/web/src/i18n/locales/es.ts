@@ -1007,13 +1007,12 @@ const es = {
     },
     importExport: {
       heading: "Import / Export",
-      description: "Importa un fichero HTML exportado por Chrome / Firefox / Edge.",
+      description:
+        "Trae tu biblioteca desde otra aplicación o desde un navegador. El formato se reconoce solo.",
       destFolderLabel: "Carpeta destino",
       destRoot: "Raíz (Inicio)",
-      wrapperLabel: "Nombre para una carpeta envolvente (opcional)",
-      wrapperPlaceholder: "Ej. Chrome {{date}}",
-      wrapperHint:
-        "Si se rellena, se crea una carpeta nueva con ese nombre dentro de la destino y todo el árbol de Chrome cuelga de ahí. Déjalo vacío para importar directamente en la destino.",
+      destHint:
+        "Se abre el árbol de carpetas, con buscador. Desde ahí puedes crear una carpeta nueva para meter dentro lo que importes.",
       autoSnapshotsLabel:
         "Generar snapshots e iconos para los bookmarks importados",
       autoSnapshotsHint:
@@ -1028,8 +1027,7 @@ const es = {
         "Reconocido como {{app}}: {{bookmarks}} marcadores en {{folders}} carpetas",
       jobEnqueued: "Import encolado: {{jobId}}",
       withoutSnapshots: "sin snapshots",
-      insideWrapper: 'dentro de "{{name}}"',
-      inSelectedFolder: "en la carpeta seleccionada",
+      intoFolder: 'en "{{name}}"',
       inRoot: "en la raíz",
       importDone: "Import completado.",
       importFinishedStatus: "Import terminó con estado: {{status}}{{error}}",

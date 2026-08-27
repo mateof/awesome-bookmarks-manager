@@ -893,6 +893,10 @@ favoritos. Lo que estaba archivado o pendiente de leer se guarda como los tags
 `archivado` y `por leer`, porque esta aplicación no tiene ese estado; hay una
 casilla para no hacerlo.
 
+La **carpeta destino** se escoge en el árbol de siempre, con buscador, y desde
+ahí se pueden crear carpetas: si quieres que lo importado quede aparte, creas
+la carpeta en ese mismo momento y la eliges.
+
 El detalle de cada formato, con sus rarezas, está en
 [importar.md](importar.md).
 

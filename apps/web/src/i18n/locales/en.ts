@@ -1007,13 +1007,11 @@ const en = {
     importExport: {
       heading: "Import / Export",
       description:
-        "Import an HTML file exported by Chrome / Firefox / Edge.",
+        "Bring your library over from another app or from a browser. The format is recognised on its own.",
       destFolderLabel: "Destination folder",
       destRoot: "Root (Home)",
-      wrapperLabel: "Name for a wrapping folder (optional)",
-      wrapperPlaceholder: "e.g. Chrome {{date}}",
-      wrapperHint:
-        "If filled, a new folder with that name is created inside the destination and the whole Chrome tree hangs from it. Leave empty to import directly into the destination.",
+      destHint:
+        "Opens the folder tree, with a search box. You can create a new folder there to hold whatever you import.",
       autoSnapshotsLabel:
         "Generate snapshots and icons for imported bookmarks",
       autoSnapshotsHint:
@@ -1028,8 +1026,7 @@ const en = {
         "Recognised as {{app}}: {{bookmarks}} bookmarks in {{folders}} folders",
       jobEnqueued: "Import queued: {{jobId}}",
       withoutSnapshots: "without snapshots",
-      insideWrapper: 'inside "{{name}}"',
-      inSelectedFolder: "in the selected folder",
+      intoFolder: 'into "{{name}}"',
       inRoot: "at the root",
       importDone: "Import completed.",
       importFinishedStatus: "Import finished with status: {{status}}{{error}}",

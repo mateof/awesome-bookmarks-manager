@@ -6,6 +6,13 @@ contenido**, y la pantalla te dice qué ha reconocido antes de importar nada.
 
 Está en **Ajustes → Importar / Exportar**.
 
+La **carpeta destino** se elige en el mismo árbol que el resto de la
+aplicación: se despliega rama a rama, tiene buscador y **crea carpetas** con el
+botón de la derecha de cada fila. Por eso ya no hay un campo aparte para el
+nombre de una «carpeta envolvente»: si quieres que lo importado quede en una
+carpeta suya, la creas ahí y la eliges, que es un paso menos y una cosa menos
+que explicar.
+
 ## Qué hay ahí fuera
 
 El panorama de aplicaciones parecidas, y qué exporta cada una. Es lo que

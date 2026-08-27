@@ -456,7 +456,6 @@ export const api = {
       fetchSnapshots?: boolean;
       stateTags?: boolean;
       parentId?: string | null;
-      wrapperFolderName?: string;
     } = {},
   ) => {
     const fd = new FormData();
@@ -464,8 +463,6 @@ export const api = {
     fd.append("fetchSnapshots", String(options.fetchSnapshots ?? false));
     fd.append("stateTags", String(options.stateTags ?? true));
     if (options.parentId) fd.append("parentId", options.parentId);
-    if (options.wrapperFolderName)
-      fd.append("wrapperFolderName", options.wrapperFolderName);
     const res = await fetch(`${BASE}/import/links`, {
       method: "POST",
       credentials: "include",

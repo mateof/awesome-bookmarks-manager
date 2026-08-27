@@ -55,7 +55,28 @@ test("importar desde otras aplicaciones: wallabag y Pocket", async ({
   const file = page.getByLabel("Fichero a importar");
   await expect(file).toBeVisible({ timeout: 20_000 });
 
-  await page.getByLabel(/carpeta envolvente/i).fill("Desde wallabag");
+  /**
+   * The destination is the same tree as everywhere else, and it makes folders,
+   * which is what the old "wrapping folder" text field was for. Creating the
+   * folder here and choosing it is the whole flow for "put this import
+   * somewhere of its own".
+   */
+  const chooseDest = async (name: string) => {
+    await page.getByRole("button", { name: /Carpeta destino/ }).click();
+    const picker = page.getByTestId("folder-picker");
+    await expect(picker).toBeVisible();
+    await picker
+      .getByRole("button", { name: "Nueva carpeta dentro de Inicio" })
+      .click();
+    await page.getByLabel("Nombre de la carpeta").fill(name);
+    await page.keyboard.press("Enter");
+    await picker.getByRole("button", { name, exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: new RegExp(`Carpeta destino ${name}`) }),
+    ).toBeVisible();
+  };
+
+  await chooseDest("Desde wallabag");
   await file.setInputFiles({
     name: "wallabag-export.json",
     mimeType: "application/json",
@@ -95,8 +116,8 @@ test("importar desde otras aplicaciones: wallabag y Pocket", async ({
     expect(String(uno.createdAt)).toContain("2021-04-05");
   }).toPass({ timeout: 30_000 });
 
-  // The same screen, a different app, no setting changed.
-  await page.getByLabel(/carpeta envolvente/i).fill("Desde Pocket");
+  // The same screen, a different app, into a folder of its own.
+  await chooseDest("Desde Pocket");
   await file.setInputFiles({
     name: "part_000000.csv",
     mimeType: "text/csv",
@@ -126,12 +147,20 @@ test("importar desde otras aplicaciones: wallabag y Pocket", async ({
     expect(dos.tagIds.map(nameOf)).toContain("archivado");
   }).toPass({ timeout: 30_000 });
 
-  // Two imports, two wrapper folders, and the tag shared by both files exists
-  // once: "leer" came from wallabag and from Pocket.
+  // Each import went into the folder chosen for it, and neither landed in the
+  // root: choosing the destination is not decoration.
   const carpetas = await (await req.get("/api/folders")).json();
-  const nombres = carpetas.map((f: { name: string }) => f.name);
-  expect(nombres).toContain("Desde wallabag");
-  expect(nombres).toContain("Desde Pocket");
+  const marcadores = await (await req.get("/api/bookmarks")).json();
+  const idOf = (name: string) =>
+    carpetas.find((f: { name: string }) => f.name === name)?.id;
+  const folderOf = (url: string) =>
+    marcadores.find((b: { url: string }) => b.url === url)?.folderId;
+  expect(idOf("Desde wallabag")).toBeTruthy();
+  expect(folderOf("https://wallabag.example/uno")).toBe(idOf("Desde wallabag"));
+  expect(folderOf("https://pocket.example/uno")).toBe(idOf("Desde Pocket"));
+
+  // And the tag both files share exists once: "leer" came from wallabag and
+  // from Pocket.
   const tags = await (await req.get("/api/tags")).json();
   expect(tags.filter((t: { name: string }) => t.name === "leer")).toHaveLength(1);
 

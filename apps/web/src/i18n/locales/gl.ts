@@ -1009,13 +1009,12 @@ const gl = {
     },
     importExport: {
       heading: "Importar / Exportar",
-      description: "Importa un ficheiro HTML exportado por Chrome / Firefox / Edge.",
+      description:
+        "Trae a túa biblioteca dende outra aplicación ou dende un navegador. O formato recoñécese só.",
       destFolderLabel: "Cartafol destino",
       destRoot: "Raíz (Inicio)",
-      wrapperLabel: "Nome para un cartafol envolvente (opcional)",
-      wrapperPlaceholder: "Ex. Chrome {{date}}",
-      wrapperHint:
-        "Se se enche, créase un cartafol novo con ese nome dentro do destino e toda a árbore de Chrome colga de aí. Déixao baleiro para importar directamente no destino.",
+      destHint:
+        "Ábrese a árbore de cartafoles, con buscador. Dende aí podes crear un cartafol novo para meter dentro o que importes.",
       autoSnapshotsLabel:
         "Xerar snapshots e iconas para os marcadores importados",
       autoSnapshotsHint:
@@ -1030,8 +1029,7 @@ const gl = {
         "Recoñecido como {{app}}: {{bookmarks}} marcadores en {{folders}} cartafoles",
       jobEnqueued: "Importación encolada: {{jobId}}",
       withoutSnapshots: "sen snapshots",
-      insideWrapper: 'dentro de "{{name}}"',
-      inSelectedFolder: "no cartafol seleccionado",
+      intoFolder: 'en "{{name}}"',
       inRoot: "na raíz",
       importDone: "Importación completada.",
       importFinishedStatus: "Importación rematou con estado: {{status}}{{error}}",
