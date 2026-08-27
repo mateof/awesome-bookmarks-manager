@@ -131,9 +131,26 @@ test("el emoji se abre, se ve entero y escribe en el texto", async ({
   );
   expect(escaped).toBe(true);
 
-  // --- Tabs, and a search that ignores them --------------------------------
+  // --- Only the grid scrolls -----------------------------------------------
   const grid = page.getByTestId("emoji-grid");
   await expect(page.getByRole("tablist")).toBeVisible();
+
+  // Two nested scroll areas is not a redundancy, it is something you feel:
+  // the grid reaches its end, the wheel carries on into the popover, and the
+  // search box slides out of sight under the toolbar it hangs from. The panel
+  // itself must not be scrollable at all.
+  await page.getByRole("tab", { name: "Símbolos" }).click();
+  const before = await page.getByLabel("Buscar emoji…").boundingBox();
+  await grid.hover();
+  await page.mouse.wheel(0, 2000);
+  await page.mouse.wheel(0, 2000);
+  const after = await page.getByLabel("Buscar emoji…").boundingBox();
+  // The search box has not moved: nothing above the grid was scrolled away.
+  expect(Math.abs((after?.y ?? 0) - (before?.y ?? 0))).toBeLessThan(2);
+  // And the grid really did scroll, or the assertion above proves nothing.
+  expect(await grid.evaluate((el) => el.scrollTop)).toBeGreaterThan(20);
+
+  // --- Tabs, and a search that ignores them --------------------------------
 
   // A category that is not the one open: the food tab, by its own icon.
   await page.getByRole("tab", { name: "Comida y bebida" }).click();

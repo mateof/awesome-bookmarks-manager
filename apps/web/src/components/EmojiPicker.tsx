@@ -114,11 +114,14 @@ export function EmojiPicker({
       ref={boxRef}
       className={
         plain
-          ? "w-full p-1"
+          ? // A column inside the popover: the search box and the tabs keep
+            // their height and the grid takes what is left, so the only thing
+            // that scrolls is the grid.
+            "flex h-full w-full min-h-0 flex-col p-1"
           : "absolute right-0 top-full z-30 mt-1 w-80 rounded-lg border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-800"
       }
     >
-      <div className="mb-2 flex items-center gap-1 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
+      <div className="mb-2 flex shrink-0 items-center gap-1 rounded border border-slate-300 px-2 py-1 dark:border-slate-600">
         <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
         <input
           autoFocus
@@ -145,7 +148,7 @@ export function EmojiPicker({
         <div
           role="tablist"
           aria-label={t("panels.emojiCategories")}
-          className="mb-1 flex items-center gap-0.5 border-b border-slate-200 pb-1 dark:border-slate-700"
+          className="mb-1 flex shrink-0 items-center gap-0.5 border-b border-slate-200 pb-1 dark:border-slate-700"
         >
           <button
             type="button"
@@ -183,7 +186,12 @@ export function EmojiPicker({
         </div>
       )}
 
-      <div className="max-h-56 overflow-y-auto" data-testid="emoji-grid">
+      <div
+        data-testid="emoji-grid"
+        className={`overflow-y-auto overscroll-contain ${
+          plain ? "min-h-0 flex-1" : "max-h-56"
+        }`}
+      >
         {shown.length === 0 && (
           <div className="px-1 py-4 text-center text-xs text-slate-400">
             {t("panels.emojiNoResults")}
@@ -208,7 +216,7 @@ export function EmojiPicker({
 
       {/* Says how many there are, which is the answer to "is this all of
           them?" without making anybody count. */}
-      <div className="pt-1 text-right text-[10px] text-slate-400">
+      <div className="shrink-0 pt-1 text-right text-[10px] text-slate-400">
         {searching
           ? t("panels.emojiCount", { count: shown.length })
           : t("panels.emojiTotal", { count: ALL_EMOJI.length })}

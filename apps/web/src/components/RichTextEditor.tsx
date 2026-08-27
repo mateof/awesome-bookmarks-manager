@@ -626,7 +626,12 @@ export function RichTextEditor({
         <AnchoredPopover
           anchor={emojiAnchor}
           onClose={() => setEmoji(false)}
-          width={288}
+          width={296}
+          // Taller than a list of options, and it does not scroll itself: the
+          // picker has a search box, a row of tabs and a grid, and only the
+          // grid should move.
+          maxHeight={360}
+          scrollable={false}
         >
           <EmojiPicker
             plain

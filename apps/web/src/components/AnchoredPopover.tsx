@@ -24,12 +24,28 @@ export function AnchoredPopover({
   anchor,
   onClose,
   width = 208,
+  maxHeight = 224,
+  scrollable = true,
   children,
 }: {
   anchor: React.RefObject<HTMLElement>;
   onClose: () => void;
   /** Pixels. Fixed positioning has no parent to take a width from. */
   width?: number;
+  /**
+   * How tall it may get before it has to fit. The default suits a list of
+   * options; a panel with its own header and grid asks for more.
+   */
+  maxHeight?: number;
+  /**
+   * Whether *this* box scrolls.
+   *
+   * Off for a child that scrolls its own content. Two nested scroll areas is
+   * not a redundancy, it is a bug you can feel: when the inner one reaches its
+   * end the wheel keeps going into the outer one, and the panel's own header
+   * slides out of view under the toolbar it hangs from.
+   */
+  scrollable?: boolean;
   children: React.ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -53,7 +69,7 @@ export function AnchoredPopover({
       setPos({
         left: Math.max(gap, Math.min(a.left, window.innerWidth - width - gap)),
         top: up ? a.top - gap : a.bottom + gap,
-        maxHeight: Math.max(96, Math.min(224, up ? above : below)),
+        maxHeight: Math.max(96, Math.min(maxHeight, up ? above : below)),
         up,
       });
     };
@@ -64,7 +80,7 @@ export function AnchoredPopover({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("resize", place);
     };
-  }, [anchor, width]);
+  }, [anchor, width, maxHeight]);
 
   useLayoutEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -106,7 +122,13 @@ export function AnchoredPopover({
         maxHeight: pos.maxHeight,
         ...(pos.up ? { transform: "translateY(-100%)" } : {}),
       }}
-      className="z-50 overflow-y-auto rounded border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+      className={`z-50 rounded border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900 ${
+        scrollable
+          ? // Contained, so reaching the end of this list does not carry on
+            // into whatever is behind the popover.
+            "overflow-y-auto overscroll-contain"
+          : "flex flex-col overflow-hidden"
+      }`}
     >
       {children}
     </div>,

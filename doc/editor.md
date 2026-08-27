@@ -123,6 +123,13 @@ qué cajón está. Las palabras clave son en español y sin acentos, y la búsqu
 también quita los acentos de lo que se teclea, para que "arbol" y "árbol"
 encuentren lo mismo sin escribir cada palabra dos veces.
 
+Dentro del popover, **solo la rejilla hace scroll**. Dos zonas de scroll
+anidadas no son una redundancia sino algo que se nota: la rejilla llega al
+final, la rueda sigue empujando el contenedor de fuera y el buscador se va de
+la vista por debajo de la barra de la que cuelga el panel. El popover admite
+ahora que un hijo se encargue de su propio scroll (`scrollable={false}`) y
+todos los listados llevan `overscroll-contain`, que corta el encadenado.
+
 Sigue siendo un catálogo escrito a mano y no todo Unicode. Las mil quinientas
 entradas completas vienen con palabras clave en inglés que habría que traducir
 para que sirvieran de algo, y un selector donde "casa" no encuentra la casa es
