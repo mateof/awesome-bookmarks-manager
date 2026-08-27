@@ -3,6 +3,7 @@ import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, isConflict } from "../api.js";
+import { dlg } from "./dialogs.js";
 import { Modal } from "./Modal.js";
 import { RichTextEditor } from "./RichTextEditor.js";
 
@@ -54,6 +55,43 @@ export function DescriptionEditDialog({
   const [rev, setRev] = useState(baseRev);
   useEffect(() => setRev(baseRev), [baseRev]);
 
+  /** Something has been typed that is not on the server yet. */
+  const dirty = value !== html;
+
+  /**
+   * Leaving with unsaved text asks first — twice, in two different ways.
+   *
+   * Closing the dialog is ours to intercept, so it gets the app's own
+   * confirmation, in the app's language and looks. **Reloading or closing the
+   * tab is not.** Browsers deliberately removed the ability to put your own
+   * text (or your own dialog) in front of that: all a page may do is say "yes,
+   * there is unsaved work", and the browser draws its own box. Refusing to use
+   * it because it is not ours would mean losing the note instead, so it is
+   * wired up as well.
+   */
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Required by older browsers; the string itself is ignored everywhere.
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
+  const close = async () => {
+    if (dirty) {
+      const go = await dlg.confirm({
+        message: t("richText.discardChanges"),
+        confirmLabel: t("richText.discard"),
+        danger: true,
+      });
+      if (!go) return;
+    }
+    onClose();
+  };
+
   const save = useMutation({
     mutationFn: async (close: boolean): Promise<boolean> => {
       // An empty editor means "no description", not an empty paragraph: the
@@ -104,7 +142,7 @@ export function DescriptionEditDialog({
       )}
       <button
         type="button"
-        onClick={onClose}
+        onClick={() => void close()}
         className="rounded border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"
       >
         {t("common.cancel")}
@@ -131,7 +169,9 @@ export function DescriptionEditDialog({
   return (
     <Modal
       title={t("richText.editTitle", { name: title })}
-      onClose={onClose}
+      // The X and Escape go through the same question as Cancel: they are the
+      // same act, and only one of the three having a guard is worse than none.
+      onClose={() => void close()}
       size="lg"
       fill
     >

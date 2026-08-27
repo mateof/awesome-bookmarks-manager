@@ -1,8 +1,15 @@
-import { ChevronDown, ChevronUp, Maximize2, PencilLine } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
+  PencilLine,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { Modal } from "./Modal.js";
+import { ReadFindBar } from "./ReadFindBar.js";
 import { RichTextView } from "./RichTextView.js";
 
 /**
@@ -57,6 +64,9 @@ export function CollapsibleRichText({
   const innerRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const [full, setFull] = useState(false);
+  /** Full screen for the full view: a long note is why you opened it. */
+  const [wide, setWide] = useState(false);
+  const fullBody = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
 
   /**
@@ -74,6 +84,7 @@ export function CollapsibleRichText({
    */
   useEffect(() => {
     setFull(false);
+    setWide(false);
   }, [pathname]);
 
   const measure = useCallback(() => {
@@ -214,8 +225,31 @@ export function CollapsibleRichText({
           title={t("richText.fullViewTitle")}
           onClose={() => setFull(false)}
           size="xl"
+          fill
+          fullscreen={wide}
+          headerAction={
+            <button
+              type="button"
+              onClick={() => setWide((v) => !v)}
+              title={wide ? t("richText.restore") : t("richText.maximise")}
+              aria-label={wide ? t("richText.restore") : t("richText.maximise")}
+              aria-pressed={wide}
+              className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              {wide ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </button>
+          }
         >
-          <RichTextView html={html} />
+          <ReadFindBar container={fullBody} />
+          {/* The one thing that scrolls, so the find bar stays put while the
+              matches go past under it. */}
+          <div ref={fullBody} className="min-h-0 flex-1 overflow-y-auto">
+            <RichTextView html={html} />
+          </div>
         </Modal>
       )}
     </div>

@@ -1351,6 +1351,8 @@ const en = {
     restore: "Restore the size",
     underline: "Underline",
     taskList: "Task list",
+    discardChanges: "You have typed things that are not saved. Discard them?",
+    discard: "Discard",
     groupText: "Text",
     groupBlocks: "Blocks",
     groupInsert: "Insert",

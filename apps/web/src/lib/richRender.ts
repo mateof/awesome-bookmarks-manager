@@ -232,6 +232,29 @@ function hastToHtml(node: { children?: unknown[] } | HastNode): string {
   return ((node.children ?? []) as HastNode[]).map(one).join("");
 }
 
+/**
+ * Put every table in a box that scrolls sideways.
+ *
+ * A table cannot be both "as wide as its content needs" and "no wider than the
+ * sheet it is in" — one of the two has to give, and making the table itself
+ * the scroller does not work: its columns still get squeezed into the width of
+ * the block. The wrapper is what lets the columns size to their content, so a
+ * cell holding a paragraph gets a paragraph's width instead of becoming a
+ * ribbon one word wide, and anything past the edge is reachable by scrolling.
+ *
+ * Done at render time rather than stored: it is presentation, and the stored
+ * HTML is content. Idempotent, because these views re-render.
+ */
+export function wrapTables(root: HTMLElement): void {
+  for (const table of [...root.querySelectorAll("table")]) {
+    if (table.parentElement?.classList.contains("ab-table-scroll")) continue;
+    const box = document.createElement("div");
+    box.className = "ab-table-scroll";
+    table.parentNode?.insertBefore(box, table);
+    box.appendChild(table);
+  }
+}
+
 /** Headings of a rendered note, for its table of contents. */
 export interface OutlineEntry {
   id: string;

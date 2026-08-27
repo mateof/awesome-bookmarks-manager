@@ -68,6 +68,7 @@ import {
 import { RICH_COLORS } from "../lib/richColors.js";
 import { Callout, CALLOUT_KINDS, type CalloutKind } from "../lib/richCallout.js";
 import { DiagramBlock } from "../lib/richDiagram.js";
+import { EditorFind } from "../lib/editorFind.js";
 import { MathBlock, MathInline } from "../lib/richMath.js";
 import { ColoredUnderline, RICH_MARKS } from "../lib/richMarks.js";
 import { DatabaseBlock as DatabaseBlockNode } from "../lib/richDatabase.js";
@@ -246,6 +247,7 @@ export function RichTextEditor({
       DiagramBlock,
       Callout,
       CharacterCount,
+      EditorFind,
       Placeholder.configure({
         placeholder: ({ node }) =>
           node.type.name === "paragraph" ? placeholderHint : "",

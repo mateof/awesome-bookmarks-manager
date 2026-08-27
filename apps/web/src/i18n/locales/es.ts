@@ -1352,6 +1352,8 @@ const es = {
     restore: "Restaurar el tamaño",
     underline: "Subrayado",
     taskList: "Lista de tareas",
+    discardChanges: "Has escrito cosas que no están guardadas. ¿Descartarlas?",
+    discard: "Descartar",
     groupText: "Texto",
     groupBlocks: "Bloques",
     groupInsert: "Insertar",

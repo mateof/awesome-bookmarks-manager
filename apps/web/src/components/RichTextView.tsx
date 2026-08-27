@@ -8,6 +8,7 @@ import {
   renderCode,
   renderDiagrams,
   renderMath,
+  wrapTables,
   type OutlineEntry,
 } from "../lib/richRender.js";
 import { useRefChips } from "./RefChips.js";
@@ -64,6 +65,7 @@ export function RichTextView({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    wrapTables(el);
     void renderMath(el);
     void renderCode(el);
     void renderDiagrams(el);

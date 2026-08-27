@@ -1354,6 +1354,8 @@ const gl = {
     restore: "Restaurar o tamaño",
     underline: "Subliñado",
     taskList: "Lista de tarefas",
+    discardChanges: "Escribiches cousas que non están gardadas. Descartalas?",
+    discard: "Descartar",
     groupText: "Texto",
     groupBlocks: "Bloques",
     groupInsert: "Inserir",

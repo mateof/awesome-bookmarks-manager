@@ -104,7 +104,17 @@ Un `/` en medio de una palabra es un `/`: "y/o" no abre nada.
 
 ### Buscar y reemplazar
 
-Trabaja sobre las posiciones del documento, no sobre el DOM renderizado. Eso es
+**Escribir en la caja no mueve el foco.** La primera versión seleccionaba cada
+coincidencia en el editor y llamaba a `focus()` para que se viera, así que a
+las dos o tres letras el cursor saltaba del buscador al texto y la búsqueda se
+quedaba con media palabra. Las coincidencias se pintan ahora con una
+*decoración* de ProseMirror (`lib/editorFind.ts`): se dibujan encima del
+documento sin formar parte de él, así que ni la selección ni el foco se mueven
+y el resaltado se ve aunque el editor no esté enfocado, que es el estado normal
+mientras se teclea una consulta.
+
+Reemplazar sí toca el documento, porque es una edición. Trabaja sobre las
+posiciones del documento, no sobre el DOM renderizado. Eso es
 lo que hace seguro reemplazar: una coincidencia encontrada recorriendo HTML
 reescribiría alegremente el interior de un chip de referencia o el origen de
 una fórmula. "Reemplazar todo" va **del final hacia atrás**, porque reemplazar
@@ -156,6 +166,46 @@ emoji puesto desde CSS, que además no hay que traducir.
 El contenido es `block+` y no un párrafo: lo que la gente mete en un aviso es
 una frase **y** la lista de qué hacer al respecto, y una caja de una sola línea
 deja esa lista fuera del recuadro al que pertenece.
+
+### Leer una nota larga
+
+La vista completa lleva su propio buscador y se pone a pantalla completa. El
+buscador del navegador no sirve aquí: la nota vive en un diálogo que hace
+scroll por su cuenta, así que Ctrl+F desplaza la página de detrás, y en un
+móvil no hay Ctrl+F. El resaltado se hace envolviendo el texto en `<mark>`
+sobre el DOM ya renderizado (`lib/findInDom.ts`), y se deshace al cerrar la
+barra: una nota que se quedara pintada de amarillo sería una nota que una
+búsqueda ha editado.
+
+No toca dos cosas a propósito: lo que KaTeX y Mermaid han dibujado (envolver
+medio `<mspace>` en un `<mark>` rompe el dibujo por una coincidencia que nadie
+buscaba) y el HTML guardado.
+
+### Salir sin guardar
+
+Cerrar el diálogo de edición con texto sin guardar pregunta con el diálogo de
+la aplicación. Recargar o cerrar la pestaña **no puede** preguntar con el
+nuestro: los navegadores quitaron hace años la posibilidad de poner texto o
+diálogos propios ahí, y lo único que una página puede hacer es declarar que hay
+trabajo sin guardar para que el navegador dibuje su propia caja. Renunciar a
+ella por no ser nuestra sería perder la nota, así que está puesta también.
+
+### Tablas en una copia compartida
+
+El modal de un panel inserta el HTML de la nota en una hoja con su propio tema,
+que no es la página de la app y no recibe ninguna de sus clases de tipografía.
+Las tablas llegaban por tanto con los valores por defecto del navegador: sin
+líneas entre celdas, sin margen interior, y con una celda larga convertida en
+una cinta vertical de una palabra de ancho mientras el resto de la fila quedaba
+vacío. Se leía bien en la app y mal en la copia que ven los demás, que es el
+peor sitio para una diferencia así.
+
+Ahora el cuerpo del modal lleva la clase `ab-rich` y hay una hoja de estilos
+para el contenido de una nota que se lee, con los colores tomados de la paleta
+del panel mediante variables. Y las tablas se envuelven al dibujarlas en un
+contenedor que hace scroll horizontal: una tabla no puede ser a la vez tan
+ancha como su contenido y no más ancha que la hoja, así que cede la hoja y lo
+que no cabe se alcanza desplazando.
 
 ## Lo que se copió distinto
 

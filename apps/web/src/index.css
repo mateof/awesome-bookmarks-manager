@@ -1145,3 +1145,126 @@ body,
 .ab-callout-dot::before {
   content: none;
 }
+
+/* ---- Search highlights ---------------------------------------------------
+   The same two classes for the editor (drawn by a ProseMirror decoration) and
+   for a note being read (a real `<mark>` wrapped around the text). One look
+   for one idea, and neither of them is stored: the editor's is a decoration
+   over the document, and the reader's is undone when the search bar closes. */
+.ab-find {
+  background: rgba(250, 204, 21, 0.4);
+  border-radius: 0.15em;
+}
+.ab-find-current {
+  background: rgba(249, 115, 22, 0.55);
+  box-shadow: 0 0 0 1px rgb(234 88 12 / 0.6);
+}
+
+/* ---- Tables inside a note that is being read -----------------------------
+   Not the editor's: those have column widths somebody dragged. These are the
+   ones written in a note and the ones a shared copy carries, and they were
+   getting the browser's defaults — no borders at all inside a panel, and a
+   `table-layout: fixed` that squeezed a column of prose into a vertical ribbon
+   one word wide.
+
+   The scroll box is what makes the columns free: a table cannot be both as
+   wide as its content and no wider than the sheet, so the sheet gives and what
+   does not fit is reached by scrolling sideways. `wrapTables` in
+   `lib/richRender.ts` puts it there when the note is drawn. */
+.ab-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+.ab-table-scroll > table {
+  /* Sized by its content, but never narrower than the space available. */
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.prose .ab-table-scroll > table th,
+.prose .ab-table-scroll > table td,
+.ab-rich th,
+.ab-rich td {
+  /* Enough for a sentence, capped so one long cell does not make the table
+     three screens wide. */
+  min-width: 5rem;
+  max-width: 24rem;
+  padding: 0.3rem 0.55rem;
+  vertical-align: top;
+  text-align: left;
+  border: 1px solid var(--ab-rich-border, rgb(148 163 184 / 0.45));
+}
+.prose .ab-table-scroll > table th,
+.ab-rich th {
+  font-weight: 600;
+  background: var(--ab-rich-head, rgb(148 163 184 / 0.16));
+}
+
+/* The rest of a note, inside a panel's modal, where none of Tailwind's prose
+   classes reach: the HTML is inserted into a themed sheet of its own. */
+.ab-rich h1,
+.ab-rich h2,
+.ab-rich h3 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.9rem 0 0.4rem;
+}
+.ab-rich h1 {
+  font-size: 1.3em;
+}
+.ab-rich h2 {
+  font-size: 1.15em;
+}
+.ab-rich h3 {
+  font-size: 1.05em;
+}
+.ab-rich p {
+  margin: 0.5rem 0;
+}
+.ab-rich ul,
+.ab-rich ol {
+  margin: 0.5rem 0;
+  padding-left: 1.4rem;
+}
+.ab-rich ul {
+  list-style: disc;
+}
+.ab-rich ol {
+  list-style: decimal;
+}
+.ab-rich blockquote {
+  margin: 0.6rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--ab-rich-border, rgb(148 163 184 / 0.45));
+  opacity: 0.85;
+}
+.ab-rich pre {
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.4rem;
+  overflow-x: auto;
+  background: rgb(15 23 42);
+  color: rgb(226 232 240);
+  font-size: 0.85em;
+}
+.ab-rich :not(pre) > code {
+  padding: 0.05em 0.3em;
+  border-radius: 0.25em;
+  background: var(--ab-rich-head, rgb(148 163 184 / 0.18));
+  font-size: 0.9em;
+}
+.ab-rich img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.35rem;
+}
+.ab-rich hr {
+  margin: 0.9rem 0;
+  border: 0;
+  border-top: 1px solid var(--ab-rich-border, rgb(148 163 184 / 0.45));
+}
+.ab-rich a {
+  text-decoration: underline;
+}

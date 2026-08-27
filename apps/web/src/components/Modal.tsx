@@ -19,6 +19,16 @@ interface Props {
    * for their own overflow.
    */
   fill?: boolean;
+  /**
+   * Take the whole window instead of a centred sheet.
+   *
+   * For content that is being *read* rather than filled in: a long note, a
+   * table with twelve columns. The dialog's job there is to get the page out
+   * of the way, and a 5xl box with margins is still a box.
+   */
+  fullscreen?: boolean;
+  /** Put next to the close button: a control that belongs to the dialog. */
+  headerAction?: React.ReactNode;
 }
 
 const SIZE = {
@@ -34,6 +44,8 @@ export function Modal({
   onClose,
   size = "md",
   fill = false,
+  fullscreen = false,
+  headerAction,
 }: Props) {
   const { t } = useTranslation();
   const backdrop = useBackdropDismiss(onClose);
@@ -51,20 +63,31 @@ export function Modal({
       {...backdrop}
     >
       <div
-        className={`w-full ${SIZE[size]} rounded-t-lg sm:rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 ${
-          fill
-            ? "flex h-[85vh] max-h-[90vh] flex-col gap-3 overflow-hidden"
+        className={`w-full border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 ${
+          fullscreen
+            ? "h-screen max-w-none rounded-none"
+            : `${SIZE[size]} rounded-t-lg sm:rounded-lg`
+        } ${
+          fill || fullscreen
+            ? `flex flex-col gap-3 overflow-hidden ${
+                fullscreen ? "" : "h-[85vh] max-h-[90vh]"
+              }`
             : "max-h-[90vh] space-y-3 overflow-auto"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={`flex items-center ${fill ? "shrink-0" : ""}`}>
-          <h3 className="text-base font-semibold">{title}</h3>
+        <div
+          className={`flex items-center gap-1 ${fill || fullscreen ? "shrink-0" : ""}`}
+        >
+          <h3 className="min-w-0 flex-1 truncate text-base font-semibold">
+            {title}
+          </h3>
+          {headerAction}
           <button
             onClick={onClose}
             title={t("common.close")}
             aria-label={t("common.close")}
-            className="ml-auto text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            className="shrink-0 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
           >
             <X className="h-4 w-4" />
           </button>

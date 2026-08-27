@@ -17,6 +17,8 @@ import {
   Home,
   Info,
   Download,
+  Maximize2,
+  Minimize2,
   Search,
   X,
 } from "lucide-react";
@@ -33,6 +35,7 @@ import {
   renderCode,
   renderDiagrams,
   renderMath,
+  wrapTables,
 } from "../lib/richRender.js";
 import { opaqueSurface } from "../lib/contrast.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
@@ -44,6 +47,7 @@ import {
 } from "../lib/richMarks.js";
 import { downloadPanelBookmarks } from "../lib/panelExport.js";
 import { PanelBackground } from "./PanelBackground.js";
+import { ReadFindBar } from "./ReadFindBar.js";
 import {
   InfoButton,
   stripHtml,
@@ -1115,6 +1119,7 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
+    wrapTables(el);
     void renderMath(el);
     void renderCode(el);
     void renderDiagrams(el);
@@ -1136,6 +1141,8 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
 
   // Swipe-down-to-dismiss: only starts a drag when the sheet is scrolled to
   // the top and the gesture is downward, so inner scrolling still works.
+  const [wide, setWide] = useState(false);
+  const [finding, setFinding] = useState(false);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -1188,7 +1195,13 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
         data-testid="panel-modal"
-        className="flex w-full flex-col overflow-y-auto overscroll-contain rounded-t-2xl sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
+        className={`flex w-full flex-col overflow-y-auto overscroll-contain ${
+          wide
+            ? // Full screen: a note with a twelve-column table in it is the
+              // reason somebody opened this, and a 2xl sheet is still a sheet.
+              "h-full sm:h-full sm:max-h-none sm:max-w-none sm:rounded-none"
+            : "rounded-t-2xl sm:h-auto sm:max-h-[85vh] sm:max-w-2xl sm:rounded-2xl"
+        }`}
         style={{
           // Opaque on purpose: several templates make the surface translucent,
           // which reads well on a card over the background and makes a modal's
@@ -1211,6 +1224,25 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
           )}
           <button
             type="button"
+            onClick={() => setFinding((v) => !v)}
+            title={tr("richText.find")}
+            aria-label={tr("richText.find")}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: t.muted, display: "inline-flex" }}
+          >
+            <Search size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setWide((v) => !v)}
+            title={wide ? tr("richText.restore") : tr("richText.maximise")}
+            aria-label={wide ? tr("richText.restore") : tr("richText.maximise")}
+            aria-pressed={wide}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: t.muted, display: "inline-flex" }}
+          >
+            {wide ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+          </button>
+          <button
+            type="button"
             onClick={onClose}
             title="Cerrar"
             aria-label="Cerrar"
@@ -1222,9 +1254,14 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
         {desc.url && (
           <div style={{ fontSize: 12, color: t.muted, marginBottom: 12, wordBreak: "break-all" }}>{desc.url}</div>
         )}
+        {finding && (
+          <div style={{ marginBottom: 10 }}>
+            <ReadFindBar container={bodyRef} onClose={() => setFinding(false)} />
+          </div>
+        )}
         <div
           ref={bodyRef}
-          className="ab-marks-themed"
+          className="ab-marks-themed ab-rich"
           // The mark styles are written against the app's own light/dark
           // palette, which says nothing about a panel: a template can be dark
           // while the app is light. These two hand the panel's own colours to
@@ -1235,6 +1272,11 @@ function DescriptionModal({ desc, template, onClose }: { desc: PanelDesc; templa
               lineHeight: 1.6,
               "--ab-mark-bg": `${t.accent}2b`,
               "--ab-mark-line": t.muted,
+              // The note's own furniture — table rules, quote bars, the tint
+              // behind inline code — drawn from the panel's palette rather
+              // than from the app's, which says nothing here.
+              "--ab-rich-border": t.border,
+              "--ab-rich-head": `${t.muted}22`,
             } as React.CSSProperties
           }
           dangerouslySetInnerHTML={{ __html: safe }}
