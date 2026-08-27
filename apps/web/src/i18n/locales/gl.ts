@@ -1020,6 +1020,14 @@ const gl = {
         "Xerar snapshots e iconas para os marcadores importados",
       autoSnapshotsHint:
         "Útil desactivar para importacións grandes ou cando hai moitas URLs internas/intranet que non resolven dende este servidor.",
+      stateTagsLabel: "Conservar «arquivado» e «por ler» como tags",
+      stateTagsHint:
+        "Aplicacións como wallabag, Pocket ou Karakeep marcan o lido ou arquivado. Esta app non ten ese estado, así que se garda como os tags «archivado» e «por leer», que podes borrar dunha vez se non os queres.",
+      fileLabel: "Ficheiro a importar",
+      supported:
+        "HTML de navegador (Chrome, Firefox, Edge, Safari, linkding, Shaarli…), CSV (Pocket, Raindrop, Instapaper, Readwise…), JSON (wallabag, Pinboard, Karakeep, Omnivore…) e o .zip que dan algunhas delas.",
+      detected:
+        "Recoñecido como {{app}}: {{bookmarks}} marcadores en {{folders}} cartafoles",
       jobEnqueued: "Importación encolada: {{jobId}}",
       withoutSnapshots: "sen snapshots",
       insideWrapper: 'dentro de "{{name}}"',

@@ -1065,6 +1065,9 @@ function ImportExport() {
   // capturing every one of them is a long run of network fetches that also
   // eats storage quota. Ticking the box is a deliberate choice.
   const [fetchSnapshots, setFetchSnapshots] = useState<boolean>(false);
+  // On by default, the opposite of snapshots: this one costs nothing and the
+  // alternative is throwing away which links were archived or still to read.
+  const [stateTags, setStateTags] = useState<boolean>(true);
   const [parentId, setParentId] = useState<string>("");
   const [wrapperName, setWrapperName] = useState<string>(
     `Import ${new Date().toISOString().slice(0, 10)}`,
@@ -1107,12 +1110,20 @@ function ImportExport() {
     if (!file) return;
     setBusy(true);
     try {
-      const r = await api.importHtml(file, {
+      const r = await api.importLinks(file, {
         fetchSnapshots,
+        stateTags,
         parentId: parentId || null,
         wrapperFolderName: wrapperName.trim() || undefined,
       });
       const parts = [
+        // What was recognised, before anything else: a Pocket export read as
+        // a generic CSV is the difference between tags arriving and not.
+        t("settings.importExport.detected", {
+          app: r.app,
+          bookmarks: r.bookmarks,
+          folders: r.folders,
+        }),
         t("settings.importExport.jobEnqueued", { jobId: r.jobId }),
         fetchSnapshots ? "" : t("settings.importExport.withoutSnapshots"),
         wrapperName.trim()
@@ -1193,7 +1204,34 @@ function ImportExport() {
           </span>
         </label>
 
-        <input type="file" accept=".html,.htm" onChange={onFile} disabled={busy} />
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-slate-700"
+            checked={stateTags}
+            onChange={(e) => setStateTags(e.target.checked)}
+            disabled={busy}
+          />
+          <span>
+            {t("settings.importExport.stateTagsLabel")}
+            <span className="mt-0.5 block text-xs text-slate-500">
+              {t("settings.importExport.stateTagsHint")}
+            </span>
+          </span>
+        </label>
+
+        <div>
+          <input
+            type="file"
+            accept=".html,.htm,.json,.csv,.zip,.txt"
+            onChange={onFile}
+            disabled={busy}
+            aria-label={t("settings.importExport.fileLabel")}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            {t("settings.importExport.supported")}
+          </p>
+        </div>
         {msg && <div className="text-sm text-slate-500">{msg}</div>}
       </div>
     </Card>

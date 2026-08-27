@@ -332,7 +332,7 @@ export async function buildArchive(
 
 /* ---- Import ------------------------------------------------------------ */
 
-function readZipEntries(buf: Buffer): Promise<Map<string, Buffer>> {
+export function readZipEntries(buf: Buffer): Promise<Map<string, Buffer>> {
   return new Promise((resolve, reject) => {
     const out = new Map<string, Buffer>();
     yauzl.fromBuffer(buf, { lazyEntries: true }, (err, zip) => {

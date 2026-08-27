@@ -444,10 +444,17 @@ export const api = {
   },
 
   // import / export
-  importHtml: async (
+  /**
+   * A bookmarks file from anywhere: a browser's HTML, or an export from
+   * wallabag, Pocket, Raindrop, Pinboard, Karakeep, Instapaper, Omnivore,
+   * linkding… The server works out which by looking inside, and says so in
+   * the answer, so the screen can report what it recognised.
+   */
+  importLinks: async (
     file: File,
     options: {
       fetchSnapshots?: boolean;
+      stateTags?: boolean;
       parentId?: string | null;
       wrapperFolderName?: string;
     } = {},
@@ -455,17 +462,31 @@ export const api = {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("fetchSnapshots", String(options.fetchSnapshots ?? false));
+    fd.append("stateTags", String(options.stateTags ?? true));
     if (options.parentId) fd.append("parentId", options.parentId);
     if (options.wrapperFolderName)
       fd.append("wrapperFolderName", options.wrapperFolderName);
-    const res = await fetch(`${BASE}/import/html`, {
+    const res = await fetch(`${BASE}/import/links`, {
       method: "POST",
       credentials: "include",
       body: fd,
     });
     signalAuthInvalidated(res.status);
-    if (!res.ok) throw new ApiError(res.status, "import_failed", "Import failed");
-    return (await res.json()) as { jobId: string };
+    if (!res.ok) {
+      // The server explains what it could not read, and that message is the
+      // only thing that tells somebody their file was not what they thought.
+      const detail = await res
+        .json()
+        .then((b) => (b as { message?: string }).message)
+        .catch(() => undefined);
+      throw new ApiError(res.status, "import_failed", detail ?? "Import failed");
+    }
+    return (await res.json()) as {
+      jobId: string;
+      app: string;
+      folders: number;
+      bookmarks: number;
+    };
   },
 
   /** The app's own format: everything, importable back into a folder. */

@@ -874,6 +874,28 @@ la carpeta ya lo incluye.
 
 ---
 
+## 24b. Venir de otra aplicación
+
+En **Ajustes → Importar / Exportar** entra el fichero que te dé la aplicación
+de la que vienes, tal cual: **wallabag**, **Pocket** (incluido el zip de CSV
+que repartió al cerrar), **Raindrop**, **Pinboard**, **Karakeep**,
+**Instapaper**, **Omnivore**, **linkding**, **Shaarli**, o el HTML de
+cualquier navegador. No hay que convertir nada antes.
+
+El formato se deduce **del contenido**, no del nombre del fichero, y la
+pantalla dice qué ha reconocido y cuántos marcadores trae *antes* de que
+aparezcan. Eso importa: una exportación de Pocket leída como un CSV cualquiera
+es la diferencia entre que lleguen los tags o no.
+
+Se conservan las carpetas (o colecciones, o listas, con su anidamiento), los
+tags, la nota o resumen de cada enlace, la fecha en que lo guardaste y los
+favoritos. Lo que estaba archivado o pendiente de leer se guarda como los tags
+`archivado` y `por leer`, porque esta aplicación no tiene ese estado; hay una
+casilla para no hacerlo.
+
+El detalle de cada formato, con sus rarezas, está en
+[importar.md](importar.md).
+
 ## 25. Exportar e importar en el formato de la app
 
 La exportación a HTML sirve para llevarte los enlaces a un navegador, pero

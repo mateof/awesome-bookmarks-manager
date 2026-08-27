@@ -341,7 +341,12 @@ one port.
   requires the caller to state how many items it expects to destroy, so an
   assistant that never looked cannot call it. See [doc/mcp.md](doc/mcp.md).
 - **Browser extension** (Manifest V3) for one-click adding of the current tab.
-- **Importer** for the standard HTML bookmarks export of Chrome / Firefox / Edge.
+- **Importer for the app you are leaving** — wallabag, Pocket (including the
+  zip of CSVs it handed out when it shut down), Raindrop, Pinboard, Karakeep,
+  Instapaper, Omnivore, linkding, Shaarli, and the HTML export of any browser.
+  The format is worked out from the file's content rather than its name, and
+  the screen names what it recognised before importing. Folders, tags, notes,
+  saved dates and favourites all survive; see [doc/importar.md](doc/importar.md).
   Page snapshots are **off by default** on import: bringing in a few thousand
   URLs would otherwise mean a few thousand page fetches and a lot of storage.
 - **Installable PWA and share target** — install it from the browser on Android

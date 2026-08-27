@@ -1018,6 +1018,14 @@ const es = {
         "Generar snapshots e iconos para los bookmarks importados",
       autoSnapshotsHint:
         "Útil desactivar para imports grandes o cuando hay muchas URLs internas/intranet que no resuelven desde este servidor.",
+      stateTagsLabel: "Conservar «archivado» y «por leer» como tags",
+      stateTagsHint:
+        "Aplicaciones como wallabag, Pocket o Karakeep marcan lo leído o archivado. Esta app no tiene ese estado, así que se guarda como los tags «archivado» y «por leer», que puedes borrar de una vez si no los quieres.",
+      fileLabel: "Fichero a importar",
+      supported:
+        "HTML de navegador (Chrome, Firefox, Edge, Safari, linkding, Shaarli…), CSV (Pocket, Raindrop, Instapaper, Readwise…), JSON (wallabag, Pinboard, Karakeep, Omnivore…) y el .zip que dan algunas de ellas.",
+      detected:
+        "Reconocido como {{app}}: {{bookmarks}} marcadores en {{folders}} carpetas",
       jobEnqueued: "Import encolado: {{jobId}}",
       withoutSnapshots: "sin snapshots",
       insideWrapper: 'dentro de "{{name}}"',

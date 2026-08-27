@@ -11,6 +11,10 @@ native apps, scripts and AI assistants.
   screenshots. In Spanish.
 - [extension.md](./extension.md) — install the browser extension on Chrome,
   Opera and Firefox, configure it, and use the folder picker. In Spanish.
+- [importar.md](./importar.md) — coming from wallabag, Pocket, Raindrop,
+  Pinboard, Karakeep, Instapaper, Omnivore, linkding or a browser: which
+  formats are read, how they are recognised and what survives the trip. In
+  Spanish.
 - [authentication.md](./authentication.md) — API tokens, the security model
   behind headless access, and how encryption still applies.
 - [encryption.md](./encryption.md) — which key protects what, how a group's key
