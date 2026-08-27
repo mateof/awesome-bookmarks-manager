@@ -34,6 +34,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 21. [Registro de seguridad](#21-registro-de-seguridad)
 22. [Texto copiable y texto oculto](#22-texto-copiable-y-texto-oculto)
 23. [Copias en la nube](#23-copias-en-la-nube)
+23a. [La barra de la carpeta se queda arriba](#23a-la-barra-de-la-carpeta-se-queda-arriba)
 23b. [Marcar todo de una vez](#23b-marcar-todo-de-una-vez)
 24. [Copiar una selección como lista](#24-copiar-una-selección-como-lista)
 25. [Exportar e importar en el formato de la app](#25-exportar-e-importar-en-el-formato-de-la-app)
@@ -847,6 +848,24 @@ archivos que hay en él con su fecha y tamaño. Desde ahí puedes:
 
 Una copia solo se puede restaurar en la cuenta que la hizo: las filas van
 selladas con tu clave.
+
+---
+
+## 23a. La barra de la carpeta se queda arriba
+
+La ruta (las migas) y los botones de la carpeta —modo de vista, nueva carpeta,
+nuevo bookmark y el menú— van **juntos en una sola barra fija** arriba. Antes
+eran dos filas que se iban con el scroll, así que cambiar de vista o añadir algo
+desde el final de una carpeta larga obligaba a subir hasta arriba primero.
+
+Para que no robe pantalla mientras lees, **se esconde al bajar y vuelve al
+mínimo amago de subir**. La asimetría es a propósito: irse pide unos
+centímetros de scroll hacia abajo, para que un roce no la haga parpadear;
+volver pide casi nada, porque si subes es justo porque la quieres. Cerca del
+principio de la carpeta se queda siempre a la vista.
+
+Cuando marcas elementos, la barra de selección aparece **dentro de ese mismo
+bloque**, debajo de la ruta, y se comporta igual.
 
 ---
 

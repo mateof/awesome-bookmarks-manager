@@ -34,6 +34,7 @@ import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { buildOutline, copyOutline } from "../lib/outline.js";
 import { onAppCommand } from "../lib/commands.js";
+import { useHideOnScroll } from "../lib/useHideOnScroll.js";
 import {
   lookStyle,
   useLookClass,
@@ -243,6 +244,9 @@ export function FolderPage() {
   // was set up.
   const visibleKeysRef = useRef<SelectionKey[]>(visibleKeys);
   visibleKeysRef.current = visibleKeys;
+
+  const topBarRef = useRef<HTMLDivElement>(null);
+  const barHidden = useHideOnScroll(topBarRef);
 
   /**
    * Ctrl/Cmd+A selects the items, always.
@@ -758,22 +762,137 @@ export function FolderPage() {
 
   return (
     <div className="space-y-4">
-      {folderId && (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              nav(folder?.parentId ? `/folder/${folder.parentId}` : "/")
-            }
-            title={t("folder.upLevel")}
-            aria-label={t("folder.upLevel")}
-            className="shrink-0 rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <ArrowUp className="h-4 w-4" />
-          </button>
-          <Breadcrumbs folderId={folderId} />
+      {/* Where you are and what you can do, in one strip that stays put.
+          The two used to be separate rows that scrolled away, so changing the
+          view or adding a bookmark from the bottom of a long folder meant
+          scrolling all the way back up first. It hides on the way down and
+          returns at the first hint of scrolling up: see `useHideOnScroll`. */}
+      <div
+        ref={topBarRef}
+        className={`sticky top-0 z-20 -mx-3 -mt-3 bg-slate-50 px-3 pb-2 pt-2 transition-transform duration-200 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-3 dark:bg-slate-950 ${
+          barHidden ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
+        {/* Kept deliberately short. A folder with a long description already
+            spends most of the first screen on the note, and the promise is
+            that its bookmarks stay above the fold: every pixel this bar takes
+            comes out of that. */}
+        <div className="flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-2 py-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          {folderId && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  nav(folder?.parentId ? `/folder/${folder.parentId}` : "/")
+                }
+                title={t("folder.upLevel")}
+                aria-label={t("folder.upLevel")}
+                className="shrink-0 rounded border border-slate-300 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <Breadcrumbs folderId={folderId} />
+            </>
+          )}
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {headerControls}
+          </div>
         </div>
-      )}
+
+        {/* Inside the same strip rather than sticking on its own: two bars
+            both pinned to the top of the same scroller land on top of each
+            other the moment both are there. */}
+        {selection.size > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            {/* One control for both directions, with the half-filled state for
+                "some". Two separate buttons would mean one of them is always
+                the one that does nothing. */}
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                ref={(el) => {
+                  if (el) el.indeterminate = !allSelected && selection.size > 0;
+                }}
+                onChange={() => (allSelected ? clearSelection() : selectAll())}
+                aria-label={
+                  allSelected
+                    ? t("folder.selectionNone")
+                    : t("folder.selectionAll")
+                }
+                title={
+                  allSelected
+                    ? t("folder.selectionNone")
+                    : t("folder.selectionAll")
+                }
+                className="h-4 w-4 accent-slate-700"
+              />
+              {t("folder.selectionCount", { count: selection.size })}
+              <span className="text-xs font-normal text-slate-500">
+                {t("folder.selectionOfVisible", { total: visibleKeys.length })}
+              </span>
+            </label>
+            <button
+              onClick={openSelectionInTabs}
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              title={t("folder.selectionOpenTabsTitle")}
+            >
+              <ExternalLink className="h-4 w-4" /> {t("folder.selectionOpenTabs")}
+            </button>
+            <button
+              onClick={() =>
+                setMoveTarget({
+                  folderIds: selectedFolderIds,
+                  bookmarkIds: selectedBookmarkIds,
+                })
+              }
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <FolderInput className="h-4 w-4" /> {t("folder.selectionMove")}
+            </button>
+            {canWrite && (
+              <button
+                onClick={() => setTagTarget(true)}
+                className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                <TagIcon className="h-4 w-4" /> {t("folder.selectionTag")}
+              </button>
+            )}
+            <button
+              onClick={copySelectionOutline}
+              title={t("folder.selectionCopyListTitle")}
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              {copiedOutline ? (
+                <Check className="h-4 w-4 text-emerald-500" />
+              ) : (
+                <ListTree className="h-4 w-4" />
+              )}{" "}
+              {copiedOutline
+                ? t("folder.selectionCopied")
+                : t("folder.selectionCopyList")}
+            </button>
+            <button
+              onClick={exportSelection}
+              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            >
+              <Download className="h-4 w-4" /> {t("folder.selectionExport")}
+            </button>
+            <button
+              onClick={deleteSelection}
+              className="flex items-center gap-1 rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+            >
+              <Trash2 className="h-4 w-4" /> {t("folder.selectionDelete")}
+            </button>
+            <button
+              onClick={clearSelection}
+              className="ml-auto rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              {t("folder.selectionCancel")}
+            </button>
+          </div>
+        )}
+      </div>
 
       {hasCover ? (
         <EntityBanner
@@ -795,7 +914,6 @@ export function FolderPage() {
                   }`
                 : undefined
           }
-          actions={headerControls}
         />
       ) : (
         <div className="flex flex-wrap items-center gap-3">
@@ -822,9 +940,6 @@ export function FolderPage() {
           {folder?.shared && !folder.mine && (
             <SharedBadge canWrite={folder.canWrite} />
           )}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {headerControls}
-          </div>
         </div>
       )}
 
@@ -875,96 +990,6 @@ export function FolderPage() {
         />
       )}
 
-      {selection.size > 0 && (
-        <div className="sticky top-0 z-10 -mx-2 flex flex-wrap items-center gap-2 rounded border border-slate-300 bg-white px-3 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          {/* One control for both directions, with the half-filled state for
-              "some". Two separate buttons would mean one of them is always the
-              one that does nothing. */}
-          <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={allSelected}
-              ref={(el) => {
-                if (el) el.indeterminate = !allSelected && selection.size > 0;
-              }}
-              onChange={() => (allSelected ? clearSelection() : selectAll())}
-              aria-label={
-                allSelected
-                  ? t("folder.selectionNone")
-                  : t("folder.selectionAll")
-              }
-              title={
-                allSelected
-                  ? t("folder.selectionNone")
-                  : t("folder.selectionAll")
-              }
-              className="h-4 w-4 accent-slate-700"
-            />
-            {t("folder.selectionCount", { count: selection.size })}
-            <span className="text-xs font-normal text-slate-500">
-              {t("folder.selectionOfVisible", { total: visibleKeys.length })}
-            </span>
-          </label>
-          <button
-            onClick={openSelectionInTabs}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            title={t("folder.selectionOpenTabsTitle")}
-          >
-            <ExternalLink className="h-4 w-4" /> {t("folder.selectionOpenTabs")}
-          </button>
-          <button
-            onClick={() =>
-              setMoveTarget({
-                folderIds: selectedFolderIds,
-                bookmarkIds: selectedBookmarkIds,
-              })
-            }
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <FolderInput className="h-4 w-4" /> {t("folder.selectionMove")}
-          </button>
-          {canWrite && (
-            <button
-              onClick={() => setTagTarget(true)}
-              className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-            >
-              <TagIcon className="h-4 w-4" /> {t("folder.selectionTag")}
-            </button>
-          )}
-          <button
-            onClick={copySelectionOutline}
-            title={t("folder.selectionCopyListTitle")}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            {copiedOutline ? (
-              <Check className="h-4 w-4 text-emerald-500" />
-            ) : (
-              <ListTree className="h-4 w-4" />
-            )}{" "}
-            {copiedOutline
-              ? t("folder.selectionCopied")
-              : t("folder.selectionCopyList")}
-          </button>
-          <button
-            onClick={exportSelection}
-            className="flex items-center gap-1 rounded border border-slate-300 px-3 py-1 text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <Download className="h-4 w-4" /> {t("folder.selectionExport")}
-          </button>
-          <button
-            onClick={deleteSelection}
-            className="flex items-center gap-1 rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
-          >
-            <Trash2 className="h-4 w-4" /> {t("folder.selectionDelete")}
-          </button>
-          <button
-            onClick={clearSelection}
-            className="ml-auto rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            {t("folder.selectionCancel")}
-          </button>
-        </div>
-      )}
 
       <Body
         mode={mode}
