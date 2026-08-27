@@ -1341,6 +1341,13 @@ const en = {
     rowKind: "Row of a table",
     noDescription: "No description",
   },
+  folderPicker: {
+    title: "Choose a folder",
+    search: "Search for a folder…",
+    noResults: "No folder matches.",
+    expand: "Expand",
+    collapse: "Collapse",
+  },
   richText: {
     saveKeepOpen: "Save",
     saveAndClose: "Save and close",

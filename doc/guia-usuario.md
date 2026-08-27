@@ -604,6 +604,16 @@ Funciona con las dos formas en que las apps comparten: las que envían la URL en
 su propio campo y las que lo meten todo dentro del texto (en ese caso el enlace
 se extrae y el resto queda como nota).
 
+**La carpeta se elige en un árbol con buscador.** Antes era la lista
+desplegable del sistema: todas las carpetas en fila, cada una con su ruta
+entera delante y sin forma de buscar. Con una docena da igual; con doscientas
+es una lista interminable en la que hay que reconocer la carpeta por un prefijo
+repetido. Ahora se abre una ventana con el árbol, que empieza plegado y se va
+abriendo rama a rama, y una caja de búsqueda arriba que se salta el árbol y
+busca en toda la biblioteca (sin distinguir mayúsculas ni acentos). Cada
+resultado enseña debajo su ruta completa, que es lo que distingue dos carpetas
+llamadas *Facturas*. Si ya había una carpeta elegida, su rama aparece abierta.
+
 Si la sesión está cerrada, el enlace compartido sobrevive al inicio de sesión:
 te devuelve a la misma pantalla con los datos puestos.
 
@@ -688,6 +698,20 @@ ya tienes y crea uno nuevo al pulsar Enter si el nombre no existe.
 Se guarda solo, sin botón de confirmar, igual que la estrella de favorito que
 tiene al lado. Y guarda **solo la lista de tags**, así que no toca nada más de
 la carpeta o del bookmark.
+
+**Las sugerencias se recorren con el teclado.** Al escribir salen debajo los
+tags que encajan y, al final, la opción de crear el que estás escribiendo.
+`↓` y `↑` van bajando y subiendo por esa lista (dan la vuelta al llegar al
+final, y `↑` desde el principio salta directamente a la última opción), `Enter`
+añade la que esté marcada y `Esc` quita la marca sin cerrar nada. Vale en todos
+los sitios donde se ponen tags: el detalle, los diálogos de edición, el
+etiquetado en bloque, las carpetas compartidas y la pantalla de guardar desde
+el móvil.
+
+Mientras no toques las flechas **no hay nada marcado**, a propósito: con la
+primera sugerencia ya marcada, escribir `foo` y pulsar `Enter` añadiría
+`foobar` en vez de crear el tag que estabas escribiendo. Sin flechas, `Enter`
+sigue haciendo lo de siempre: añade el tag si el nombre existe y lo crea si no.
 
 ---
 

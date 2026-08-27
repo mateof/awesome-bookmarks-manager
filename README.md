@@ -346,7 +346,9 @@ one port.
   URLs would otherwise mean a few thousand page fetches and a lot of storage.
 - **Installable PWA and share target** — install it from the browser on Android
   and the app joins the system share sheet, so a link can be sent from any app
-  straight into a folder you pick (the last one is remembered). Responsive UI
+  straight into a folder you pick (the last one is remembered). The folder is
+  chosen in a collapsed tree with a search box over it, not a flat list of
+  every folder you own. Responsive UI
   throughout; a minimal service worker keeps the shell available offline and
   never caches anything under `/api`.
 

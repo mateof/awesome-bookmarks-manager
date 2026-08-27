@@ -1342,6 +1342,13 @@ const es = {
     rowKind: "Fila de una tabla",
     noDescription: "Sin descripción",
   },
+  folderPicker: {
+    title: "Elegir carpeta",
+    search: "Buscar una carpeta…",
+    noResults: "Ninguna carpeta coincide.",
+    expand: "Desplegar",
+    collapse: "Replegar",
+  },
   richText: {
     saveKeepOpen: "Guardar",
     saveAndClose: "Guardar y cerrar",

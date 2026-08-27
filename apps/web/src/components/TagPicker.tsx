@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Tag } from "@awesome-bookmarks/shared";
 import { Plus, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
 
@@ -39,7 +39,18 @@ export function TagPicker({
   const tagsQ = useQuery({ queryKey: ["tags"], queryFn: api.listTags });
   const [input, setInput] = useState("");
   const [open, setOpen] = useState(false);
+  /**
+   * Which suggestion the arrows are on, or -1 for none.
+   *
+   * It starts at -1 on purpose, rather than highlighting the first match the
+   * way a lot of pickers do. With a highlight already on, typing "foo" and
+   * pressing Enter would add "foobar" — the first thing that happens to start
+   * with it — instead of creating the tag you were spelling out. Nothing is
+   * selected until an arrow key says so.
+   */
+  const [cursor, setCursor] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const allTags = tagsQ.data ?? [];
   const byId = useMemo(() => new Map(allTags.map((t) => [t.id, t])), [allTags]);
@@ -82,6 +93,33 @@ export function TagPicker({
       ),
     [allTags, input],
   );
+
+  /**
+   * What the arrows walk: the matching tags, and then "create this one".
+   *
+   * Built from the same two pieces the list below renders, so the third item
+   * on screen is the third item the keyboard counts. A separate list would
+   * drift the first time somebody reorders the panel.
+   */
+  const rows = useMemo(
+    () => [
+      ...matching.map((tag) => ({ kind: "tag" as const, tag })),
+      ...(input.trim().length > 0 && !exactMatch
+        ? [{ kind: "new" as const, tag: null }]
+        : []),
+    ],
+    [matching, input, exactMatch],
+  );
+
+  // Typing changes what is on the list, so whatever was highlighted is no
+  // longer the thing that was highlighted.
+  useEffect(() => setCursor(-1), [input]);
+
+  useEffect(() => {
+    listRef.current
+      ?.querySelector(`[data-idx="${cursor}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
 
   // The chosen ids, readable from inside a mutation that started before the
   // latest render. Two tags created quickly both close over the `value` their
@@ -131,8 +169,32 @@ export function TagPicker({
   };
 
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (rows.length === 0) return;
       e.preventDefault();
+      setOpen(true);
+      setCursor((c) => {
+        // Up from nothing-selected means the last one. Counting from -1 like
+        // any other position would land on the second-to-last and quietly skip
+        // a row nobody can reach without going all the way round.
+        if (c < 0) return e.key === "ArrowDown" ? 0 : rows.length - 1;
+        const next = e.key === "ArrowDown" ? c + 1 : c - 1;
+        // Wraps, because a list of three suggestions is short enough that
+        // walking off the end and stopping feels like something jammed.
+        return ((next % rows.length) + rows.length) % rows.length;
+      });
+    } else if (e.key === "Escape" && cursor >= 0) {
+      e.preventDefault();
+      setCursor(-1);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const picked = cursor >= 0 ? rows[cursor] : undefined;
+      if (picked) {
+        if (picked.kind === "tag") addExisting(picked.tag);
+        else addNew(input.trim());
+        setCursor(-1);
+        return;
+      }
       const q = input.trim();
       if (!q) return;
       const existing = allTags.find(
@@ -176,16 +238,25 @@ export function TagPicker({
         />
       </div>
       {open && input.trim().length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800">
-          {matching.map((tg) => (
+        <div
+          ref={listRef}
+          data-testid="tag-suggestions"
+          className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        >
+          {matching.map((tg, i) => (
             <button
               key={tg.id}
               type="button"
+              data-idx={i}
+              aria-selected={cursor === i}
+              onMouseMove={() => setCursor(i)}
               onMouseDown={(e) => {
                 e.preventDefault();
                 addExisting(tg);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700"
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-100 dark:hover:bg-slate-700 ${
+                cursor === i ? "bg-slate-100 dark:bg-slate-700" : ""
+              }`}
             >
               <span
                 className="h-2 w-2 rounded-full"
@@ -197,12 +268,17 @@ export function TagPicker({
           {input.trim().length > 0 && !exactMatch && (
             <button
               type="button"
+              data-idx={matching.length}
+              aria-selected={cursor === matching.length}
+              onMouseMove={() => setCursor(matching.length)}
               onMouseDown={(e) => {
                 e.preventDefault();
                 addNew(input.trim());
               }}
               disabled={create.isPending}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-700"
+              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:text-slate-200 dark:hover:bg-slate-700 ${
+                cursor === matching.length ? "bg-slate-100 dark:bg-slate-700" : ""
+              }`}
             >
               <Plus className="h-3 w-3" />
               <span>{t("tags.createNew", { name: input.trim() })}</span>

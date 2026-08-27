@@ -38,7 +38,13 @@ test("guardar un enlace llegado desde el menú de compartir", async ({
     "Un articulo compartido",
   );
 
-  await page.getByRole("combobox", { name: "Carpeta" }).selectOption(inbox.id);
+  // The folder is chosen in a dialog now, not a `<select>`: see
+  // `pickers.app.spec.ts` for the tree and the search inside it.
+  await page.getByRole("button", { name: "Carpeta" }).click();
+  await page
+    .getByTestId("folder-picker")
+    .getByRole("button", { name: "Entrada" })
+    .click();
   await page.getByRole("button", { name: "Guardar bookmark" }).click();
   await expect(page.getByRole("heading", { name: "Guardado" })).toBeVisible();
 
@@ -59,8 +65,10 @@ test("guardar un enlace llegado desde el menú de compartir", async ({
 
   // The folder chosen last time is remembered: sharing repeatedly into the
   // same inbox is the common case.
-  await expect(page.getByRole("combobox", { name: "Carpeta" })).toHaveValue(
-    inbox.id,
+  // Read off the button, which now spells the folder out by name instead of
+  // holding its id.
+  await expect(page.getByRole("button", { name: "Carpeta" })).toContainText(
+    "Entrada",
   );
   await page.getByRole("button", { name: "Guardar bookmark" }).click();
   await expect(page.getByRole("heading", { name: "Guardado" })).toBeVisible();

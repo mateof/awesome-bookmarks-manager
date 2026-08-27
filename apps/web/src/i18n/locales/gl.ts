@@ -1344,6 +1344,13 @@ const gl = {
     rowKind: "Fila dunha táboa",
     noDescription: "Sen descrición",
   },
+  folderPicker: {
+    title: "Escoller cartafol",
+    search: "Buscar un cartafol…",
+    noResults: "Ningún cartafol coincide.",
+    expand: "Despregar",
+    collapse: "Pregar",
+  },
   richText: {
     saveKeepOpen: "Gardar",
     saveAndClose: "Gardar e pechar",

@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, FolderClosed, Share2 } from "lucide-react";
+import { Check, ChevronDown, FolderClosed, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { FolderPickerDialog } from "../components/FolderPickerDialog.js";
 import { TagPicker } from "../components/TagPicker.js";
 import { buildFolderPath } from "../hooks.js";
 
@@ -65,6 +66,7 @@ export function ShareTargetPage() {
   const [title, setTitle] = useState(shared.title);
   const [note, setNote] = useState(shared.note);
   const [folderId, setFolderId] = useState<string | null>(null);
+  const [pickingFolder, setPickingFolder] = useState(false);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [saved, setSaved] = useState<{ id: string; folderId: string | null } | null>(
     null,
@@ -89,18 +91,12 @@ export function ShareTargetPage() {
     }
   }, []);
 
-  const options = useMemo(() => {
-    const list = folders.data ?? [];
-    return list
-      .filter((f) => !f.linkedShareId && !f.aliasOf)
-      .map((f) => ({
-        id: f.id,
-        label: buildFolderPath(list, f.id)
-          .map((p) => p.name)
-          .join(" / "),
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [folders.data]);
+  /** Where it is going to be saved, spelled out on the button. */
+  const currentPath = useMemo(() => {
+    if (!folderId) return t("sidebar.home");
+    const path = buildFolderPath(folders.data ?? [], folderId).map((p) => p.name);
+    return path.length > 0 ? path.join(" / ") : t("sidebar.home");
+  }, [folders.data, folderId, t]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -205,24 +201,28 @@ export function ShareTargetPage() {
           />
         </label>
 
-        <label className="block text-xs font-medium text-slate-500">
-          {t("shareTarget.folder")}
-          <div className="mt-1 flex items-center gap-2">
+        <div className="block text-xs font-medium text-slate-500">
+          {/* Not a `<label>` any more: a label points at a form control, and
+              this is a button that opens a dialog. The text still names the
+              button, through `aria-labelledby`, so it is read as "Carpeta,
+              Inicio" rather than leaving the button to announce a bare path. */}
+          <span id="share-folder-label">{t("shareTarget.folder")}</span>
+          {/* A button that opens a real picker rather than a `<select>` with
+              two hundred flat lines in it: on a phone that control has no
+              search, and the shape of the library — the thing you navigate
+              by — is exactly what a flat list throws away. */}
+          <button
+            type="button"
+            id="share-folder-button"
+            aria-labelledby="share-folder-label share-folder-button"
+            onClick={() => setPickingFolder(true)}
+            className="mt-1 flex w-full items-center gap-2 rounded border border-slate-300 bg-white px-2 py-2 text-left text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
             <FolderClosed className="h-4 w-4 shrink-0 text-slate-400" />
-            <select
-              value={folderId ?? ""}
-              onChange={(e) => setFolderId(e.target.value || null)}
-              className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="">{t("sidebar.home")}</option>
-              {options.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </label>
+            <span className="min-w-0 flex-1 truncate">{currentPath}</span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+          </button>
+        </div>
 
         <div>
           <span className="text-xs font-medium text-slate-500">
@@ -263,6 +263,17 @@ export function ShareTargetPage() {
         >
           {t("common.cancel")}
         </button>
+        {pickingFolder && (
+          <FolderPickerDialog
+            folders={folders.data ?? []}
+            value={folderId}
+            onPick={(id) => {
+              setFolderId(id);
+              setPickingFolder(false);
+            }}
+            onClose={() => setPickingFolder(false)}
+          />
+        )}
       </form>
     </div>
   );
