@@ -712,19 +712,32 @@ Se guarda solo, sin botón de confirmar, igual que la estrella de favorito que
 tiene al lado. Y guarda **solo la lista de tags**, así que no toca nada más de
 la carpeta o del bookmark.
 
-**Las sugerencias se recorren con el teclado.** Al escribir salen debajo los
-tags que encajan y, al final, la opción de crear el que estás escribiendo.
-`↓` y `↑` van bajando y subiendo por esa lista (dan la vuelta al llegar al
-final, y `↑` desde el principio salta directamente a la última opción), `Enter`
-añade la que esté marcada y `Esc` quita la marca sin cerrar nada. Vale en todos
-los sitios donde se ponen tags: el detalle, los diálogos de edición, el
-etiquetado en bloque, las carpetas compartidas y la pantalla de guardar desde
-el móvil.
+**Escribe unas letras y pulsa Enter.** Al escribir salen los tags que encajan,
+con **el primero ya marcado**, así que `Enter` añade ese sin tocar nada más.
+Poner tags es repetitivo y casi siempre el tag ya existe, así que ese es el
+camino rápido: tres letras y Enter.
 
-Mientras no toques las flechas **no hay nada marcado**, a propósito: con la
-primera sugerencia ya marcada, escribir `foo` y pulsar `Enter` añadiría
-`foobar` en vez de crear el tag que estabas escribiendo. Sin flechas, `Enter`
-sigue haciendo lo de siempre: añade el tag si el nombre existe y lo crea si no.
+Primero salen los que **empiezan** por lo que escribiste, y después los que
+solo lo contienen en medio. Como Enter se lleva el de arriba, cuál va arriba
+deja de ser un detalle.
+
+`↓` y `↑` recorren la lista y dan la vuelta al llegar al final, así que `↑`
+desde el primero salta directamente a la última fila. `Esc` cierra la lista sin
+cerrar el diálogo que haya detrás.
+
+**Para crear un tag nuevo se elige la última fila**, la de *Crear nuevo*. Es
+deliberado: si escribes `conta` y ya tienes `contabilidad`, Enter añade el que
+existe, porque es lo que pasa casi siempre; crear uno cuyo nombre es el
+principio de otro que ya tienes es el caso raro y pide un gesto propio.
+
+Vale en todos los sitios donde se ponen tags: el detalle, los diálogos de
+edición, el etiquetado en bloque, las carpetas compartidas y la pantalla de
+guardar desde el móvil.
+
+**La lista se dibuja por encima de lo que haya detrás**, con su propio scroll.
+Dentro de un diálogo antes formaba parte del formulario, así que el diálogo
+crecía, sus botones se iban abajo del todo y elegir un tag obligaba a hacer
+scroll por todo el formulario para ver las sugerencias.
 
 ---
 

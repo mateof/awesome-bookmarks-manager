@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api.js";
+import { AnchoredPopover } from "./AnchoredPopover.js";
 
 
 interface Props {
@@ -40,17 +41,36 @@ export function TagPicker({
   const [input, setInput] = useState("");
   const [open, setOpen] = useState(false);
   /**
-   * Which suggestion the arrows are on, or -1 for none.
+   * Which suggestion is highlighted. The first one, from the first letter.
    *
-   * It starts at -1 on purpose, rather than highlighting the first match the
-   * way a lot of pickers do. With a highlight already on, typing "foo" and
-   * pressing Enter would add "foobar" — the first thing that happens to start
-   * with it — instead of creating the tag you were spelling out. Nothing is
-   * selected until an arrow key says so.
+   * Tagging is repetitive: nearly every tag you type already exists, so Enter
+   * meaning "the one at the top" is the fast path, and typing three letters
+   * plus Enter is the whole interaction. Creating is the rare case, and it has
+   * its own row at the end of the list.
    */
-  const [cursor, setCursor] = useState(-1);
+  const [cursor, setCursor] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The floating list is as wide as the field it belongs to.
+   *
+   * Fixed positioning has no parent to take a width from, and the picker is a
+   * different width in a dialog, in a detail page and in the share screen.
+   * Watched rather than measured once: the box grows a row taller as chips are
+   * added, and shrinks when the window does.
+   */
+  const [boxWidth, setBoxWidth] = useState(288);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const measure = () => setBoxWidth(Math.round(el.getBoundingClientRect().width));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const allTags = tagsQ.data ?? [];
   const byId = useMemo(() => new Map(allTags.map((t) => [t.id, t])), [allTags]);
@@ -79,10 +99,24 @@ export function TagPicker({
 
   const matching = useMemo(() => {
     const q = input.trim().toLowerCase();
-    return allTags
-      .filter((tg) => !has(tg))
-      .filter((tg) => (q ? tg.name.toLowerCase().includes(q) : true))
-      .slice(0, 8);
+    return (
+      allTags
+        .filter((tg) => !has(tg))
+        .filter((tg) => (q ? tg.name.toLowerCase().includes(q) : true))
+        // The ones that *start* with what was typed first. Enter takes the top
+        // row, so which row is on top stopped being a detail: typing "alt"
+        // should offer "alta" before "salta", and before "Balta", which the
+        // database's own ordering puts first because capitals sort earlier.
+        .sort((a, b) => {
+          if (!q) return 0;
+          const as = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const bs = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          return as - bs || a.name.localeCompare(b.name);
+        })
+        // Enough to be worth scrolling now that the list floats free of the
+        // dialog instead of making it taller.
+        .slice(0, 20)
+    );
   }, [allTags, input, value]);
 
   const exactMatch = useMemo(
@@ -112,8 +146,8 @@ export function TagPicker({
   );
 
   // Typing changes what is on the list, so whatever was highlighted is no
-  // longer the thing that was highlighted.
-  useEffect(() => setCursor(-1), [input]);
+  // longer the thing that was highlighted: back to the top.
+  useEffect(() => setCursor(0), [input]);
 
   useEffect(() => {
     listRef.current
@@ -174,18 +208,12 @@ export function TagPicker({
       e.preventDefault();
       setOpen(true);
       setCursor((c) => {
-        // Up from nothing-selected means the last one. Counting from -1 like
-        // any other position would land on the second-to-last and quietly skip
-        // a row nobody can reach without going all the way round.
-        if (c < 0) return e.key === "ArrowDown" ? 0 : rows.length - 1;
         const next = e.key === "ArrowDown" ? c + 1 : c - 1;
         // Wraps, because a list of three suggestions is short enough that
-        // walking off the end and stopping feels like something jammed.
+        // walking off the end and stopping feels like something jammed. Up
+        // from the top is how you reach "create" without walking the list.
         return ((next % rows.length) + rows.length) % rows.length;
       });
-    } else if (e.key === "Escape" && cursor >= 0) {
-      e.preventDefault();
-      setCursor(-1);
     } else if (e.key === "Enter") {
       e.preventDefault();
       const picked = cursor >= 0 ? rows[cursor] : undefined;
@@ -212,8 +240,11 @@ export function TagPicker({
   };
 
   return (
-    <div className="relative space-y-1">
-      <div className="flex flex-wrap items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+    <div className="space-y-1">
+      <div
+        ref={boxRef}
+        className="flex flex-wrap items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800"
+      >
         {selected.map((tg) => (
           <ChipInPicker
             key={tg.id}
@@ -237,12 +268,19 @@ export function TagPicker({
           className="flex-1 min-w-[8rem] bg-transparent text-sm focus:outline-none"
         />
       </div>
+      {/* Floating free of whatever contains the picker.
+          Inside a dialog, a list in the flow makes the dialog taller and
+          pushes its buttons off the bottom, so choosing a tag means scrolling
+          through the whole form to see the suggestions. In a portal it lies
+          over the dialog and scrolls on its own. */}
       {open && input.trim().length > 0 && (
-        <div
-          ref={listRef}
-          data-testid="tag-suggestions"
-          className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-auto rounded border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-800"
+        <AnchoredPopover
+          anchor={boxRef as React.RefObject<HTMLElement>}
+          onClose={() => setOpen(false)}
+          width={boxWidth}
+          maxHeight={288}
         >
+        <div ref={listRef} data-testid="tag-suggestions" className="text-sm">
           {matching.map((tg, i) => (
             <button
               key={tg.id}
@@ -290,6 +328,7 @@ export function TagPicker({
             </div>
           )}
         </div>
+        </AnchoredPopover>
       )}
     </div>
   );

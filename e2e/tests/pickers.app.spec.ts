@@ -100,10 +100,10 @@ test("tags: flechas para elegir una sugerencia y Enter para añadirla", async ({
   const list = page.getByTestId("tag-suggestions");
   await expect(list).toBeVisible();
 
-  // Nothing is highlighted until an arrow says so. With a highlight already
-  // on, typing a new name that happens to be a prefix of an existing tag and
-  // pressing Enter would add the wrong one instead of creating yours.
-  await expect(list.locator('[aria-selected="true"]')).toHaveCount(0);
+  // The first suggestion is highlighted from the first letter, so three
+  // letters and Enter is the whole interaction. Tagging is repetitive and
+  // almost every tag you type already exists.
+  await expect(list.locator('[data-idx="0"][aria-selected="true"]')).toHaveCount(1);
 
   // Read the order off the list itself rather than assuming one: what the
   // second arrow press lands on has to be the second row on screen, whatever
@@ -115,8 +115,8 @@ test("tags: flechas para elegir una sugerencia y Enter para añadirla", async ({
   const names = (await suggestions.allTextContents()).map((s) => s.trim());
 
   await page.keyboard.press("ArrowUp");
-  // Up from nothing-selected is the last row, which here is "create «cont»" —
-  // reachable in one press rather than four.
+  // Up from the top wraps to the last row, which here is "create «cont»":
+  // creating is one press away rather than four.
   await expect(list.locator('[data-idx="3"][aria-selected="true"]')).toHaveCount(1);
 
   await page.keyboard.press("ArrowDown");
@@ -133,6 +133,32 @@ test("tags: flechas para elegir una sugerencia y Enter para añadirla", async ({
       (id: string) => tags.find((t: { id: string }) => t.id === id)?.name,
     );
     expect(applied).toEqual([names[1]]);
+  }).toPass({ timeout: 10_000 });
+
+  // And the fast path, which is the reason the first row is highlighted:
+  // a few letters and Enter, no arrows, adds the tag at the top.
+  await box.fill("contab");
+  await expect(list).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(async () => {
+    const after = await (await req.get(`/api/folders/${folder.id}`)).json();
+    const tags = await (await req.get("/api/tags")).json();
+    const applied = after.tagIds.map(
+      (id: string) => tags.find((t: { id: string }) => t.id === id)?.name,
+    );
+    expect(applied).toContain("contabilidad");
+  }).toPass({ timeout: 10_000 });
+
+  // Creating is now the deliberate choice: the typed name is a prefix of tags
+  // that exist, so Enter alone would have taken one of those. The last row is
+  // the one that makes a new tag.
+  await box.fill("conta");
+  const crear = list.getByRole("button", { name: /Crear/ });
+  await expect(crear).toBeVisible();
+  await crear.click();
+  await expect(async () => {
+    const tags = await (await req.get("/api/tags")).json();
+    expect(tags.map((t: { name: string }) => t.name)).toContain("conta");
   }).toPass({ timeout: 10_000 });
 
   await ctx.close();
