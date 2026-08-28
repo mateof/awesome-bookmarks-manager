@@ -246,7 +246,32 @@ the original is untouched.
 A tag: `{ "id": "…", "name": "dev", "color": "#3b82f6" }`.
 
 ### `GET /tags`
-List all tags.
+List all tags. Each one comes with how much wears it:
+
+```json
+{ "id": "…", "name": "dev", "color": "#3b82f6",
+  "folderCount": 2, "bookmarkCount": 37 }
+```
+
+Counted over what the caller can see, shared content included, and excluding
+anything in the trash. The write endpoints answer with the tag alone, without
+the counts.
+
+### `POST /tags/{id}/merge` (internal API)
+Fold one tag into another.
+
+```json
+{ "into": "…" }
+```
+→ `{ "folders": 3, "bookmarks": 12, "smartFolders": 1 }`
+
+Everything wearing `{id}` ends up wearing `into`, saved filters naming the old
+one are rewritten, and `{id}` stops existing. The counts are what moved, so an
+item already carrying both tags is not counted twice.
+
+### `POST /tags/delete` (internal API)
+Delete several at once: `{ "ids": ["…"] }` → `{ "deleted": 12 }`. Their tag
+assignments go with them.
 
 ### `POST /tags/apply` (internal API)
 Add tags to a batch of folders and bookmarks at once.

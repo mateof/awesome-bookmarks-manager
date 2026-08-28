@@ -761,6 +761,31 @@ scroll por todo el formulario para ver las sugerencias.
 
 ---
 
+## 18d. Poner orden en los tags
+
+La pantalla **Tags** es la de mantenimiento, y está pensada para cuando hay
+muchos: una importación de otra aplicación trae cientos de golpe.
+
+- **Buscador**, sin distinguir mayúsculas ni acentos, que dice cuántos deja
+  fuera.
+- **Orden** por nombre, por más usados o por menos usados.
+- **Sin usar (N)**: los que no lleva nada. Esta es la única pantalla donde
+  aparecen, porque la de filtrar los esconde por inútiles.
+- **Posibles duplicados (N)**: los que son el mismo nombre ignorando
+  mayúsculas, acentos y una `s` final, que es justo lo que deja una
+  importación (`receta` junto a `recetas`). Es una regla basta a propósito:
+  solo *propone*, y equivocarse cuesta un vistazo.
+- **Selección múltiple y borrado en bloque**, con una sola confirmación para
+  todo el lote.
+- **Fusionar** dos tags: eliges el que se queda, todo lo que llevaba el otro
+  pasa a llevar ese, **los filtros guardados se reescriben** y el otro deja de
+  existir. Sin eso, una carpeta inteligente que nombrara al desaparecido se
+  quedaría apuntando a nada y dejaría de encontrar cosas sin decirlo.
+- Cada tag dice **en cuántas carpetas y en cuántos bookmarks** está, por
+  separado, o *sin usar*. Lo que esté en la papelera no cuenta.
+
+---
+
 ## 19. Almacenamiento y cuotas
 
 En **Ajustes → Almacenamiento** ves cuánto ocupan tus datos en el servidor,

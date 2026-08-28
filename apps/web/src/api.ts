@@ -341,6 +341,18 @@ export const api = {
 
   // tags
   listTags: () => request<Tag[]>("/tags"),
+  /** Fold one tag into another; the first stops existing. */
+  mergeTag: (id: string, into: string) =>
+    request<{ folders: number; bookmarks: number; smartFolders: number }>(
+      `/tags/${id}/merge`,
+      { method: "POST", body: JSON.stringify({ into }) },
+    ),
+  /** Delete several at once, rather than one request per tag. */
+  deleteTags: (ids: string[]) =>
+    request<{ deleted: number }>("/tags/delete", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
   /** Add tags to a whole selection in one call. */
   applyTags: (body: ApplyTagsBody) =>
     request<ApplyTagsResult>("/tags/apply", {

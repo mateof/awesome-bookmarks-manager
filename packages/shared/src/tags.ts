@@ -7,6 +7,18 @@ export const TagSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   color: z.string().regex(HEX_COLOR),
+  /**
+   * How many visible folders and bookmarks carry this tag.
+   *
+   * Counted by the server, which can do it with two `GROUP BY` over the join
+   * tables. The screens that show it used to download the entire library and
+   * count in the browser, which meant decrypting every bookmark you own to
+   * render a list of names.
+   *
+   * Optional because the write endpoints answer with the tag alone.
+   */
+  folderCount: z.number().int().nonnegative().optional(),
+  bookmarkCount: z.number().int().nonnegative().optional(),
 });
 export type Tag = z.infer<typeof TagSchema>;
 
@@ -31,6 +43,33 @@ export const UpdateTagBodySchema = z.object({
   color: z.string().regex(HEX_COLOR).optional(),
 });
 export type UpdateTagBody = z.infer<typeof UpdateTagBodySchema>;
+
+/**
+ * Fold one tag into another: everything wearing `id` ends up wearing `into`,
+ * and `id` stops existing.
+ *
+ * The operation an import invents the need for. Bringing a library over from
+ * another app leaves `receta` next to `recetas` and `Prensa` next to `prensa`,
+ * and renaming one of them just leaves two tags with the same name.
+ */
+export const MergeTagBodySchema = z.object({
+  into: z.string().uuid(),
+});
+export type MergeTagBody = z.infer<typeof MergeTagBodySchema>;
+
+export const MergeTagResultSchema = z.object({
+  /** What the surviving tag now carries, so the caller can report it. */
+  folders: z.number().int(),
+  bookmarks: z.number().int(),
+  smartFolders: z.number().int(),
+});
+export type MergeTagResult = z.infer<typeof MergeTagResultSchema>;
+
+/** Delete several at once: the shape a clean-up after an import takes. */
+export const DeleteTagsBodySchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(1000),
+});
+export type DeleteTagsBody = z.infer<typeof DeleteTagsBodySchema>;
 
 /**
  * Add tags to a batch of folders and bookmarks at once.
