@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { useAuth } from "../auth.js";
 
@@ -9,6 +9,12 @@ export function SignupPage() {
   const { t } = useTranslation();
   const { user, signIn } = useAuth();
   const nav = useNavigate();
+  const loc = useLocation();
+  // The same parked destination the login form honours. Somebody sent a link
+  // to a private panel who has no account yet goes panel → login → signup, and
+  // without carrying it this far the link is lost at the last step of three.
+  const from = (loc.state as { from?: string } | null)?.from;
+  const target = from && from.startsWith("/") && !from.startsWith("//") ? from : "/";
   const [email, setEmail] = useState("");
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +22,7 @@ export function SignupPage() {
   const [busy, setBusy] = useState(false);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: api.authConfig });
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={target} replace />;
 
   if (config.data && !config.data.registrationEnabled) {
     return (
@@ -28,6 +34,7 @@ export function SignupPage() {
           </p>
           <Link
             to="/login"
+            state={{ from }}
             className="inline-block text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
           >
             {t("auth.haveAccount")}
@@ -48,7 +55,7 @@ export function SignupPage() {
           try {
             await api.signup(email, nickname, password);
             signIn();
-            nav("/", { replace: true });
+            nav(target, { replace: true });
           } catch (e) {
             setErr(e instanceof ApiError ? e.message : t("common.error"));
           } finally {
@@ -102,6 +109,7 @@ export function SignupPage() {
         <div className="text-center text-sm">
           <Link
             to="/login"
+            state={{ from }}
             className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
           >
             {t("auth.haveAccount")}

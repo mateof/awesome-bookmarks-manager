@@ -140,6 +140,7 @@ export function LoginPage() {
           <div className="text-center text-sm">
             <Link
               to="/signup"
+              state={{ from }}
               className="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
             >
               {t("auth.noAccount")}
