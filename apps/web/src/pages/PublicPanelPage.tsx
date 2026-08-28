@@ -2,7 +2,7 @@ import type { PublicPanelResponse } from "@awesome-bookmarks/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ApiError, api } from "../api.js";
 import { PanelRenderer } from "../components/PanelRenderer.js";
 import {
@@ -54,6 +54,7 @@ function usePanelTabMeta(resp: PublicPanelResponse | undefined, slug?: string) {
 
 export function PublicPanelPage() {
   const { slug } = useParams<{ slug: string }>();
+  const loc = useLocation();
   const [unlocked, setUnlocked] = useState<PublicPanelResponse | null>(null);
   const q = useQuery({
     queryKey: ["public-panel", slug],
@@ -111,8 +112,14 @@ export function PublicPanelPage() {
           <p className="text-slate-600 dark:text-slate-300">
             Este panel es privado. Inicia sesión para verlo.
           </p>
+          {/* Where to come back to. Without it, logging in from a private
+              panel lands on your own home and the panel you were sent — very
+              likely a link somebody gave you — is gone from the screen.
+              `LoginPage` already knows how to honour `state.from`; this was the
+              one door into it that did not say where it came from. */}
           <Link
             to="/login"
+            state={{ from: loc.pathname + loc.search }}
             className="inline-block rounded bg-slate-900 px-4 py-2 text-sm text-white dark:bg-slate-100 dark:text-slate-900"
           >
             Iniciar sesión

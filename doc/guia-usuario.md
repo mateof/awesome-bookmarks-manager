@@ -318,6 +318,16 @@ porque es contenido tuyo y no una decoración elegida para pegar con los colores
 
 ---
 
+**El filtro de tags no se come el panel.** Si el panel tiene muchos tags, la
+barra de filtros muestra unas pocas filas y el resto se ve con **ver todos**,
+que la despliega (y con *ver menos* vuelve a plegarse). Además tiene su propio
+**buscador de tags**, porque cuando hay tantos como para necesitar un filtro,
+el filtro necesita un filtro. La búsqueda ignora acentos y mayúsculas, y un tag
+que tengas activado sigue apareciendo aunque no coincida con lo que buscas:
+si desapareciera, no habría forma de desactivarlo.
+
+---
+
 ## 6. Panel protegido con contraseña
 
 Si eliges el modo **Con contraseña**, el panel pide una clave antes de mostrar
@@ -326,6 +336,16 @@ nada:
 | Puerta de contraseña | Panel desbloqueado |
 | --- | --- |
 | ![Panel pide contraseña](images/17-panel-password.png) | ![Panel tras introducir la contraseña](images/18-panel-unlocked.png) |
+
+Con el modo **Solo ciertas cuentas**, quien abra el panel sin sesión ve un
+aviso y un botón para entrar. **Al iniciar sesión vuelves al panel**, no a tu
+inicio: el enlace te lo dio alguien y perderlo por el camino significaba tener
+que buscar otra vez el mensaje donde venía.
+
+Ojo con una cosa al configurarlo: las cuentas se resuelven **al guardar el
+panel**, así que un correo de alguien que todavía no se ha registrado se
+descarta en ese momento. Si invitas a alguien antes de que tenga cuenta, hay
+que volver a añadirlo después.
 
 ---
 

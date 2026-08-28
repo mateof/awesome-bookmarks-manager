@@ -9,7 +9,9 @@ import {
 import DOMPurify from "dompurify";
 import {
   ArrowUp,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CornerDownLeft,
   ExternalLink,
   Filter,
@@ -28,6 +30,7 @@ import { useSearchParams } from "react-router-dom";
 import type { PanelScheme } from "../lib/panelScheme.js";
 import { PanelSchemeToggle } from "./PanelSchemeToggle.js";
 import { fuzzyScoreAny } from "../fuzzy.js";
+import { foldText } from "../lib/emojiCatalog.js";
 import { bindInteractiveMarks } from "../lib/interactiveMarks.js";
 import { sanitizeNote } from "../lib/purify.js";
 import {
@@ -688,14 +691,75 @@ function TagFilterBar({
   onClear: () => void;
 }) {
   const t = template.theme;
-  const entries = [...allTags.entries()].sort((a, b) => b[1].count - a[1].count);
+  const entries = useMemo(
+    () => [...allTags.entries()].sort((a, b) => b[1].count - a[1].count),
+    [allTags],
+  );
+
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [clipped, setClipped] = useState(false);
+
+  const shown = useMemo(() => {
+    const needle = foldText(query.trim());
+    if (!needle) return entries;
+    // Whatever is switched on stays on the list even when it does not match
+    // the search, or filtering would hide the only control that turns it off.
+    return entries.filter(
+      ([name]) => foldText(name).includes(needle) || selected.has(name),
+    );
+  }, [entries, query, selected]);
+
+  /**
+   * Whether there is more than fits, which is what decides if the control to
+   * see the rest is worth showing.
+   *
+   * Measured rather than counted: whether forty tags need one row or six
+   * depends on how long their names are and how wide the panel is, and a
+   * "more than N tags" rule gets both of those wrong.
+   */
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const measure = () => setClipped(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [shown.length, expanded]);
+
+  const chip = (name: string, info: { color: string; count: number }) => {
+    const on = selected.has(name);
+    return (
+      <button
+        key={name}
+        type="button"
+        onClick={() => onToggle(name)}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          fontSize: 12,
+          padding: "3px 10px",
+          borderRadius: 999,
+          cursor: "pointer",
+          fontFamily: "inherit",
+          background: on ? info.color : `${info.color}22`,
+          color: on ? "#fff" : info.color,
+          border: `1px solid ${info.color}${on ? "" : "55"}`,
+        }}
+      >
+        {name}
+        <span style={{ opacity: 0.7 }}>{info.count}</span>
+      </button>
+    );
+  };
+
   return (
     <div
+      data-testid="panel-tag-filter"
       style={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 6,
         marginBottom: "1.25rem",
         padding: "0.6rem 0.75rem",
         borderRadius: "0.75rem",
@@ -703,49 +767,90 @@ function TagFilterBar({
         border: `1px solid ${t.border}`,
       }}
     >
-      <Filter size={15} style={{ color: t.muted }} />
-      {entries.map(([name, info]) => {
-        const on = selected.has(name);
-        return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Filter size={15} style={{ color: t.muted, flexShrink: 0 }} />
+        {/* A panel of a few hundred links can carry more tags than fit on a
+            screen, and then the filter is the thing you have to search. */}
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar un tag…"
+          aria-label="Buscar un tag"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: 12,
+            fontFamily: "inherit",
+            padding: "3px 8px",
+            borderRadius: 999,
+            background: "transparent",
+            color: t.text,
+            border: `1px solid ${t.border}`,
+            outline: "none",
+          }}
+        />
+        {selected.size > 1 && (
           <button
-            key={name}
             type="button"
-            onClick={() => onToggle(name)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontSize: 12,
-              padding: "3px 10px",
-              borderRadius: 999,
-              cursor: "pointer",
-              fontFamily: "inherit",
-              background: on ? info.color : `${info.color}22`,
-              color: on ? "#fff" : info.color,
-              border: `1px solid ${info.color}${on ? "" : "55"}`,
-            }}
+            onClick={onMatchAll}
+            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, cursor: "pointer", background: "transparent", color: t.muted, border: `1px dashed ${t.border}`, fontFamily: "inherit", flexShrink: 0 }}
           >
-            {name}
-            <span style={{ opacity: 0.7 }}>{info.count}</span>
+            {matchAll ? "coincidir todas" : "coincidir alguna"}
           </button>
-        );
-      })}
-      {selected.size > 1 && (
+        )}
+        {selected.size > 0 && (
+          <button
+            type="button"
+            onClick={onClear}
+            style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, cursor: "pointer", background: "transparent", color: t.muted, border: "none", fontFamily: "inherit", flexShrink: 0 }}
+          >
+            <X size={13} /> limpiar
+          </button>
+        )}
+      </div>
+
+      <div
+        ref={listRef}
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 6,
+          marginTop: 8,
+          // Capped, with its own scrollbar: the tag list is the way into the
+          // panel, not the panel, and a hundred tags used to push the links
+          // themselves off the first screen.
+          maxHeight: expanded ? 260 : 76,
+          overflowY: "auto",
+        }}
+      >
+        {shown.map(([name, info]) => chip(name, info))}
+        {shown.length === 0 && (
+          <span style={{ fontSize: 12, color: t.muted }}>
+            Ningún tag coincide.
+          </span>
+        )}
+      </div>
+
+      {(clipped || expanded) && (
         <button
           type="button"
-          onClick={onMatchAll}
-          style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, cursor: "pointer", background: "transparent", color: t.muted, border: `1px dashed ${t.border}`, fontFamily: "inherit" }}
+          onClick={() => setExpanded((v) => !v)}
+          style={{
+            marginTop: 6,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            fontSize: 11,
+            cursor: "pointer",
+            background: "transparent",
+            color: t.muted,
+            border: "none",
+            fontFamily: "inherit",
+            padding: 0,
+          }}
         >
-          {matchAll ? "coincidir todas" : "coincidir alguna"}
-        </button>
-      )}
-      {selected.size > 0 && (
-        <button
-          type="button"
-          onClick={onClear}
-          style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12, cursor: "pointer", background: "transparent", color: t.muted, border: "none", fontFamily: "inherit" }}
-        >
-          <X size={13} /> limpiar
+          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          {expanded ? "ver menos" : `ver todos (${shown.length})`}
         </button>
       )}
     </div>
