@@ -13,6 +13,10 @@ import { loadConfig } from "./storage.js";
 const BRIDGE_ID = "ab-bridge";
 const STALE_MS = 5 * 60_000;
 const LOAD_TIMEOUT_MS = 60_000;
+const SETTLE_MS = 400;
+const NAVIGATION_CHECK_MS = 1_000;
+const MAX_ATTEMPTS = 3;
+const RUN_LIMIT_MS = 120_000;
 
 interface CachedRuntime {
   at: number;
@@ -74,28 +78,35 @@ export function forgetRuntime() {
   cache = null;
 }
 
-function waitForLoad(tabId: number): Promise<chrome.tabs.Tab> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      chrome.tabs.onUpdated.removeListener(listener);
-      reject(new Error("La página no terminó de cargar"));
-    }, LOAD_TIMEOUT_MS);
-    const finish = (tab: chrome.tabs.Tab) => {
-      clearTimeout(timer);
-      chrome.tabs.onUpdated.removeListener(listener);
-      resolve(tab);
-    };
-    const listener = (id: number, info: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => {
-      if (id === tabId && info.status === "complete") finish(tab);
-    };
-    chrome.tabs.onUpdated.addListener(listener);
-    chrome.tabs
-      .get(tabId)
-      .then((tab) => {
-        if (tab.status === "complete" && tab.url && tab.url !== "about:blank") finish(tab);
-      })
-      .catch(() => undefined);
-  });
+interface DocumentProbe {
+  id: number;
+  ready: DocumentReadyState;
+}
+
+async function probe(tabId: number): Promise<DocumentProbe | null> {
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => ({ id: performance.timeOrigin, ready: document.readyState }),
+    });
+    return (result?.result as DocumentProbe | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitForSettled(tabId: number): Promise<number> {
+  const deadline = Date.now() + LOAD_TIMEOUT_MS;
+  let previous: DocumentProbe | null = null;
+  while (Date.now() < deadline) {
+    const current = await probe(tabId);
+    if (current?.ready === "complete" && previous?.id === current.id) return current.id;
+    previous = current?.ready === "complete" ? current : null;
+    await sleep(SETTLE_MS);
+  }
+  throw new Error("La página no terminó de cargar");
 }
 
 async function badge(tabId: number, ok: boolean, title: string) {
@@ -111,11 +122,61 @@ async function badge(tabId: number, ok: boolean, title: string) {
   }
 }
 
+function stepsOrNavigation(
+  tabId: number,
+  documentId: number | null,
+  automation: RunnableAutomation,
+  variables: Record<string, string>,
+): Promise<AutomationRunReport | "navigated"> {
+  const total = automation.steps.length;
+  const budget = Math.min(automation.timeoutMs * (total + 2) + 5_000, RUN_LIMIT_MS);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: AutomationRunReport | "navigated") => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      clearInterval(watcher);
+      resolve(value);
+    };
+    const timer = setTimeout(
+      () => finish({ ok: false, done: 0, total, error: "La página no respondió a tiempo" }),
+      budget,
+    );
+    const watcher = setInterval(() => {
+      if (documentId === null) return;
+      void probe(tabId).then((current) => {
+        if (current && current.id !== documentId) finish("navigated");
+      });
+    }, NAVIGATION_CHECK_MS);
+    chrome.scripting
+      .executeScript({
+        target: { tabId },
+        func: runAutomationSteps,
+        args: [{ steps: automation.steps, vars: variables, timeoutMs: automation.timeoutMs }],
+      })
+      .then(([result]) =>
+        finish(
+          (result?.result as AutomationRunReport | undefined) ?? {
+            ok: false,
+            done: 0,
+            total,
+            error: "Sin respuesta de la página",
+          },
+        ),
+      )
+      .catch((e) =>
+        finish({ ok: false, done: 0, total, error: e instanceof Error ? e.message : String(e) }),
+      );
+  });
+}
+
 export async function runInTab(
   tabId: number,
   automation: RunnableAutomation,
   variables: Record<string, string>,
-): Promise<AutomationRunReport> {
+  documentId: number | null = null,
+): Promise<AutomationRunReport | "navigated"> {
   const tab = await chrome.tabs.get(tabId);
   const expected = automationScope(automation.url)?.origin;
   const actual = tab.url ? automationScope(tab.url)?.origin : undefined;
@@ -132,17 +193,9 @@ export async function runInTab(
 
   let report: AutomationRunReport = { ok: true, done: 0, total: 0 };
   if (automation.steps.length > 0) {
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: runAutomationSteps,
-      args: [{ steps: automation.steps, vars: variables, timeoutMs: automation.timeoutMs }],
-    });
-    report = (result?.result as AutomationRunReport | undefined) ?? {
-      ok: false,
-      done: 0,
-      total: automation.steps.length,
-      error: "Sin respuesta de la página",
-    };
+    const outcome = await stepsOrNavigation(tabId, documentId, automation, variables);
+    if (outcome === "navigated") return outcome;
+    report = outcome;
   }
 
   if (report.ok && automation.script.trim()) {
@@ -198,8 +251,12 @@ export async function openBookmark(
   }
   claimedTabs.add(tab.id);
   try {
-    await waitForLoad(tab.id);
-    await runInTab(tab.id, automation, loaded.runtime!.variables);
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const documentId = await waitForSettled(tab.id);
+      const outcome = await runInTab(tab.id, automation, loaded.runtime!.variables, documentId);
+      if (outcome !== "navigated") return;
+    }
+    await badge(tab.id, false, "Autorrelleno: la página no dejó de navegar");
   } catch (e) {
     await badge(tab.id, false, e instanceof Error ? e.message : String(e));
   } finally {

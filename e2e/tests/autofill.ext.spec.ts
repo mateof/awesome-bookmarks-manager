@@ -10,6 +10,13 @@ let forms: Server;
 let FORM_URL = "";
 let REDIRECT_URL = "";
 let ELSEWHERE_URL = "";
+let PROCESSING_URL = "";
+
+const PROCESSING_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"><title>Procesando página</title></head>
+<body>Procesando…<script>
+  setTimeout(() => location.replace("/alta?desde=procesando"), 300);
+</script></body></html>`;
 
 const FORM_HTML = `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><title>Alta de trámite</title></head>
@@ -26,11 +33,21 @@ const FORM_HTML = `<!doctype html>
       </select>
     </label>
     <label><input type="checkbox" id="acepto"> Acepto</label>
+    <label>Búsqueda
+      <select id="tipoCita"><option value="">--</option><option value="1">Primera cita</option></select>
+    </label>
+    <label>Código postal <input id="cp" disabled></label>
   </form>
+  <img src="/lento.png" alt="">
   <output id="mirror"></output>
   <script>
     document.getElementById("nif").addEventListener("input", (e) => {
       document.getElementById("mirror").textContent = "input:" + e.target.value;
+    });
+    window.addEventListener("load", () => {
+      document.getElementById("tipoCita").addEventListener("change", (e) => {
+        document.getElementById("cp").disabled = e.target.value !== "1";
+      });
     });
     setTimeout(() => {
       const late = document.createElement("input");
@@ -42,6 +59,18 @@ const FORM_HTML = `<!doctype html>
 
 test.beforeAll(async () => {
   forms = createServer((req, res) => {
+    if (req.url?.startsWith("/lento.png")) {
+      setTimeout(() => {
+        res.writeHead(200, { "content-type": "image/png" });
+        res.end();
+      }, 1500);
+      return;
+    }
+    if (req.url?.startsWith("/procesando")) {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(PROCESSING_HTML);
+      return;
+    }
     if (req.url?.startsWith("/salto")) {
       res.writeHead(302, { location: ELSEWHERE_URL });
       res.end();
@@ -55,6 +84,7 @@ test.beforeAll(async () => {
   FORM_URL = `http://127.0.0.1:${port}/alta`;
   REDIRECT_URL = `http://127.0.0.1:${port}/salto`;
   ELSEWHERE_URL = `http://localhost:${port}/alta`;
+  PROCESSING_URL = `http://127.0.0.1:${port}/procesando`;
 });
 
 test.afterAll(async () => {
@@ -200,6 +230,33 @@ test("autorrelleno: variables, automatización aprobada, apertura desde la web y
 
   await app.getByRole("button", { name: "Aprobar" }).click();
   await expect(app.getByTestId("automation-pending")).toHaveCount(0);
+
+  const processingId = await createBookmark(app, PROCESSING_URL, "Pasa por una página intermedia");
+  const throughProcessing = await app.request.put(
+    `${BASE_URL}/api/bookmarks/${processingId}/automation`,
+    {
+      data: {
+        steps: [
+          { action: "select", selector: "#tipoCita", value: "1" },
+          { action: "wait", selector: "#cp:enabled" },
+          { action: "fill", selector: "#cp", value: "15100" },
+          { action: "fill", selector: "#nif", value: "{{dni}}" },
+        ],
+      },
+    },
+  );
+  expect(throughProcessing.ok(), await throughProcessing.text()).toBeTruthy();
+  await app.goto(`/bookmark/${processingId}`);
+  await expect(app.getByTestId("automation-section")).toContainText("Esperar a #cp:enabled");
+  const settled = await nextPage(context, FORM_URL, () =>
+    app.getByRole("link", { name: "Abrir URL" }).click(),
+  );
+  await expect(
+    settled.locator("#cp"),
+    "steps wait for the real form behind an interstitial page, and for its load handlers",
+  ).toHaveValue("15100");
+  await expect(settled.locator("#nif")).toHaveValue("12345678Z");
+  await settled.close();
 
   const redirectId = await createBookmark(app, REDIRECT_URL, "Salto a otro sitio");
   const saved = await app.request.put(`${BASE_URL}/api/bookmarks/${redirectId}/automation`, {
