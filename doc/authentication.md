@@ -21,6 +21,19 @@ ability to decrypt data (see below).
 The same header/token also works for the browser extension endpoint
 (`POST /api/ext/quick-add`).
 
+### The autofill permission
+
+One thing a token does **not** get by default: the values of the user's
+autofill variables (name, ID number, phone…). Reading them
+(`GET /api/ext/autofill`) needs a token created with **"Can read autofill
+data"** ticked, which is meant for the browser extension and the Android app.
+A token for MCP or scripts should leave it off: those clients can still see the
+variables' names and descriptions and propose automations, which arrive
+`pending` until approved in the web app.
+
+When a request carries both a session cookie and a Bearer token, this endpoint
+judges it by the token.
+
 ## Why tokens can decrypt your data without your password
 
 AwesomeBookmarks encrypts every title, URL and description at rest. The

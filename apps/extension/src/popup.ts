@@ -1,12 +1,17 @@
 import {
+  appOrigin,
   createFolder,
   createTag,
+  fetchAutofill,
   listFolders,
   listTags,
+  matchBookmarks,
   quickAdd,
+  saveAutomation,
   type FolderLite,
   type TagLite,
 } from "./api.js";
+import { type CapturedField, captureFormFields, stepsFromCapture } from "./capture.js";
 import {
   type ExtConfig,
   getLastFolderId,
@@ -35,6 +40,7 @@ const expanded = new Set<string>();
 const chosenTags: { name: string; color: string; id?: string }[] = [];
 let cfg: ExtConfig | null = null;
 let tabUrl = "";
+let tabId: number | undefined;
 
 function el<T extends HTMLElement>(id: string): T {
   return document.getElementById(id) as T;
@@ -306,6 +312,7 @@ async function init() {
   const tab = tabs[0];
   if (!tab) return;
   tabUrl = tab.url ?? "";
+  tabId = tab.id;
 
   el("title-display").textContent = tab.title ?? "";
   el("url-display").textContent = tab.url ?? "";
@@ -417,10 +424,86 @@ async function init() {
     }
   });
 
+  el("capture-btn").addEventListener("click", () => void capture());
+
   el("options-link").addEventListener("click", (e) => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
+}
+
+function withoutHash(url: string): string {
+  try {
+    const u = new URL(url);
+    u.hash = "";
+    return u.href;
+  } catch {
+    return url;
+  }
+}
+
+async function capture() {
+  const out = el("capture-status");
+  out.className = "";
+  out.textContent = "Leyendo el formulario…";
+  if (!cfg || tabId === undefined) {
+    out.className = "err";
+    out.textContent = "Configura el backend y el token primero";
+    return;
+  }
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: captureFormFields,
+    });
+    const fields = (res?.result as CapturedField[] | undefined) ?? [];
+    if (fields.length === 0) {
+      out.className = "err";
+      out.textContent = "No hay campos rellenos en esta página";
+      return;
+    }
+    let variables: Record<string, string> = {};
+    try {
+      variables = (await fetchAutofill(cfg)).variables;
+    } catch {
+      variables = {};
+    }
+    const steps = stepsFromCapture(fields, variables);
+    const matches = await matchBookmarks(cfg, tabUrl);
+    const page = withoutHash(tabUrl);
+    let bookmarkId = matches.find((m) => withoutHash(m.url) === page)?.id;
+    if (!bookmarkId) {
+      const title = el<HTMLInputElement>("title-input").value.trim();
+      const created = (await quickAdd(cfg, {
+        url: tabUrl,
+        ...(title ? { title } : {}),
+        folderId: selectedFolderId,
+      })) as { id: string };
+      bookmarkId = created.id;
+    }
+    await saveAutomation(cfg, bookmarkId, {
+      enabled: true,
+      trigger: "open",
+      timeoutMs: 10000,
+      steps,
+      script: "",
+    });
+    void chrome.runtime.sendMessage({ type: "autofill-changed" });
+    out.className = "ok";
+    out.textContent = `${steps.length} pasos guardados, pendientes de aprobar. `;
+    const origin = appOrigin(cfg);
+    if (origin) {
+      const link = document.createElement("a");
+      link.id = "capture-review";
+      link.href = `${origin}/bookmark/${bookmarkId}`;
+      link.target = "_blank";
+      link.textContent = "Revisar y aprobar →";
+      out.appendChild(link);
+    }
+  } catch (e) {
+    out.className = "err";
+    out.textContent = String(e instanceof Error ? e.message : e);
+  }
 }
 
 void init();

@@ -24,13 +24,20 @@ const chromeManifest = {
 // add-on id under browser_specific_settings.
 const firefoxManifest = {
   ...base,
+  permissions: base.permissions.filter((p) => p !== "userScripts"),
+  optional_permissions: ["userScripts"],
   background: { scripts: ["background.js"] },
   browser_specific_settings: {
     gecko: { id: "awesomebookmarks@mateof", strict_min_version: "121.0" },
   },
 };
 
-const entryPoints = ["src/popup.ts", "src/options.ts", "src/background.ts"];
+const entryPoints = [
+  "src/popup.ts",
+  "src/options.ts",
+  "src/background.ts",
+  "src/bridge.ts",
+];
 const buildOpts = {
   entryPoints,
   bundle: true,

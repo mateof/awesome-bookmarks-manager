@@ -241,6 +241,51 @@ the original is untouched.
 
 ---
 
+## Autofill automations
+
+An automation fills the bookmark's page when it is opened. Through `/api/v1`
+you can read and write automations and read the **description** of the
+user's variables, never their values.
+
+### `GET /autofill/variables`
+
+`[{ id, key, label, description, hasValue }]`. No `value` field.
+
+### `GET /bookmarks/:id/automation`
+
+`{ automation: Automation | null }`. `Automation` carries `enabled`,
+`trigger` (`open` | `always`), `timeoutMs`, `steps`, `script`, `status`
+(`approved` | `pending`), `fingerprint`, `unknownVariables` and `updatedAt`.
+
+### `PUT /bookmarks/:id/automation`
+
+Body: `{ steps?, script?, trigger?, enabled?, timeoutMs? }`, at least one step
+or a script. A step is one of:
+
+```json
+{ "action": "fill",   "selector": "#nif", "value": "{{dni}}" }
+{ "action": "select", "selector": "#provincia", "value": "Madrid" }
+{ "action": "check",  "selector": "#acepto", "checked": true }
+{ "action": "click",  "selector": "button[type=submit]" }
+{ "action": "wait",   "selector": "#resultado" }
+{ "action": "pause",  "ms": 500 }
+```
+
+Anything written here is stored as **`pending`**: it does not run until the
+user approves it in the web app. Only `http`/`https` bookmarks accept one.
+
+### `DELETE /bookmarks/:id/automation`
+
+`204`.
+
+### Runtime (extension and Android app)
+
+`GET /api/ext/autofill` returns the approved, enabled automations **with the
+variable values**. It accepts the web session or a token created with
+`autofill: true` (*Settings → API → "Can read autofill data"*); any other token
+gets `403`. `GET /api/ext/autofill/runner.js` serves the code that applies the
+steps, so the Android app runs exactly what the extension runs.
+
 ## Tags
 
 A tag: `{ "id": "…", "name": "dev", "color": "#3b82f6" }`.

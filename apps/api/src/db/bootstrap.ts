@@ -248,6 +248,22 @@ export function ensureSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS extension_tokens_hash_idx
       ON extension_tokens(token_hash);
 
+    CREATE TABLE IF NOT EXISTS autofill_profiles (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      data_ct BLOB NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp)
+    );
+
+    CREATE TABLE IF NOT EXISTS bookmark_automations (
+      bookmark_id TEXT NOT NULL REFERENCES bookmarks(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      data_ct BLOB NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (current_timestamp),
+      PRIMARY KEY (bookmark_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS bookmark_automations_user_idx
+      ON bookmark_automations(user_id);
+
     CREATE TABLE IF NOT EXISTS groups (
       id TEXT PRIMARY KEY,
       owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -530,6 +546,7 @@ export function ensureSchema() {
   tryAddColumn("panels", "favicon_mime", "TEXT");
   // Token-wrapped DEK envelope for headless API / MCP access.
   tryAddColumn("extension_tokens", "dek_wrap", "BLOB");
+  tryAddColumn("extension_tokens", "autofill", "INTEGER NOT NULL DEFAULT 0");
   // Passkeys registered before the PRF-less fallback existed default to PRF.
   tryAddColumn("webauthn_credentials", "prfless", "INTEGER NOT NULL DEFAULT 0");
 

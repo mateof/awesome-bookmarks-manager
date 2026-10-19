@@ -90,6 +90,7 @@ import {
   rectSortingStrategy,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { openExternal } from "../lib/extensionBridge.js";
 
 
 
@@ -210,7 +211,7 @@ export function FolderPage() {
     ) {
       return;
     }
-    for (const u of urls) window.open(u, "_blank", "noopener,noreferrer");
+    for (const u of urls) openExternal(u);
   };
 
   const toggle = (key: SelectionKey) => {
@@ -339,7 +340,7 @@ export function FolderPage() {
     ) {
       return;
     }
-    for (const u of urls) window.open(u, "_blank", "noopener,noreferrer");
+    for (const u of urls) openExternal(u);
   };
 
   const exportSingle = async (

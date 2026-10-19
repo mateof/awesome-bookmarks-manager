@@ -19,6 +19,7 @@ import {
   Palette,
   ShieldCheck,
   Trash2,
+  WandSparkles,
   User,
   Users,
 } from "lucide-react";
@@ -43,6 +44,7 @@ import { SessionList } from "../components/SessionList.js";
 import { SecurityLog } from "../components/SecurityLog.js";
 import { ThemePicker } from "../components/ThemePicker.js";
 import { CloudVault } from "../components/CloudVault.js";
+import { AutofillVariablesEditor } from "../components/AutofillVariablesEditor.js";
 import {
   CertificateTrust,
   TrustedCertBadge,
@@ -179,6 +181,9 @@ export function SettingsPage() {
           <Tab to="/settings/storage" icon={<HardDrive className="h-4 w-4" />}>
             {t("settings.tabs.storage")}
           </Tab>
+          <Tab to="/settings/autofill" icon={<WandSparkles className="h-4 w-4" />}>
+            {t("autofill.tab")}
+          </Tab>
           <Tab to="/settings/api" icon={<KeyRound className="h-4 w-4" />}>
             {t("settings.tabs.api")}
           </Tab>
@@ -214,6 +219,7 @@ export function SettingsPage() {
             <Route path="cloud" element={<Cloud />} />
             <Route path="import-export" element={<ImportExport />} />
             <Route path="storage" element={<Storage />} />
+            <Route path="autofill" element={<AutofillTab />} />
             <Route path="api" element={<ApiTokens />} />
             {isAdmin && <Route path="admin" element={<Admin />} />}
             {isAdmin && <Route path="insights" element={<InsightsTab />} />}
@@ -1247,6 +1253,20 @@ function ImportExport() {
 /* API access & tokens                                                */
 /* ------------------------------------------------------------------ */
 
+function AutofillTab() {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <SectionHeader
+        icon={<WandSparkles className="h-5 w-5" />}
+        title={t("autofill.vars.heading")}
+        subtitle={t("autofill.vars.intro")}
+      />
+      <AutofillVariablesEditor />
+    </Card>
+  );
+}
+
 function ApiTokens() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -1255,16 +1275,18 @@ function ApiTokens() {
     queryFn: api.listApiTokens,
   });
   const [label, setLabel] = useState("");
+  const [autofill, setAutofill] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
 
   const origin =
     typeof window !== "undefined" ? window.location.origin : "http://your-host";
 
   const create = useMutation({
-    mutationFn: () => api.createApiToken(label.trim() || "token"),
+    mutationFn: () => api.createApiToken(label.trim() || "token", autofill),
     onSuccess: (r) => {
       setCreated(r.token);
       setLabel("");
+      setAutofill(false);
       qc.invalidateQueries({ queryKey: ["api-tokens"] });
     },
   });
@@ -1309,6 +1331,20 @@ function ApiTokens() {
             <Plus className="h-4 w-4" /> {t("settings.api.create")}
           </button>
         </div>
+        <label className="mt-3 flex items-start gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autofill}
+            onChange={(e) => setAutofill(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-medium">{t("settings.api.autofillScope")}</span>
+            <span className="block text-xs text-slate-500">
+              {t("settings.api.autofillScopeHint")}
+            </span>
+          </span>
+        </label>
       </Card>
 
       {created && (
@@ -1362,7 +1398,14 @@ function ApiTokens() {
               className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800"
             >
               <div className="min-w-0 flex-1">
-                <div className="font-medium">{tok.label}</div>
+                <div className="flex items-center gap-2 font-medium">
+                  {tok.label}
+                  {tok.autofill && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                      {t("settings.api.autofillBadge")}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-slate-500">
                   {t("settings.api.createdAt", { when: tok.createdAt.slice(0, 10) })}
                   {" · "}

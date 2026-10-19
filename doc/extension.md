@@ -103,3 +103,35 @@ guarda la pestaña actual en la **última carpeta usada**.
 El bookmark aparece al instante en tu biblioteca, en la carpeta elegida:
 
 ![Bookmark guardado en su carpeta](images/22-extension-saved.png)
+
+## Rellenar formularios
+
+La extensión también ejecuta las **automatizaciones** de tus bookmarks: al abrir
+uno desde la web, carga la página y rellena el formulario con tus datos. Cómo se
+definen está en la [guía de usuario](guia-usuario.md#29-rellenar-formularios-al-abrir-un-bookmark).
+
+Para que funcione:
+
+- El token configurado tiene que haberse creado con **«Puede leer los datos de
+  autorrelleno»** marcado. Sin él, la extensión guarda pestañas igual, pero no
+  puede leer los valores y el icono muestra `!` al abrir un bookmark
+  automatizado.
+- La web detecta la extensión sola (registra un pequeño script en el dominio de
+  tu instancia al guardar las opciones). Si tenías la web abierta, recárgala.
+
+Al terminar, el icono muestra `✓` (pasos completados) o `!` con el motivo en el
+título. Antes de rellenar se comprueba que la pestaña sigue en el mismo sitio
+que el bookmark; si redirige a otro dominio, no se escribe nada.
+
+**Capturar formulario de esta página**, en el popup, convierte lo que has
+rellenado a mano en pasos. Queda pendiente hasta que lo apruebes en la ficha del
+bookmark.
+
+**Scripts JavaScript.** Los pasos funcionan sin más. Para el campo de script:
+
+- **Chrome/Opera** (135 o posterior): activa **Permitir scripts de usuario** en
+  `chrome://extensions`, en los detalles de la extensión.
+- **Firefox**: pulsa **Permitir scripts JavaScript** en la página de opciones y
+  acepta el permiso.
+
+La página de opciones dice en qué estado estás.

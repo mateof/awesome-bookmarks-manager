@@ -87,7 +87,7 @@ function ok(data: unknown) {
 
 const server = new McpServer({
   name: "awesomebookmarks",
-  version: "0.6.0",
+  version: "0.7.0",
 });
 
 server.tool(
@@ -227,6 +227,65 @@ server.tool(
   { id: z.string().uuid() },
   async ({ id }) => {
     await apiFetch(`/bookmarks/${id}`, { method: "DELETE" });
+    return ok({ ok: true });
+  },
+);
+
+const selector = z.string().min(1).max(500);
+const automationStep = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("fill"), selector, value: z.string().max(2000) }),
+  z.object({ action: z.literal("select"), selector, value: z.string().max(2000) }),
+  z.object({ action: z.literal("check"), selector, checked: z.boolean().default(true) }),
+  z.object({ action: z.literal("click"), selector }),
+  z.object({ action: z.literal("wait"), selector }),
+  z.object({ action: z.literal("pause"), ms: z.number().int().min(0).max(30000) }),
+]);
+
+server.tool(
+  "list_autofill_variables",
+  "List the user's autofill variables (key, label, description, hasValue). Values are never returned. Reference a variable inside an automation step as {{key}}.",
+  {},
+  async () => ok(await apiFetch("/autofill/variables")),
+);
+
+server.tool(
+  "get_bookmark_automation",
+  "Get the autofill automation attached to a bookmark, or null. `status` is 'pending' until the user approves it in the web app; pending automations never run.",
+  { bookmarkId: z.string().uuid() },
+  async ({ bookmarkId }) => ok(await apiFetch(`/bookmarks/${bookmarkId}/automation`)),
+);
+
+server.tool(
+  "set_bookmark_automation",
+  "Create or replace the automation that fills a form when the bookmark is opened. Steps run in order; fill/select/check/click/wait take a CSS selector and wait for it to appear. Use {{key}} in `value` to insert an autofill variable (see list_autofill_variables). `script` is optional JavaScript that receives `ab.vars`. Whatever is saved here stays 'pending' and does not run until the user reviews and approves it in the web app.",
+  {
+    bookmarkId: z.string().uuid(),
+    steps: z.array(automationStep).max(50).default([]),
+    script: z.string().max(20000).default(""),
+    trigger: z
+      .enum(["open", "always"])
+      .default("open")
+      .describe(
+        "'open' runs when the bookmark is opened from AwesomeBookmarks; 'always' runs on every visit to that address.",
+      ),
+    enabled: z.boolean().default(true),
+    timeoutMs: z.number().int().min(1000).max(60000).default(10000),
+  },
+  async ({ bookmarkId, ...body }) =>
+    ok(
+      await apiFetch(`/bookmarks/${bookmarkId}/automation`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    ),
+);
+
+server.tool(
+  "delete_bookmark_automation",
+  "Remove the automation attached to a bookmark.",
+  { bookmarkId: z.string().uuid() },
+  async ({ bookmarkId }) => {
+    await apiFetch(`/bookmarks/${bookmarkId}/automation`, { method: "DELETE" });
     return ok({ ok: true });
   },
 );

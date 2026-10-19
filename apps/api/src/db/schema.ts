@@ -635,12 +635,39 @@ export const extensionTokens = sqliteTable(
     // API/MCP client decrypt data without an interactive password login.
     // Nullable so pre-existing (legacy) tokens keep working via the cache.
     dekWrap: blob("dek_wrap", { mode: "buffer" }),
+    autofill: integer("autofill", { mode: "boolean" }).notNull().default(false),
     lastUsedAt: text("last_used_at"),
     createdAt: text("created_at").notNull().$defaultFn(utcNow),
   },
   (t) => ({
     userIdx: index("extension_tokens_user_idx").on(t.userId),
     hashIdx: uniqueIndex("extension_tokens_hash_idx").on(t.tokenHash),
+  }),
+);
+
+export const autofillProfiles = sqliteTable("autofill_profiles", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  dataCt: blob("data_ct", { mode: "buffer" }).notNull(),
+  updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
+});
+
+export const bookmarkAutomations = sqliteTable(
+  "bookmark_automations",
+  {
+    bookmarkId: text("bookmark_id")
+      .notNull()
+      .references(() => bookmarks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    dataCt: blob("data_ct", { mode: "buffer" }).notNull(),
+    updatedAt: text("updated_at").notNull().$defaultFn(utcNow),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.bookmarkId, t.userId] }),
+    userIdx: index("bookmark_automations_user_idx").on(t.userId),
   }),
 );
 

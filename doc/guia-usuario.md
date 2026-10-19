@@ -41,6 +41,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 26. [Ficheros adjuntos](#26-ficheros-adjuntos)
 27. [Referencias dentro del texto](#27-referencias-dentro-del-texto)
 28. [Bases de datos en las notas](#28-bases-de-datos-en-las-notas)
+29. [Rellenar formularios al abrir un bookmark](#29-rellenar-formularios-al-abrir-un-bookmark)
 
 ---
 
@@ -1233,6 +1234,102 @@ Lo que conviene saber:
   sesión, así que no puede consultar la tabla viva; se le da el contenido en
   vez de una caja vacía. Las columnas ocultas siguen ocultas y las referencias
   no se enseñan, porque apuntan a cosas tuyas que esa persona no puede abrir.
+
+---
+
+## 29. Rellenar formularios al abrir un bookmark
+
+Un bookmark puede llevar una **automatización**: al abrirlo, la página se carga y
+se rellenan sus campos con tus datos (nombre, apellidos, DNI…). Pensado para
+trámites que repites: sedes electrónicas, citas, formularios de alta.
+
+**1) Define tus datos** en *Ajustes → Autorrelleno*. Cada variable tiene un
+nombre, una clave (`dni`, `telefono`…) que es como la usan las automatizaciones,
+un valor y una descripción opcional. Hay sugerencias de un clic para los datos
+habituales. Los valores se guardan cifrados.
+
+![Variables de autorrelleno](images/60-autofill-variables.png)
+
+**2) Añade los pasos** en la ficha del bookmark, sección *Autorrelleno*. Cada
+paso es una acción sobre un selector CSS:
+
+- **Rellenar** un campo con texto o con una variable (`{{dni}}`). Se puede
+  mezclar: `{{nombre}} {{apellidos}}`.
+- **Elegir opción** de un desplegable, por su valor o por el texto que se ve.
+- **Marcar** o desmarcar una casilla.
+- **Pulsar** un botón o un enlace.
+- **Esperar a** que aparezca un elemento, y **Pausa** de unos milisegundos.
+
+Cada paso espera a que su elemento exista (hasta el tiempo que indiques), así que
+sirve también para formularios que se pintan tarde.
+
+![Editor de pasos](images/61-autofill-editor.png)
+
+**Cuándo se ejecuta.** *Al abrirlo desde AwesomeBookmarks* (lo normal) o
+*Siempre que visite esta dirección*, que se aplica también a las páginas que
+cuelgan de esa ruta aunque llegues desde otro sitio.
+
+![Automatización guardada](images/62-autofill-section.png)
+
+**Dónde funciona.**
+
+- **Escritorio:** con la [extensión](extension.md) instalada. El token que pongas
+  en ella tiene que haberse creado con **«Puede leer los datos de
+  autorrelleno»** marcado (*Ajustes → API*).
+- **Android:** desde la app. Los enlaces que tienen automatización se abren en
+  una pantalla propia de la app en lugar del navegador, porque en el navegador
+  no se puede inyectar nada; el resto de enlaces se abre como siempre.
+
+**Capturar en vez de escribir selectores.** Rellena el formulario a mano, abre
+el popup de la extensión y pulsa **Capturar formulario de esta página**. Guarda
+los campos como pasos y pone tus variables allí donde el valor coincide (si
+escribiste tu DNI, el paso queda como `{{dni}}`). Si la página no era un
+bookmark, lo crea.
+
+![Captura desde el popup](images/64-autofill-capture.png)
+
+### Lo que hace falta aprobar
+
+Una automatización ejecuta acciones en una página con tus datos, así que solo
+corre si la has visto tú:
+
+- Lo que guardas desde la web queda aprobado.
+- Lo que llega por **token** (el MCP de una IA, la API, la captura de la
+  extensión) queda **pendiente de aprobar** y no se ejecuta hasta que lo revisas
+  y pulsas *Aprobar* en la ficha.
+- Si cambias la dirección del bookmark **a otro sitio**, la automatización
+  vuelve a pendiente. Cambiar la ruta dentro del mismo sitio no.
+
+![Automatización pendiente](images/63-autofill-pending.png)
+
+Además, antes de rellenar se comprueba que la pestaña sigue en el **mismo
+sitio** que el bookmark: si la página te redirige a otro dominio, no se escribe
+nada.
+
+**Lo que ve una IA conectada por MCP:** el nombre, la clave y la descripción de
+tus variables, nunca su valor. Puede proponer automatizaciones, que llegan
+pendientes. Un token sin el permiso de autorrelleno tampoco puede pedir los
+valores por HTTP.
+
+**Las automatizaciones son tuyas.** No viajan a carpetas compartidas, enlaces
+públicos ni exportaciones: cada persona tiene las suyas, aunque el bookmark sea
+de un grupo.
+
+### Avanzado: JavaScript
+
+Para lo que los pasos no cubren hay un campo de **script**. Se ejecuta después de
+los pasos y recibe tus variables en `ab.vars`:
+
+```js
+const fecha = new Date().toLocaleDateString("es-ES");
+document.querySelector("#fecha").value = fecha;
+document.querySelector("#nif").value = ab.vars.dni.toUpperCase();
+```
+
+En Chrome necesita activar **Permitir scripts de usuario** en
+`chrome://extensions`, en los detalles de la extensión (Chrome 135 o posterior).
+En Firefox, el botón de la página de opciones pide el permiso. En la app Android
+funciona sin más.
 
 ---
 

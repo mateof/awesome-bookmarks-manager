@@ -29,9 +29,9 @@ export const extensionRoutes: FastifyPluginAsync = async (app) => {
     const ctx = requireAuth(req);
     const body = CreateExtensionTokenBodySchema.parse(req.body);
     // Pass the live DEK so the token can unlock data headlessly later.
-    const token = createToken(ctx.userId, body.label, ctx.dek);
+    const token = createToken(ctx.userId, body.label, ctx.dek, body.autofill);
     reply.code(201);
-    return { token, label: body.label };
+    return { token, label: body.label, autofill: body.autofill };
   });
 
   app.delete("/extension/tokens/:id", async (req, reply) => {

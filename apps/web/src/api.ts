@@ -1,5 +1,9 @@
 import type {
   AdminInsights,
+  AutofillVariable,
+  Automation,
+  AutomationInput,
+  AutomationSummary,
   ApplyTagsBody,
   ApplyTagsResult,
   AdminStorageRow,
@@ -1238,15 +1242,43 @@ export const api = {
       Array<{
         id: string;
         label: string;
+        autofill: boolean;
         lastUsedAt: string | null;
         createdAt: string;
       }>
     >("/extension/tokens"),
-  createApiToken: (label: string) =>
-    request<{ token: string; label: string }>("/extension/tokens", {
-      method: "POST",
-      body: JSON.stringify({ label }),
+  createApiToken: (label: string, autofill = false) =>
+    request<{ token: string; label: string; autofill: boolean }>(
+      "/extension/tokens",
+      {
+        method: "POST",
+        body: JSON.stringify({ label, autofill }),
+      },
+    ),
+
+  listAutofillVariables: () => request<AutofillVariable[]>("/autofill/variables"),
+  saveAutofillVariables: (variables: AutofillVariable[]) =>
+    request<AutofillVariable[]>("/autofill/variables", {
+      method: "PUT",
+      body: JSON.stringify({ variables }),
     }),
+  listAutomations: () => request<AutomationSummary[]>("/automations"),
+  getAutomation: (bookmarkId: string) =>
+    request<{ automation: Automation | null }>(
+      `/bookmarks/${bookmarkId}/automation`,
+    ),
+  saveAutomation: (bookmarkId: string, body: AutomationInput) =>
+    request<Automation>(`/bookmarks/${bookmarkId}/automation`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  approveAutomation: (bookmarkId: string, fingerprint: string) =>
+    request<Automation>(`/bookmarks/${bookmarkId}/automation/approve`, {
+      method: "POST",
+      body: JSON.stringify({ fingerprint }),
+    }),
+  deleteAutomation: (bookmarkId: string) =>
+    request<void>(`/bookmarks/${bookmarkId}/automation`, { method: "DELETE" }),
   revokeApiToken: (id: string) =>
     request<void>(`/extension/tokens/${id}`, { method: "DELETE" }),
 

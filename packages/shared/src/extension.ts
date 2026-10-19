@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const CreateExtensionTokenBodySchema = z.object({
   label: z.string().min(1).max(128).default("default"),
+  autofill: z.boolean().default(false),
 });
 export type CreateExtensionTokenBody = z.infer<
   typeof CreateExtensionTokenBodySchema
@@ -10,6 +11,7 @@ export type CreateExtensionTokenBody = z.infer<
 export const CreateExtensionTokenResponseSchema = z.object({
   token: z.string(),
   label: z.string(),
+  autofill: z.boolean(),
 });
 export type CreateExtensionTokenResponse = z.infer<
   typeof CreateExtensionTokenResponseSchema

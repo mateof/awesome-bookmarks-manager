@@ -1,4 +1,5 @@
 import {
+  AutomationInputSchema,
   CreateBookmarkBodySchema,
   CreateFolderBodySchema,
   CreateSmartFolderBodySchema,
@@ -17,6 +18,12 @@ import {
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireApiAuth } from "../auth/api-auth.js";
+import {
+  deleteAutomation,
+  getAutomation,
+  listVariableInfo,
+  setAutomation,
+} from "../autofill/service.js";
 import { APP_VERSION } from "../util/app-version.js";
 import { getMe } from "../auth/service.js";
 import { findDuplicates, mergeBookmarks } from "../bookmarks/duplicates.js";
@@ -193,6 +200,30 @@ export const apiV1Routes: FastifyPluginAsync = async (app) => {
     deleteBookmark(ctx, id);
     reply.code(204);
   });
+
+  app.get("/bookmarks/:id/automation", async (req) => {
+    const ctx = requireApiAuth(req);
+    const { id } = IdParam.parse(req.params);
+    return { automation: getAutomation(ctx, id) };
+  });
+
+  app.put("/bookmarks/:id/automation", async (req) => {
+    const ctx = requireApiAuth(req);
+    const { id } = IdParam.parse(req.params);
+    const body = AutomationInputSchema.parse(req.body);
+    return setAutomation(ctx, id, body, { approve: false });
+  });
+
+  app.delete("/bookmarks/:id/automation", async (req, reply) => {
+    const ctx = requireApiAuth(req);
+    const { id } = IdParam.parse(req.params);
+    deleteAutomation(ctx, id);
+    reply.code(204);
+  });
+
+  app.get("/autofill/variables", async (req) =>
+    listVariableInfo(requireApiAuth(req)),
+  );
 
   // --- tags ---
   app.get("/tags", async (req) => {

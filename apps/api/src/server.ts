@@ -38,6 +38,7 @@ import { importRoutes } from "./imports/routes.js";
 import { jobRoutes } from "./jobs/routes.js";
 import { aliasRoutes } from "./aliases/routes.js";
 import { mcpRoutes } from "./mcp/routes.js";
+import { autofillRoutes } from "./autofill/routes.js";
 import { reawakenForUser } from "./jobs/queue.js";
 import { startWorker, stopWorker } from "./jobs/worker.js";
 import { refreshBackupSchedules, stopScheduler } from "./scheduler.js";
@@ -199,6 +200,7 @@ export async function buildServer() {
       await api.register(groupRoutes);
       await api.register(notificationRoutes);
       await api.register(extensionRoutes);
+      await api.register(autofillRoutes);
       await api.register(adminRoutes);
       await api.register(securityLogRoutes);
       await api.register(jobRoutes);

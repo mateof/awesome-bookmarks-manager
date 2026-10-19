@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { resolveToken } from "../extension/service.js";
-import { KeyUnavailable, Unauthorized } from "../util/errors.js";
+import { Forbidden, KeyUnavailable, Unauthorized } from "../util/errors.js";
 import { keyCache } from "./key-cache.js";
 import type { AuthedContext } from "./session.js";
 import { unwrapDekForToken } from "./token-crypto.js";
@@ -11,6 +11,13 @@ import { unwrapDekForToken } from "./token-crypto.js";
  * the REST API and the MCP transport.
  */
 export function authFromToken(token: string): AuthedContext {
+  return authFromTokenWithScopes(token).ctx;
+}
+
+function authFromTokenWithScopes(token: string): {
+  ctx: AuthedContext;
+  autofill: boolean;
+} {
   const resolved = resolveToken(token);
   if (!resolved) throw Unauthorized("Invalid API token");
 
@@ -28,7 +35,7 @@ export function authFromToken(token: string): AuthedContext {
     );
     keyCache.put(resolved.userId, dek);
   }
-  return { userId: resolved.userId, dek };
+  return { ctx: { userId: resolved.userId, dek }, autofill: resolved.autofill };
 }
 
 /**
@@ -54,5 +61,24 @@ export function requireApiAuth(req: FastifyRequest): AuthedContext {
     return authFromToken(authz.slice("Bearer ".length).trim());
   }
 
+  throw Unauthorized();
+}
+
+export function requireAutofillAuth(req: FastifyRequest): AuthedContext {
+  const authz = req.headers.authorization;
+  if (authz && authz.startsWith("Bearer ")) {
+    const { ctx, autofill } = authFromTokenWithScopes(
+      authz.slice("Bearer ".length).trim(),
+    );
+    if (!autofill) {
+      throw Forbidden("This token is not allowed to read autofill values");
+    }
+    return ctx;
+  }
+  const sessionUserId = req.session?.get("userId");
+  if (sessionUserId) {
+    const dek = keyCache.get(sessionUserId);
+    if (dek) return { userId: sessionUserId, dek };
+  }
   throw Unauthorized();
 }

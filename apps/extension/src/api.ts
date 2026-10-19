@@ -1,3 +1,4 @@
+import type { AutofillRuntime, AutomationInput } from "@awesome-bookmarks/shared";
 import type { ExtConfig } from "./storage.js";
 
 export interface QuickAddInput {
@@ -40,9 +41,56 @@ async function req(cfg: ExtConfig, path: string, init: RequestInit) {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`HTTP ${res.status}: ${body}`);
+    throw new HttpError(res.status, `HTTP ${res.status}: ${body}`);
   }
   return res.json();
+}
+
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export function appOrigin(cfg: ExtConfig): string | null {
+  try {
+    return new URL(base(cfg)).origin;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchAutofill(cfg: ExtConfig): Promise<AutofillRuntime> {
+  return req(cfg, "/ext/autofill", { method: "GET" });
+}
+
+export interface MatchedBookmark {
+  id: string;
+  title: string;
+  url: string;
+}
+
+export async function matchBookmarks(
+  cfg: ExtConfig,
+  url: string,
+): Promise<MatchedBookmark[]> {
+  return req(cfg, `/ext/bookmarks/match?url=${encodeURIComponent(url)}`, {
+    method: "GET",
+  });
+}
+
+export async function saveAutomation(
+  cfg: ExtConfig,
+  bookmarkId: string,
+  body: AutomationInput,
+) {
+  return req(cfg, `/v1/bookmarks/${bookmarkId}/automation`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function quickAdd(cfg: ExtConfig, input: QuickAddInput) {

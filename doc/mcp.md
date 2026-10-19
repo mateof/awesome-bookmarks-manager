@@ -160,6 +160,25 @@ a `bin` named `awesomebookmarks-mcp`.
 | `delete_panel_template` | delete one of your templates |
 | `list_panel_scenes` | list the animated background scenes usable as `config.scene` |
 
+### Autofill
+
+Automations fill a page's form when the bookmark is opened (browser extension
+or Android app). An AI can describe and propose them, but:
+
+- it sees each variable's key, label and description, **never its value**;
+- whatever it writes is stored as `pending` and does not run until the user
+  approves it in the web app.
+
+| tool | what it does |
+|------|--------------|
+| `list_autofill_variables` | the user's variables: `key`, `label`, `description`, `hasValue` |
+| `get_bookmark_automation` | the automation on a bookmark, with its `status` and `unknownVariables` |
+| `set_bookmark_automation` | create or replace it (`steps`, optional `script`, `trigger`, `enabled`, `timeoutMs`); always lands as `pending` |
+| `delete_bookmark_automation` | remove it |
+
+Steps are `fill`/`select` (`selector`, `value` with `{{key}}` templates),
+`check` (`selector`, `checked`), `click`, `wait` (`selector`) and `pause` (`ms`).
+
 ### Inline databases (tables)
 
 The typed tables embedded in folder and bookmark descriptions: inventories,

@@ -26,6 +26,7 @@ import { LetterIcon } from "./LetterIcon.js";
 import { useActiveFolderId } from "../hooks.js";
 import { runAppCommand, type AppCommand } from "../lib/commands.js";
 import { useBackdropDismiss } from "../lib/overlay.js";
+import { openExternal } from "../lib/extensionBridge.js";
 
 type Result = { near: boolean; iconUrl: string | null; snippet?: string } & (
   | { kind: "folder"; id: string; title: string; sub: string }
@@ -443,7 +444,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
     else if (r.kind === "folder") nav(`/folder/${r.id}`);
     else if (r.kind === "row")
       nav(`/databases/${r.databaseId}?fila=${r.rowId}`);
-    else window.open(r.url, "_blank", "noopener,noreferrer");
+    else openExternal(r.url);
     onClose();
   };
 

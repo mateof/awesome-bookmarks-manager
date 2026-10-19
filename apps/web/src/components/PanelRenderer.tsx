@@ -62,6 +62,7 @@ import {
   OrbitLayout,
   TreeLayout,
 } from "./PanelTreeLayouts.js";
+import { openExternal } from "../lib/extensionBridge.js";
 
 /**
  * Renders a panel (a folder subtree) in the shape defined by the template.
@@ -402,7 +403,7 @@ function PanelSearch({
 
   const activate = (hit: SearchHit) => {
     if (hit.kind === "folder") onOpenFolder(hit.path);
-    else window.open(hit.b.url, "_blank", "noopener,noreferrer");
+    else openExternal(hit.b.url);
     onClose();
   };
 

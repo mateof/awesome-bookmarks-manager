@@ -17,11 +17,12 @@ import {
 } from "../folders/service.js";
 import { search } from "../search/service.js";
 import { createTag, listTags } from "../tags/service.js";
+import { registerAutofillTools } from "./autofill-tools.js";
 import { registerDatabaseTools } from "./database-tools.js";
 import { registerLibraryTools } from "./library-tools.js";
 import { registerPanelTools } from "./panels-tools.js";
 
-const MCP_VERSION = "0.8.0";
+const MCP_VERSION = "0.9.0";
 
 function ok(data: unknown) {
   return {
@@ -280,6 +281,7 @@ export function buildMcpServer(ctx: AuthedContext): McpServer {
   registerPanelTools(server, ctx);
   registerLibraryTools(server, ctx);
   registerDatabaseTools(server, ctx);
+  registerAutofillTools(server, ctx);
 
   return server;
 }

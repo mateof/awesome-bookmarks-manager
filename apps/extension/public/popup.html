@@ -20,6 +20,8 @@
       .ok { color: #059669; font-size: 12px; }
       .err { color: #dc2626; font-size: 12px; }
       a { color: #2563eb; font-size: 12px; }
+      .autofill { border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 6px; }
+      button#capture-btn { background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer; }
       button#save-btn { background: #0f172a; color: #fff; border: 0; border-radius: 4px; cursor: pointer; margin-top: 4px; }
 
       /* Tags */
@@ -75,6 +77,13 @@
 
       <button id="save-btn">Guardar</button>
       <div id="status"></div>
+
+      <div class="autofill">
+        <label class="lbl">Autorrelleno</label>
+        <button id="capture-btn">Capturar formulario de esta página</button>
+        <div class="hint">Rellena el formulario a mano y pulsa: se guardan los campos como pasos, con tus variables donde coincidan. Queda pendiente hasta que lo apruebes en AwesomeBookmarks.</div>
+        <div id="capture-status"></div>
+      </div>
       <a href="#" id="options-link">Configurar →</a>
     </div>
     <script src="popup.js"></script>

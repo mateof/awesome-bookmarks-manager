@@ -31,6 +31,7 @@ import { EntityBanner } from "../components/EntityBanner.js";
 import { ExportArchiveDialog } from "../components/ExportArchiveDialog.js";
 import { KebabMenu } from "../components/KebabMenu.js";
 import { Attachments } from "../components/Attachments.js";
+import { AutomationSection } from "../components/AutomationSection.js";
 import { DescriptionSection } from "../components/DescriptionSection.js";
 import { EntitySection } from "../components/EntitySection.js";
 import { DescriptionEditDialog } from "../components/DescriptionEditDialog.js";
@@ -266,6 +267,8 @@ export function BookmarkDetailPage() {
       />
 
       <Attachments entity="bookmark" id={b.id} canEdit={b.canWrite} />
+
+      <AutomationSection bookmarkId={b.id} url={b.url} />
 
       {editDescription && (
         <DescriptionEditDialog

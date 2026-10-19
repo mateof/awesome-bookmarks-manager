@@ -38,6 +38,12 @@ export const grace: TestUser = {
   password: "CobolNanoseconds1959",
 };
 
+export const autofillUser: TestUser = {
+  email: "autofill.e2e@example.com",
+  nickname: "autofill",
+  password: "FormFillingPioneer1",
+};
+
 export type BookmarkSeed = {
   url: string;
   title: string;

@@ -30,6 +30,7 @@ import type {
   SharedPayload,
 } from "./SharedNodeEditor.js";
 import { ViewModeToggle } from "./ViewModeToggle.js";
+import { openExternal } from "../lib/extensionBridge.js";
 
 /**
  * A shared folder drawn with the *same* grid as your own folders.
@@ -141,7 +142,7 @@ export function SharedGrid({
           {
             label: String(t("bookmark.openUrl")),
             icon: <ExternalLink className="h-4 w-4" />,
-            onClick: () => window.open(url, "_blank", "noopener,noreferrer"),
+            onClick: () => openExternal(url),
           },
         ]
       : [];

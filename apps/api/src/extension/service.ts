@@ -10,6 +10,7 @@ export interface ResolvedToken {
   tokenId: string;
   rawSecret: string;
   dekWrap: Buffer | null;
+  autofill: boolean;
 }
 
 /**
@@ -22,6 +23,7 @@ export function createToken(
   userId: string,
   label: string,
   dek?: Buffer,
+  autofill = false,
 ): string {
   const id = uuidv4();
   const raw = randomBytes(32).toString("base64url");
@@ -29,7 +31,7 @@ export function createToken(
   const dekWrap = dek ? wrapDekForToken(userId, id, raw, dek) : null;
   getDb()
     .insert(extensionTokens)
-    .values({ id, userId, label, tokenHash: hash, dekWrap })
+    .values({ id, userId, label, tokenHash: hash, dekWrap, autofill })
     .run();
   // Token format: <id>.<raw> so we can do a fast lookup by id (avoid scanning).
   return `${id}.${raw}`;
@@ -64,6 +66,7 @@ export function resolveToken(token: string): ResolvedToken | null {
     tokenId: id,
     rawSecret: raw,
     dekWrap: row.dekWrap ? Buffer.from(row.dekWrap) : null,
+    autofill: row.autofill,
   };
 }
 
@@ -77,6 +80,7 @@ export function listTokens(userId: string) {
     .select({
       id: extensionTokens.id,
       label: extensionTokens.label,
+      autofill: extensionTokens.autofill,
       lastUsedAt: extensionTokens.lastUsedAt,
       createdAt: extensionTokens.createdAt,
     })

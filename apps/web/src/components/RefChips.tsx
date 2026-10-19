@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { openExternal } from "../lib/extensionBridge.js";
 
 /**
  * Makes the reference chips inside rendered rich text do something.
@@ -169,7 +170,7 @@ export function useRefChips(
       if (r.type === "bookmark") {
         // The arrow opens the site; the label opens the bookmark's own page.
         // Two destinations, two targets, no menu in between.
-        if (wantsUrl && r.url) window.open(r.url, "_blank", "noopener");
+        if (wantsUrl && r.url) openExternal(r.url, "noopener");
         else navigate(`/bookmark/${r.id}`);
       } else if (r.type === "folder") {
         navigate(`/folder/${r.id}`);
