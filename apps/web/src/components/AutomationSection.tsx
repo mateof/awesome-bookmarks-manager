@@ -1,6 +1,7 @@
 import type {
   AutofillVariable,
   Automation,
+  AutomationContent,
   AutomationAction,
   AutomationInput,
   AutomationStep,
@@ -190,7 +191,11 @@ export function AutomationSection({ bookmarkId, url }: { bookmarkId: string; url
                 </button>
               </div>
             )}
-            <AutomationSummaryView automation={automation} />
+            {automation.status === "pending" && automation.previousApproved ? (
+              <AutomationDiff before={automation.previousApproved} after={automation} />
+            ) : (
+              <AutomationSummaryView automation={automation} />
+            )}
             {automation.unknownVariables.length > 0 && (
               <p className="text-xs text-amber-700 dark:text-amber-300">
                 {t("autofill.section.unknownVariables", {
@@ -231,7 +236,7 @@ export function AutomationSection({ bookmarkId, url }: { bookmarkId: string; url
   );
 }
 
-function StepText({ step }: { step: AutomationStep }) {
+export function StepText({ step }: { step: AutomationStep }) {
   const { t } = useTranslation();
   const sel = "selector" in step ? <code className="text-xs">{step.selector}</code> : null;
   switch (step.action) {
@@ -258,6 +263,127 @@ function StepText({ step }: { step: AutomationStep }) {
     case "pause":
       return <>{t("autofill.actions.pauseMs", { ms: step.ms })}</>;
   }
+}
+
+type DiffLine = { kind: "same" | "added" | "removed"; step: AutomationStep };
+
+function diffSteps(before: AutomationStep[], after: AutomationStep[]): DiffLine[] {
+  const a = before.map((x) => JSON.stringify(x));
+  const b = after.map((x) => JSON.stringify(x));
+  const lcs = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) {
+      lcs[i]![j] = a[i] === b[j] ? lcs[i + 1]![j + 1]! + 1 : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+    }
+  }
+  const out: DiffLine[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (i < a.length && j < b.length && a[i] === b[j]) {
+      out.push({ kind: "same", step: after[j]! });
+      i++;
+      j++;
+    } else if (j < b.length && (i === a.length || lcs[i]![j + 1]! >= lcs[i + 1]![j]!)) {
+      out.push({ kind: "added", step: after[j]! });
+      j++;
+    } else {
+      out.push({ kind: "removed", step: before[i]! });
+      i++;
+    }
+  }
+  return out;
+}
+
+function AutomationDiff({ before, after }: { before: AutomationContent; after: Automation }) {
+  const { t } = useTranslation();
+  const lines = diffSteps(before.steps, after.steps);
+  const changes: string[] = [];
+  if (before.enabled !== after.enabled) {
+    changes.push(after.enabled ? t("autofill.diff.enabled") : t("autofill.diff.disabled"));
+  }
+  if (before.trigger !== after.trigger) {
+    changes.push(t("autofill.diff.trigger", { trigger: t(`autofill.triggers.${after.trigger}`) }));
+  }
+  if (before.timeoutMs !== after.timeoutMs) {
+    changes.push(
+      t("autofill.diff.timeout", {
+        before: Math.round(before.timeoutMs / 1000),
+        after: Math.round(after.timeoutMs / 1000),
+      }),
+    );
+  }
+  const scriptChanged = before.script !== after.script;
+  return (
+    <div data-testid="automation-diff" className="space-y-2 text-sm">
+      <p className="text-xs font-medium text-slate-500">{t("autofill.diff.title")}</p>
+      {changes.map((c) => (
+        <p key={c} className="text-xs text-amber-700 dark:text-amber-300">
+          {c}
+        </p>
+      ))}
+      <ol className="space-y-0.5">
+        {lines.map((line, k) => (
+          <li
+            key={k}
+            data-diff={line.kind}
+            className={
+              line.kind === "added"
+                ? "rounded bg-emerald-50 px-1 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                : line.kind === "removed"
+                  ? "rounded bg-red-50 px-1 text-red-700 line-through dark:bg-red-950/40 dark:text-red-300"
+                  : "px-1 text-slate-600 dark:text-slate-300"
+            }
+          >
+            <span className="mr-1 inline-block w-3 font-mono">
+              {line.kind === "added" ? "+" : line.kind === "removed" ? "−" : ""}
+            </span>
+            <StepText step={line.step} />
+          </li>
+        ))}
+      </ol>
+      {scriptChanged && (
+        <details open>
+          <summary className="cursor-pointer text-xs text-amber-700 dark:text-amber-300">
+            {t("autofill.diff.script")}
+          </summary>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            <pre className="max-h-48 overflow-auto rounded bg-red-50 p-2 text-xs dark:bg-red-950/40">
+              {before.script || "∅"}
+            </pre>
+            <pre className="max-h-48 overflow-auto rounded bg-emerald-50 p-2 text-xs dark:bg-emerald-950/40">
+              {after.script || "∅"}
+            </pre>
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+export function AutomationStepsList({ automation }: { automation: AutomationContent }) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-1 text-xs">
+      <div className="text-slate-500">
+        {automation.enabled ? t("autofill.section.enabled") : t("autofill.section.disabled")}
+        {" · "}
+        {t(`autofill.triggers.${automation.trigger}`)}
+      </div>
+      <ol className="list-decimal space-y-0.5 pl-5">
+        {automation.steps.map((s, i) => (
+          <li key={i}>
+            <StepText step={s} />
+          </li>
+        ))}
+      </ol>
+      {automation.script.trim() && (
+        <pre className="max-h-32 overflow-auto rounded bg-slate-50 p-2 dark:bg-slate-950/40">
+          {automation.script}
+        </pre>
+      )}
+    </div>
+  );
 }
 
 function AutomationSummaryView({ automation }: { automation: Automation }) {

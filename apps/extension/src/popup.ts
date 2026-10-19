@@ -3,6 +3,7 @@ import {
   createFolder,
   createTag,
   fetchAutofill,
+  getAutomation,
   listFolders,
   listTags,
   matchBookmarks,
@@ -11,7 +12,12 @@ import {
   type FolderLite,
   type TagLite,
 } from "./api.js";
-import { type CapturedField, captureFormFields, stepsFromCapture } from "./capture.js";
+import {
+  type CapturedField,
+  captureFormFields,
+  mergeCapturedSteps,
+  stepsFromCapture,
+} from "./capture.js";
 import {
   type ExtConfig,
   getLastFolderId,
@@ -481,16 +487,28 @@ async function capture() {
       })) as { id: string };
       bookmarkId = created.id;
     }
+    const existing = await getAutomation(cfg, bookmarkId);
+    const merged = mergeCapturedSteps(existing?.steps ?? [], steps);
+    if (existing && merged.added === 0) {
+      out.className = "ok";
+      out.textContent = "Nada nuevo: esos campos ya estaban en la automatización.";
+      return;
+    }
     await saveAutomation(cfg, bookmarkId, {
-      enabled: true,
-      trigger: "open",
-      timeoutMs: 10000,
-      steps,
-      script: "",
+      enabled: existing?.enabled ?? true,
+      trigger: existing?.trigger ?? "open",
+      timeoutMs: existing?.timeoutMs ?? 10000,
+      steps: merged.steps,
+      script: existing?.script ?? "",
     });
     void chrome.runtime.sendMessage({ type: "autofill-changed" });
     out.className = "ok";
-    out.textContent = `${steps.length} pasos guardados, pendientes de aprobar. `;
+    const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+    out.textContent = existing
+      ? `${plural(merged.added, "paso añadido", "pasos añadidos")} a la automatización existente${
+          merged.kept ? ` (${plural(merged.kept, "ya estaba", "ya estaban")})` : ""
+        }, pendiente de aprobar. `
+      : `${steps.length} pasos guardados, pendientes de aprobar. `;
     const origin = appOrigin(cfg);
     if (origin) {
       const link = document.createElement("a");

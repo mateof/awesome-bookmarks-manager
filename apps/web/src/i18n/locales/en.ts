@@ -619,6 +619,14 @@ const en = {
     createNew: 'Create new: "{{name}}"',
   },
   folder: {
+    tagFilter: {
+      button: "Filter by tags",
+      placeholder: "Type to filter by tags in this folder and its subfolders…",
+      noMore: "No more tags to combine",
+      clear: "Clear filter",
+      remove: "Remove {{name}}",
+      summary: "Carrying all these tags, in this folder and its subfolders: folders {{folders}} · bookmarks {{bookmarks}}",
+    },
     rootTitle: "Home",
     foldersSection: "Folders",
     bookmarksSection: "Bookmarks",
@@ -1823,6 +1831,20 @@ const en = {
       wait: "Wait for",
       pause: "Pause",
       pauseMs: "Pause {{ms}} ms",
+    },
+    diff: {
+      title: "Changes compared with what you had approved",
+      enabled: "Becomes enabled",
+      disabled: "Becomes disabled",
+      trigger: "Now runs: {{trigger}}",
+      timeout: "Wait goes from {{before}} s to {{after}} s",
+      script: "The JavaScript script changes (before on the left, now on the right)",
+      none: "No automation",
+    },
+    history: {
+      none: "no autofill",
+      steps_one: "autofill: {{count}} step",
+      steps_other: "autofill: {{count}} steps",
     },
     triggers: {
       open: "When opened from AwesomeBookmarks",

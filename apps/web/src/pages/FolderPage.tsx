@@ -29,7 +29,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { dlg } from "../components/dialogs.js";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, isConflict } from "../api.js";
 import { copyRichLink } from "../lib/clipboard.js";
 import { buildOutline, copyOutline } from "../lib/outline.js";
@@ -91,6 +91,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { openExternal } from "../lib/extensionBridge.js";
+import { FolderTagFilter, type TagCandidate } from "../components/FolderTagFilter.js";
 
 
 
@@ -128,6 +129,79 @@ export function FolderPage() {
     folders.data?.filter((f) => f.parentId === folderId) ?? [];
   const items = (allBookmarks.data ?? []).filter(
     (b) => b.folderId === folderId,
+  );
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterTagIds = useMemo(
+    () => (searchParams.get("tags") ?? "").split(",").filter(Boolean),
+    [searchParams],
+  );
+  const [tagFilterOpen, setTagFilterOpen] = useState(false);
+  const setFilterTagIds = (ids: string[]) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (ids.length > 0) next.set("tags", ids.join(","));
+        else next.delete("tags");
+        return next;
+      },
+      { replace: true },
+    );
+  const subtree = useMemo(() => {
+    const all = folders.data ?? [];
+    const ids = new Set<string>();
+    if (folderId === null) {
+      for (const f of all) ids.add(f.id);
+    } else {
+      const children = new Map<string | null, string[]>();
+      for (const f of all) {
+        const list = children.get(f.parentId) ?? [];
+        list.push(f.id);
+        children.set(f.parentId, list);
+      }
+      const queue = [...(children.get(folderId) ?? [])];
+      while (queue.length > 0) {
+        const id = queue.shift()!;
+        if (ids.has(id)) continue;
+        ids.add(id);
+        queue.push(...(children.get(id) ?? []));
+      }
+    }
+    return {
+      folders: all.filter((f) => ids.has(f.id)),
+      bookmarks: (allBookmarks.data ?? []).filter(
+        (b) => b.folderId === folderId || (b.folderId !== null && ids.has(b.folderId)),
+      ),
+    };
+  }, [folders.data, allBookmarks.data, folderId]);
+  const filtering = filterTagIds.length > 0;
+  const carriesAll = (tagIds: string[] | undefined) =>
+    filterTagIds.every((id) => tagIds?.includes(id));
+  const shownSubfolders = filtering
+    ? subtree.folders.filter((f) => carriesAll(f.tagIds))
+    : subfolders;
+  const shownItems = filtering
+    ? subtree.bookmarks.filter((b) => carriesAll(b.tagIds))
+    : items;
+  const tagCandidates = useMemo<TagCandidate[]>(() => {
+    const counts = new Map<string, number>();
+    const pool = [
+      ...(filtering ? shownSubfolders : subtree.folders),
+      ...(filtering ? shownItems : subtree.bookmarks),
+    ];
+    for (const entity of pool) {
+      for (const id of entity.tagIds ?? []) {
+        if (!filterTagIds.includes(id)) counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    return allTags
+      .filter((tag) => counts.has(tag.id))
+      .map((tag) => ({ tag, count: counts.get(tag.id)! }));
+  }, [allTags, filtering, filterTagIds, shownSubfolders, shownItems, subtree]);
+  const subtreeHasTags = useMemo(
+    () =>
+      [...subtree.folders, ...subtree.bookmarks].some((e) => (e.tagIds?.length ?? 0) > 0),
+    [subtree],
   );
 
   // A linked-share portal has no real content; its home is the live view.
@@ -233,8 +307,8 @@ export function FolderPage() {
    * never chose and cannot check.
    */
   const visibleKeys: SelectionKey[] = [
-    ...subfolders.map((f) => `folder:${f.id}` as SelectionKey),
-    ...items.map((b) => `bookmark:${b.id}` as SelectionKey),
+    ...shownSubfolders.map((f) => `folder:${f.id}` as SelectionKey),
+    ...shownItems.map((b) => `bookmark:${b.id}` as SelectionKey),
   ];
   const allSelected =
     visibleKeys.length > 0 && visibleKeys.every((k) => selection.has(k));
@@ -650,6 +724,27 @@ export function FolderPage() {
 
   const headerControls = (
     <>
+      {subtreeHasTags && (
+        <button
+          type="button"
+          onClick={() => setTagFilterOpen((v) => !v)}
+          aria-pressed={tagFilterOpen || filtering}
+          title={t("folder.tagFilter.button")}
+          aria-label={t("folder.tagFilter.button")}
+          className={`relative rounded border p-1.5 ${
+            tagFilterOpen || filtering
+              ? "border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900"
+              : "border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:hover:bg-slate-800"
+          }`}
+        >
+          <TagIcon className="h-4 w-4" />
+          {filtering && (
+            <span className="absolute -right-1.5 -top-1.5 rounded-full bg-emerald-600 px-1 text-[10px] font-semibold leading-4 text-white">
+              {filterTagIds.length}
+            </span>
+          )}
+        </button>
+      )}
       <ViewModeToggle />
       <KebabMenu
         items={[
@@ -799,6 +894,18 @@ export function FolderPage() {
             {headerControls}
           </div>
         </div>
+
+        {(tagFilterOpen || filtering) && (
+          <FolderTagFilter
+            selected={filterTagIds
+              .map((id) => allTags.find((tag) => tag.id === id))
+              .filter((tag): tag is NonNullable<typeof tag> => !!tag)}
+            candidates={tagCandidates}
+            onChange={setFilterTagIds}
+            resultFolders={shownSubfolders.length}
+            resultBookmarks={shownItems.length}
+          />
+        )}
 
         {/* Inside the same strip rather than sticking on its own: two bars
             both pinned to the top of the same scroller land on top of each
@@ -992,10 +1099,13 @@ export function FolderPage() {
       )}
 
 
+      <EntitySourceProvider
+        source={filtering ? { ...PERSONAL_SOURCE, canDrag: false } : PERSONAL_SOURCE}
+      >
       <Body
         mode={mode}
-        subfolders={subfolders}
-        items={items}
+        subfolders={shownSubfolders}
+        items={shownItems}
         allTags={allTags}
         selection={selection}
         toggle={toggle}
@@ -1003,7 +1113,7 @@ export function FolderPage() {
         folderKebab={folderKebab}
         bookmarkKebab={bookmarkKebab}
         onNavFolder={(id) => {
-          const sf = subfolders.find((f) => f.id === id);
+          const sf = shownSubfolders.find((f) => f.id === id);
           if (sf?.linkedShareId) {
             nav(`/linked/${id}`);
             return;
@@ -1012,6 +1122,7 @@ export function FolderPage() {
           nav(`/folder/${sf?.aliasOf ?? id}`);
         }}
       />
+      </EntitySourceProvider>
 
       {showAddBookmark && (
         <BookmarkDialog

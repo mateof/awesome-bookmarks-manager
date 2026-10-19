@@ -9,6 +9,7 @@ import {
 } from "../api.js";
 import { fmtDateTime } from "../lib/date.js";
 import { Modal } from "./Modal.js";
+import { AutomationStepsList } from "./AutomationSection.js";
 import { RichTextView } from "./RichTextView.js";
 
 
@@ -36,6 +37,18 @@ function SnapshotView({ versionId }: { versionId: string }) {
       {s.description && (
         <div className="rounded bg-slate-50 p-2 text-xs dark:bg-slate-800">
           <RichTextView html={s.description} />
+        </div>
+      )}
+      {isBookmark && "automation" in b && (
+        <div className="rounded border border-slate-200 p-2 dark:border-slate-700">
+          <div className="mb-1 text-[11px] uppercase text-slate-400">
+            {t("autofill.section.title")}
+          </div>
+          {b.automation ? (
+            <AutomationStepsList automation={b.automation} />
+          ) : (
+            <div className="text-xs text-slate-500">{t("autofill.diff.none")}</div>
+          )}
         </div>
       )}
       {s.bgColor && (
@@ -173,6 +186,14 @@ export function VersionHistory({
                     <span className="ml-2 text-xs text-slate-400">
                       {fmtDateTime(v.createdAt)}
                     </span>
+                    {v.automationSteps !== undefined && (
+                      <span className="ml-2 text-xs text-slate-500">
+                        ·{" "}
+                        {v.automationSteps === null
+                          ? t("autofill.history.none")
+                          : t("autofill.history.steps", { count: v.automationSteps })}
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"

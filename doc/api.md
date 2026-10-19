@@ -255,7 +255,10 @@ user's variables, never their values.
 
 `{ automation: Automation | null }`. `Automation` carries `enabled`,
 `trigger` (`open` | `always`), `timeoutMs`, `steps`, `script`, `status`
-(`approved` | `pending`), `fingerprint`, `unknownVariables` and `updatedAt`.
+(`approved` | `pending`), `fingerprint`, `unknownVariables`,
+`previousApproved` and `updatedAt`. `previousApproved` is the content that was
+approved before a pending change (or `null`), so a client can show what the
+change replaces.
 
 ### `PUT /bookmarks/:id/automation`
 

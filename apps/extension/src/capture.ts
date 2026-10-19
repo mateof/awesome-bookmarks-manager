@@ -100,3 +100,20 @@ export function stepsFromCapture(
     return { action: "fill", selector: f.selector, value: template(f.value) };
   });
 }
+
+export function mergeCapturedSteps(
+  existing: AutomationStep[],
+  captured: AutomationStep[],
+): { steps: AutomationStep[]; added: number; kept: number } {
+  const target = (s: AutomationStep) => ("selector" in s ? `${s.action}:${s.selector}` : null);
+  const present = new Set(existing.map(target).filter((t): t is string => t !== null));
+  const fresh = captured.filter((s) => {
+    const key = target(s);
+    return key === null || !present.has(key);
+  });
+  return {
+    steps: [...existing, ...fresh],
+    added: fresh.length,
+    kept: captured.length - fresh.length,
+  };
+}

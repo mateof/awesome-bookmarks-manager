@@ -349,6 +349,8 @@ export function BookmarkDetailPage() {
           onChanged={() => {
             qc.invalidateQueries({ queryKey: ["bookmark", b.id] });
             qc.invalidateQueries({ queryKey: ["bookmarks"] });
+            qc.invalidateQueries({ queryKey: ["automation", b.id] });
+            qc.invalidateQueries({ queryKey: ["automation-summaries"] });
           }}
         />
       )}

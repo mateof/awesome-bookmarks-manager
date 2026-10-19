@@ -2,6 +2,7 @@ import type {
   AdminInsights,
   AutofillVariable,
   Automation,
+  AutomationContent,
   AutomationInput,
   AutomationSummary,
   ApplyTagsBody,
@@ -133,6 +134,7 @@ export interface VersionMeta {
   rev: number;
   actorId: string;
   createdAt: string;
+  automationSteps?: number | null;
 }
 export interface FolderSnapshot {
   name: string;
@@ -147,6 +149,7 @@ export interface BookmarkSnapshot {
   bgColor: string | null;
   folderId: string | null;
   tagIds: string[];
+  automation?: AutomationContent | null;
 }
 export interface VersionDetail extends VersionMeta {
   snapshot: FolderSnapshot | BookmarkSnapshot;

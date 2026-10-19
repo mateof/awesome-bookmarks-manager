@@ -3,10 +3,11 @@ import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
 import {
+  bookmarkSnapshot,
   createBookmark,
   getBookmark,
-  updateBookmark,
 } from "../bookmarks/service.js";
+import { restoreBookmarkVersion } from "./restore.js";
 import { getDb } from "../db/client.js";
 import { bookmarks } from "../db/schema.js";
 import {
@@ -63,14 +64,7 @@ export const versionRoutes: FastifyPluginAsync = async (app) => {
     const list = listVersions(ctx, "bookmark", id);
     if (list.length > 0) return list;
     const b = getBookmark(ctx, id);
-    recordVersion(ctx, "bookmark", id, b.rev, {
-      title: b.title,
-      url: b.url,
-      description: b.description,
-      bgColor: b.bgColor ?? null,
-      folderId: b.folderId,
-      tagIds: b.tagIds,
-    });
+    recordVersion(ctx, "bookmark", id, b.rev, bookmarkSnapshot(ctx, b));
     return listVersions(ctx, "bookmark", id);
   });
 
@@ -104,15 +98,7 @@ export const versionRoutes: FastifyPluginAsync = async (app) => {
     if (v.entityType !== "bookmark" || v.entityId !== id) {
       throw BadRequest("Version does not belong to this bookmark");
     }
-    const s = v.snapshot as BookmarkSnapshot;
-    return updateBookmark(ctx, id, {
-      title: s.title,
-      url: s.url,
-      description: s.description,
-      bgColor: s.bgColor,
-      folderId: s.folderId,
-      tagIds: s.tagIds,
-    });
+    return restoreBookmarkVersion(ctx, id, v.snapshot as BookmarkSnapshot);
   });
 
   // Create a NEW entity from a past version (optionally renamed).

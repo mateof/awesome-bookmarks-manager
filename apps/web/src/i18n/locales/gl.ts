@@ -619,6 +619,14 @@ const gl = {
     createNew: 'Crear nova: "{{name}}"',
   },
   folder: {
+    tagFilter: {
+      button: "Filtrar por tags",
+      placeholder: "Escribe para filtrar por tags deste cartafol e os seus subcartafoles…",
+      noMore: "Non quedan máis tags que combinar",
+      clear: "Quitar filtro",
+      remove: "Quitar {{name}}",
+      summary: "Con todos estes tags, neste cartafol e os seus subcartafoles: cartafoles {{folders}} · bookmarks {{bookmarks}}",
+    },
     rootTitle: "Inicio",
     foldersSection: "Cartafoles",
     bookmarksSection: "Marcadores",
@@ -1827,6 +1835,20 @@ const gl = {
       wait: "Agardar a",
       pause: "Pausa",
       pauseMs: "Pausa de {{ms}} ms",
+    },
+    diff: {
+      title: "Cambios respecto do que tiñas aprobado",
+      enabled: "Pasa a estar activa",
+      disabled: "Pasa a estar desactivada",
+      trigger: "Agora execútase: {{trigger}}",
+      timeout: "Espera de {{before}} s a {{after}} s",
+      script: "O script JavaScript cambia (antes á esquerda, agora á dereita)",
+      none: "Sen automatización",
+    },
+    history: {
+      none: "sen autoenchido",
+      steps_one: "autoenchido: {{count}} paso",
+      steps_other: "autoenchido: {{count}} pasos",
     },
     triggers: {
       open: "Ao abrilo dende AwesomeBookmarks",

@@ -1,38 +1,39 @@
-import { createHash } from "node:crypto";
 import {
   type AutofillRuntime,
   type AutofillVariable,
   AutofillVariableSchema,
   type AutofillVariableInfo,
   type Automation,
+  type AutomationContent,
   type AutomationInput,
-  AutomationInputSchema,
   type AutomationSummary,
   automationMatchesUrl,
   automationScope,
   automationVariableKeys,
 } from "@awesome-bookmarks/shared";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { openField, sealField } from "../auth/encryption.js";
 import type { AuthedContext } from "../auth/session.js";
-import { getBookmark, listBookmarks } from "../bookmarks/service.js";
+import { bookmarkSnapshot, getBookmark, listBookmarks } from "../bookmarks/service.js";
 import { getDb } from "../db/client.js";
 import { autofillProfiles, bookmarkAutomations } from "../db/schema.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
+import { recordVersion } from "../versions/service.js";
+import {
+  type StoredAutomation,
+  deleteStored,
+  fingerprint,
+  readStored,
+  writeStored,
+} from "./store.js";
 
 const PROFILE_AAD = "autofill.profile";
-const automationAad = (bookmarkId: string) => `bookmark.automation:${bookmarkId}`;
 
 const StoredProfileSchema = z.object({
   variables: z.array(AutofillVariableSchema).default([]),
 });
 
-const StoredAutomationSchema = z.object({
-  input: AutomationInputSchema,
-  approved: z.string().nullable().default(null),
-});
-type StoredAutomation = z.infer<typeof StoredAutomationSchema>;
 
 export function listVariables(ctx: AuthedContext): AutofillVariable[] {
   const row = getDb()
@@ -74,67 +75,6 @@ export function saveVariables(
   return listVariables(ctx);
 }
 
-function fingerprint(input: AutomationInput, url: string): string {
-  const scope = automationScope(url);
-  return createHash("sha256")
-    .update(
-      JSON.stringify([
-        scope?.origin ?? null,
-        input.enabled,
-        input.trigger,
-        input.timeoutMs,
-        input.steps,
-        input.script,
-      ]),
-    )
-    .digest("hex");
-}
-
-function readStored(
-  ctx: AuthedContext,
-  bookmarkId: string,
-): { stored: StoredAutomation; updatedAt: string } | null {
-  const row = getDb()
-    .select()
-    .from(bookmarkAutomations)
-    .where(
-      and(
-        eq(bookmarkAutomations.bookmarkId, bookmarkId),
-        eq(bookmarkAutomations.userId, ctx.userId),
-      ),
-    )
-    .get();
-  if (!row) return null;
-  const raw = openField(
-    ctx.dek,
-    ctx.userId,
-    automationAad(bookmarkId),
-    Buffer.from(row.dataCt),
-  );
-  return {
-    stored: StoredAutomationSchema.parse(JSON.parse(raw)),
-    updatedAt: row.updatedAt,
-  };
-}
-
-function writeStored(ctx: AuthedContext, bookmarkId: string, stored: StoredAutomation) {
-  const dataCt = sealField(
-    ctx.dek,
-    ctx.userId,
-    automationAad(bookmarkId),
-    JSON.stringify(stored),
-  );
-  const updatedAt = new Date().toISOString();
-  getDb()
-    .insert(bookmarkAutomations)
-    .values({ bookmarkId, userId: ctx.userId, dataCt, updatedAt })
-    .onConflictDoUpdate({
-      target: [bookmarkAutomations.bookmarkId, bookmarkAutomations.userId],
-      set: { dataCt, updatedAt },
-    })
-    .run();
-}
-
 function present(
   bookmarkId: string,
   url: string,
@@ -143,14 +83,16 @@ function present(
   knownKeys: Set<string>,
 ): Automation {
   const current = fingerprint(stored.input, url);
+  const status = stored.approved === current ? "approved" : "pending";
   return {
     bookmarkId,
     ...stored.input,
-    status: stored.approved === current ? "approved" : "pending",
+    status,
     fingerprint: current,
     unknownVariables: automationVariableKeys(stored.input).filter(
       (k) => !knownKeys.has(k),
     ),
+    previousApproved: status === "pending" ? stored.approvedInput : null,
     updatedAt,
   };
 }
@@ -177,6 +119,16 @@ export function getAutomation(
   return present(bookmarkId, url, found.stored, found.updatedAt, knownKeys(ctx));
 }
 
+function lastApproved(stored: StoredAutomation, url: string): AutomationContent | null {
+  if (stored.approvedInput) return stored.approvedInput;
+  return stored.approved === fingerprint(stored.input, url) ? stored.input : null;
+}
+
+function recordInHistory(ctx: AuthedContext, bookmarkId: string) {
+  const bookmark = getBookmark(ctx, bookmarkId);
+  recordVersion(ctx, "bookmark", bookmarkId, bookmark.rev, bookmarkSnapshot(ctx, bookmark));
+}
+
 export function setAutomation(
   ctx: AuthedContext,
   bookmarkId: string,
@@ -184,12 +136,20 @@ export function setAutomation(
   opts: { approve: boolean },
 ): Automation {
   const url = automatableUrl(ctx, bookmarkId);
-  const previous = readStored(ctx, bookmarkId)?.stored.approved ?? null;
+  const previous = readStored(ctx, bookmarkId)?.stored ?? null;
   const next = fingerprint(input, url);
-  writeStored(ctx, bookmarkId, {
-    input,
-    approved: opts.approve ? next : previous,
-  });
+  writeStored(
+    ctx,
+    bookmarkId,
+    opts.approve
+      ? { input, approved: next, approvedInput: input }
+      : {
+          input,
+          approved: previous?.approved ?? null,
+          approvedInput: previous ? lastApproved(previous, url) : null,
+        },
+  );
+  recordInHistory(ctx, bookmarkId);
   return getAutomation(ctx, bookmarkId)!;
 }
 
@@ -204,21 +164,19 @@ export function approveAutomation(
   if (fingerprint(found.stored.input, url) !== expected) {
     throw Conflict("The automation changed since it was shown; review it again");
   }
-  writeStored(ctx, bookmarkId, { ...found.stored, approved: expected });
+  writeStored(ctx, bookmarkId, {
+    input: found.stored.input,
+    approved: expected,
+    approvedInput: found.stored.input,
+  });
   return getAutomation(ctx, bookmarkId)!;
 }
 
 export function deleteAutomation(ctx: AuthedContext, bookmarkId: string) {
   getBookmark(ctx, bookmarkId);
-  getDb()
-    .delete(bookmarkAutomations)
-    .where(
-      and(
-        eq(bookmarkAutomations.bookmarkId, bookmarkId),
-        eq(bookmarkAutomations.userId, ctx.userId),
-      ),
-    )
-    .run();
+  if (!readStored(ctx, bookmarkId)) return;
+  deleteStored(ctx, bookmarkId);
+  recordInHistory(ctx, bookmarkId);
 }
 
 function allAutomations(ctx: AuthedContext): Array<{ automation: Automation; url: string }> {

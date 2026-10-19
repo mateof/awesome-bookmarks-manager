@@ -1,4 +1,8 @@
-import type { AutofillRuntime, AutomationInput } from "@awesome-bookmarks/shared";
+import type {
+  AutofillRuntime,
+  Automation,
+  AutomationInput,
+} from "@awesome-bookmarks/shared";
 import type { ExtConfig } from "./storage.js";
 
 export interface QuickAddInput {
@@ -80,6 +84,16 @@ export async function matchBookmarks(
   return req(cfg, `/ext/bookmarks/match?url=${encodeURIComponent(url)}`, {
     method: "GET",
   });
+}
+
+export async function getAutomation(
+  cfg: ExtConfig,
+  bookmarkId: string,
+): Promise<Automation | null> {
+  const body = (await req(cfg, `/v1/bookmarks/${bookmarkId}/automation`, {
+    method: "GET",
+  })) as { automation: Automation | null };
+  return body.automation;
 }
 
 export async function saveAutomation(

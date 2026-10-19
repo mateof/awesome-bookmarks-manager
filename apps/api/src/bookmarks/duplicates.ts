@@ -12,7 +12,11 @@ import { resealSharesForBookmark } from "../groups/resync.js";
 import { rebuildPanelsForFolderTree } from "../panels/resync.js";
 import { BadRequest, NotFound } from "../util/errors.js";
 import { recordVersion } from "../versions/service.js";
-import { getBookmark, listBookmarks } from "./service.js";
+import {
+  bookmarkSnapshot,
+  getBookmark,
+  listBookmarks,
+} from "./service.js";
 
 /**
  * Duplicate detection rides on `url_hash`, which every row already carries: a
@@ -184,14 +188,7 @@ export function mergeBookmarks(
   tx();
 
   const after = getBookmark(ctx, keepId);
-  recordVersion(ctx, "bookmark", keepId, after.rev, {
-    title: after.title,
-    url: after.url,
-    description: after.description,
-    bgColor: after.bgColor ?? null,
-    folderId: after.folderId,
-    tagIds: after.tagIds,
-  });
+  recordVersion(ctx, "bookmark", keepId, after.rev, bookmarkSnapshot(ctx, after));
 
   // Everything that displayed a merged copy needs to hear about it.
   resealSharesForBookmark(ctx, keepId, after.folderId);

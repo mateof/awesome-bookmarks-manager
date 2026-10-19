@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AwesomeBookmarks",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Guarda la pestaña actual en tu instancia de AwesomeBookmarks y rellena formularios con tus datos.",
   "permissions": ["activeTab", "storage", "commands", "scripting", "userScripts"],
   "host_permissions": ["<all_urls>"],

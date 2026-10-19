@@ -310,4 +310,46 @@ test("autorrelleno: variables, automatización aprobada, apertura desde la web y
     { action: "select", selector: "#provincia", value: "B" },
     { action: "check", selector: "#acepto", checked: true },
   ]);
+
+  const appendSite = await context.newPage();
+  await appendSite.goto(FORM_URL);
+  await expect(appendSite.locator("#nif")).toHaveValue("12345678Z", { timeout: 15_000 });
+  await appendSite.locator("#nif").fill("");
+  await appendSite.locator("#tipoCita").selectOption("1");
+  await popup.reload();
+  await appendSite.bringToFront();
+  await popup.reload();
+  await popup.locator("#capture-btn").click();
+  await expect(
+    popup.locator("#capture-status"),
+    "capturing over an existing automation adds to it instead of replacing it",
+  ).toContainText("1 paso añadido a la automatización existente, pendiente de aprobar");
+  await appendSite.close();
+
+  await app.goto(`/bookmark/${bookmarkId}`);
+  const diff = app.getByTestId("automation-diff");
+  await expect(diff).toBeVisible();
+  await expect(diff.locator('[data-diff="added"]')).toHaveCount(1);
+  await expect(diff.locator('[data-diff="added"]')).toContainText("#tipoCita");
+  await expect(diff.locator('[data-diff="same"]')).toContainText("#nif");
+  await expect(diff.locator('[data-diff="removed"]')).toHaveCount(0);
+  await shot(app, "65-autofill-diff");
+
+  await app.getByRole("button", { name: "Más acciones" }).first().click();
+  await app.getByRole("button", { name: "Historial", exact: true }).click();
+  await expect(app.getByRole("heading", { name: "Historial" })).toBeVisible();
+  const oneStep = app
+    .locator("div:has(> input[type=checkbox])")
+    .filter({ hasText: "autorrelleno: 1 paso" })
+    .first();
+  await expect(app.getByText("autorrelleno: 2 pasos").first()).toBeVisible();
+  await shot(app, "66-autofill-history");
+  await oneStep.getByRole("button", { name: "Restaurar" }).click();
+  await expect(app.getByText("Restaurado a esa versión.")).toBeVisible();
+  await app.keyboard.press("Escape");
+  await app.reload();
+  await expect(app.getByTestId("automation-pending")).toHaveCount(0);
+  await expect(app.getByTestId("automation-section")).toContainText("Siempre que visite esta dirección");
+  await expect(app.getByTestId("automation-section")).not.toContainText("#tipoCita");
 });
+

@@ -42,6 +42,7 @@ paneles y guardar pestañas desde la extensión de Chrome.
 27. [Referencias dentro del texto](#27-referencias-dentro-del-texto)
 28. [Bases de datos en las notas](#28-bases-de-datos-en-las-notas)
 29. [Rellenar formularios al abrir un bookmark](#29-rellenar-formularios-al-abrir-un-bookmark)
+30. [Filtrar una carpeta por tags](#30-filtrar-una-carpeta-por-tags)
 
 ---
 
@@ -1284,7 +1285,9 @@ cuelgan de esa ruta aunque llegues desde otro sitio.
 el popup de la extensión y pulsa **Capturar formulario de esta página**. Guarda
 los campos como pasos y pone tus variables allí donde el valor coincide (si
 escribiste tu DNI, el paso queda como `{{dni}}`). Si la página no era un
-bookmark, lo crea.
+bookmark, lo crea. Si el bookmark **ya tenía** automatización, la captura
+**añade** al final los campos que faltaban y deja los que ya estaban: nunca la
+sustituye.
 
 ![Captura desde el popup](images/64-autofill-capture.png)
 
@@ -1301,6 +1304,22 @@ corre si la has visto tú:
   vuelve a pendiente. Cambiar la ruta dentro del mismo sitio no.
 
 ![Automatización pendiente](images/63-autofill-pending.png)
+
+Cuando lo pendiente viene a cambiar algo que ya tenías aprobado, la ficha no
+enseña solo la versión nueva: enseña **qué cambia**. Los pasos nuevos salen en
+verde con `+`, los que desaparecen en rojo tachados, y debajo los cambios de
+disparador, tiempo de espera o script. Así un cambio de once pasos a uno no se
+aprueba sin verlo.
+
+![Diferencias antes de aprobar](images/65-autofill-diff.png)
+
+**El historial del bookmark guarda la automatización.** Cada cambio (desde la
+web, la IA o la captura) deja una versión en *Historial*, y cada fila dice
+cuántos pasos de autorrelleno tenía. *Restaurar* devuelve el bookmark **y su
+automatización** a ese momento, ya aprobada, porque la has elegido tú. Las
+versiones anteriores a esta función no la incluyen: restaurarlas no la toca.
+
+![Historial con la automatización de cada versión](images/66-autofill-history.png)
 
 Además, antes de rellenar se comprueba que la pestaña sigue en el **mismo
 sitio** que el bookmark: si la página te redirige a otro dominio, no se escribe
@@ -1330,6 +1349,30 @@ En Chrome necesita activar **Permitir scripts de usuario** en
 `chrome://extensions`, en los detalles de la extensión (Chrome 135 o posterior).
 En Firefox, el botón de la página de opciones pide el permiso. En la app Android
 funciona sin más.
+
+---
+
+## 30. Filtrar una carpeta por tags
+
+El botón con el icono de tag de la barra de la carpeta abre un filtro. Busca en
+**la carpeta y todas sus subcarpetas**, a cualquier profundidad, no solo en lo
+que se ve.
+
+- Al escribir salen solo los tags que hay **dentro** de esa carpeta, con
+  cuántos elementos los llevan. Sin tildes ni mayúsculas: `rapi` encuentra
+  *rápida*. Enter coge el primero; Retroceso con el campo vacío quita el último.
+- Con varios tags se muestran los elementos que llevan **todos**, y las
+  sugerencias se acotan a lo que sigue quedando, así que nunca te lleva a un
+  resultado vacío.
+- El filtro va en la dirección (`?tags=…`): recargar, volver atrás o compartir
+  el enlace lo conserva. **Quitar filtro** vuelve a la vista normal.
+- Mientras filtras no se puede arrastrar para reordenar: lo que ves mezcla
+  elementos de varias carpetas y no hay un orden que tenga sentido cambiar. La
+  selección y sus acciones funcionan igual.
+
+El botón solo aparece si algo dentro de la carpeta tiene tags.
+
+![Filtro de tags en una carpeta](images/67-folder-tag-filter.png)
 
 ---
 

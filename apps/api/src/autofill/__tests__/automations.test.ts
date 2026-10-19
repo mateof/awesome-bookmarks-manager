@@ -19,6 +19,8 @@ async function boot(dataDir: string) {
     bookmarks: await import("../../bookmarks/service.js"),
     tokens: await import("../../extension/service.js"),
     apiAuth: await import("../../auth/api-auth.js"),
+    versions: await import("../../versions/service.js"),
+    restore: await import("../../versions/restore.js"),
     shared: await import("@awesome-bookmarks/shared"),
   };
 }
@@ -184,6 +186,51 @@ describe("autofill automations", () => {
       { approve: true },
     );
     expect(saved.unknownVariables).toEqual(["pasaporte", "telefono"]);
+  });
+});
+
+describe("autofill history", () => {
+  it("an automation overwritten by mistake can be brought back from the bookmark's history", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    m.autofill.setAutomation(ctx, bookmark.id, steps("#nif"), { approve: true });
+    m.autofill.setAutomation(ctx, bookmark.id, steps("#prefijo"), { approve: true });
+
+    const versions = m.versions.listVersions(ctx, "bookmark", bookmark.id);
+    const good = versions
+      .map((v) => m.versions.getVersion(ctx, v.id))
+      .find((v) => JSON.stringify(v.snapshot).includes("#nif"));
+    expect(good, "the good automation is in the history").toBeTruthy();
+
+    m.restore.restoreBookmarkVersion(ctx, bookmark.id, good!.snapshot as never);
+    const back = m.autofill.getAutomation(ctx, bookmark.id)!;
+    expect(back.steps).toEqual(steps("#nif").steps);
+    expect(back.status).toBe("approved");
+  });
+
+  it("restoring a version from before the automation existed removes it", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    const [before] = m.versions.listVersions(ctx, "bookmark", bookmark.id);
+    m.autofill.setAutomation(ctx, bookmark.id, steps(), { approve: true });
+    m.restore.restoreBookmarkVersion(
+      ctx,
+      bookmark.id,
+      m.versions.getVersion(ctx, before!.id).snapshot as never,
+    );
+    expect(m.autofill.getAutomation(ctx, bookmark.id)).toBeNull();
+  });
+
+  it("a pending change carries what was approved before it, so the review can show the difference", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    m.autofill.setAutomation(ctx, bookmark.id, steps("#nif"), { approve: true });
+    const pending = m.autofill.setAutomation(ctx, bookmark.id, steps("#prefijo"), {
+      approve: false,
+    });
+    expect(pending.previousApproved?.steps).toEqual(steps("#nif").steps);
+    const approved = m.autofill.approveAutomation(ctx, bookmark.id, pending.fingerprint);
+    expect(approved.previousApproved).toBeNull();
   });
 });
 

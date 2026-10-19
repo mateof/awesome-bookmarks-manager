@@ -1,3 +1,4 @@
+import type { AutomationContent } from "@awesome-bookmarks/shared";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { openField, sealField } from "../auth/encryption.js";
@@ -21,6 +22,7 @@ export interface BookmarkSnapshot {
   bgColor: string | null;
   folderId: string | null;
   tagIds: string[];
+  automation?: AutomationContent | null;
 }
 export type Snapshot = FolderSnapshot | BookmarkSnapshot;
 
@@ -31,6 +33,7 @@ export interface VersionMeta {
   rev: number;
   actorId: string;
   createdAt: string;
+  automationSteps?: number | null;
 }
 export interface VersionDetail extends VersionMeta {
   snapshot: Snapshot;
@@ -71,15 +74,8 @@ export function listVersions(
   entityType: EntityType,
   entityId: string,
 ): VersionMeta[] {
-  return getDb()
-    .select({
-      id: entityVersions.id,
-      entityType: entityVersions.entityType,
-      entityId: entityVersions.entityId,
-      rev: entityVersions.rev,
-      actorId: entityVersions.actorId,
-      createdAt: entityVersions.createdAt,
-    })
+  const rows = getDb()
+    .select()
     .from(entityVersions)
     .where(
       and(
@@ -89,7 +85,24 @@ export function listVersions(
       ),
     )
     .orderBy(desc(entityVersions.createdAt))
-    .all() as VersionMeta[];
+    .all();
+  return rows.map((r) => {
+    const meta: VersionMeta = {
+      id: r.id,
+      entityType: r.entityType as EntityType,
+      entityId: r.entityId,
+      rev: r.rev,
+      actorId: r.actorId,
+      createdAt: r.createdAt,
+    };
+    const snapshot = JSON.parse(
+      openField(ctx.dek, ctx.userId, "version.payload", Buffer.from(r.payloadCt)),
+    ) as Snapshot;
+    if ("automation" in snapshot) {
+      meta.automationSteps = snapshot.automation ? snapshot.automation.steps.length : null;
+    }
+    return meta;
+  });
 }
 
 export function getVersion(

@@ -23,9 +23,10 @@ import { enqueue } from "../jobs/queue.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
 import { sanitizeRichText } from "../util/sanitize.js";
 import { urlHash } from "../util/url.js";
+import { storedInput } from "../autofill/store.js";
 import { type BookmarkSnapshot, recordVersion } from "../versions/service.js";
 
-function bookmarkSnapshot(b: Bookmark): BookmarkSnapshot {
+export function bookmarkSnapshot(ctx: AuthedContext, b: Bookmark): BookmarkSnapshot {
   return {
     title: b.title,
     url: b.url,
@@ -33,6 +34,7 @@ function bookmarkSnapshot(b: Bookmark): BookmarkSnapshot {
     bgColor: b.bgColor ?? null,
     folderId: b.folderId,
     tagIds: b.tagIds,
+    automation: storedInput(ctx, b.id),
   };
 }
 
@@ -445,7 +447,7 @@ export function createBookmark(
   }
 
   const saved = getBookmark(ctx, id);
-  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(ctx, saved));
   // A new bookmark inside a shared folder must reach members.
   resealSharesForBookmark(ctx, id, saved.folderId);
   rebuildPanelsForFolderTree(ctx, saved.folderId);
@@ -551,7 +553,7 @@ export function updateBookmark(
   }
 
   const saved = getBookmark(ctx, id);
-  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(saved));
+  recordVersion(ctx, "bookmark", id, saved.rev, bookmarkSnapshot(ctx, saved));
   // Reflect edits (title/url/description) to members; also cover the old
   // folder if the bookmark was moved out of a shared subtree.
   resealSharesForBookmark(ctx, id, saved.folderId);

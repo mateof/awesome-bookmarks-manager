@@ -60,14 +60,16 @@ export type AutomationAction = AutomationStep["action"];
 export const AutomationTriggerSchema = z.enum(["open", "always"]);
 export type AutomationTrigger = z.infer<typeof AutomationTriggerSchema>;
 
-export const AutomationInputSchema = z
-  .object({
-    enabled: z.boolean().default(true),
-    trigger: AutomationTriggerSchema.default("open"),
-    timeoutMs: z.number().int().min(1000).max(60000).default(10000),
-    steps: z.array(AutomationStepSchema).max(50).default([]),
-    script: z.string().max(20000).default(""),
-  })
+export const AutomationContentSchema = z.object({
+  enabled: z.boolean().default(true),
+  trigger: AutomationTriggerSchema.default("open"),
+  timeoutMs: z.number().int().min(1000).max(60000).default(10000),
+  steps: z.array(AutomationStepSchema).max(50).default([]),
+  script: z.string().max(20000).default(""),
+});
+export type AutomationContent = z.infer<typeof AutomationContentSchema>;
+
+export const AutomationInputSchema = AutomationContentSchema
   .refine((a) => a.steps.length > 0 || a.script.trim() !== "", {
     message: "An automation needs at least one step or a script",
     path: ["steps"],
@@ -87,6 +89,7 @@ export const AutomationSchema = z.object({
   status: AutomationStatusSchema,
   fingerprint: z.string(),
   unknownVariables: z.array(z.string()),
+  previousApproved: AutomationContentSchema.nullable(),
   updatedAt: z.string(),
 });
 export type Automation = z.infer<typeof AutomationSchema>;
