@@ -135,14 +135,18 @@ test("autorrelleno: variables, automatización aprobada, apertura desde la web y
 
   await app.goto("/settings/autofill");
   await expect(app.getByRole("heading", { name: "Datos para autorrelleno" })).toBeVisible();
-  await app.getByRole("button", { name: "+ DNI" }).click();
-  await app.getByRole("button", { name: "+ Nombre" }).click();
-  const rows = app.getByTestId("autofill-variable");
-  await rows.nth(0).getByLabel("Valor", { exact: true }).fill("12345678Z");
-  await rows.nth(1).getByLabel("Valor", { exact: true }).fill("Radia");
-  await app.getByRole("button", { name: "Guardar" }).click();
-  await expect(app.getByText("Guardado", { exact: true })).toBeVisible();
-  await shot(app, "60-autofill-variables");
+  for (const [preset, value] of [
+    ["+ DNI", "12345678Z"],
+    ["+ Nombre", "Radia"],
+  ] as const) {
+    await app.getByRole("button", { name: "Nueva variable" }).click();
+    const dialog = app.getByTestId("autofill-variable-dialog");
+    await dialog.getByRole("button", { name: preset }).click();
+    await dialog.getByLabel("Valor", { exact: true }).fill(value);
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+    await expect(dialog).toBeHidden();
+  }
+  await expect(app.getByTestId("autofill-variable")).toHaveCount(2);
 
   const scoped = await mintToken(app, "Extensión con autorrelleno", true);
   await expect(app.getByText("autorrelleno", { exact: true })).toBeVisible();

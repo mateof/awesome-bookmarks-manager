@@ -18,6 +18,7 @@ import {
   listVariables,
   saveVariables,
   setAutomation,
+  variableUsage,
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
@@ -29,6 +30,8 @@ globalThis.__abRunAutomationSteps = ${runAutomationSteps.toString()};
 
 export const autofillRoutes: FastifyPluginAsync = async (app) => {
   app.get("/autofill/variables", async (req) => listVariables(requireAuth(req)));
+
+  app.get("/autofill/variables/usage", async (req) => variableUsage(requireAuth(req)));
 
   app.put("/autofill/variables", async (req) => {
     const ctx = requireAuth(req);

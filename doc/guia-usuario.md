@@ -1246,10 +1246,25 @@ trámites que repites: sedes electrónicas, citas, formularios de alta.
 
 **1) Define tus datos** en *Ajustes → Autorrelleno*. Cada variable tiene un
 nombre, una clave (`dni`, `telefono`…) que es como la usan las automatizaciones,
-un valor y una descripción opcional. Hay sugerencias de un clic para los datos
-habituales. Los valores se guardan cifrados.
+un valor y una descripción opcional. Los valores se guardan cifrados.
+
+Las variables se ven en una tabla paginada:
+
+- **Buscar** por nombre, clave o descripción, sin tildes ni mayúsculas.
+- **Filtrar** por si tienen valor y por si alguna automatización las usa. La
+  columna *Uso* dice en cuántas.
+- **Ordenar** por nombre o por clave pulsando la cabecera.
+- Los valores salen ocultos; el ojo de cada fila enseña ese.
 
 ![Variables de autorrelleno](images/60-autofill-variables.png)
+
+**Nueva variable** y el lápiz de cada fila abren el mismo formulario. Al crear
+hay sugerencias de un clic para los datos habituales (DNI, teléfono…). Si
+cambias la clave de una variable que alguna automatización usa, te avisa de
+que esas automatizaciones dejarán de encontrarla; borrar una en uso pide
+confirmación diciendo cuántas la usan.
+
+![Editar una variable](images/68-autofill-variable-dialog.png)
 
 **2) Añade los pasos** en la ficha del bookmark, sección *Autorrelleno*. Cada
 paso es una acción sobre un selector CSS:

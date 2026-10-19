@@ -210,6 +210,16 @@ function allAutomations(ctx: AuthedContext): Array<{ automation: Automation; url
   return out;
 }
 
+export function variableUsage(ctx: AuthedContext): Record<string, number> {
+  const usage: Record<string, number> = {};
+  for (const { automation } of allAutomations(ctx)) {
+    for (const key of automationVariableKeys(automation)) {
+      usage[key] = (usage[key] ?? 0) + 1;
+    }
+  }
+  return usage;
+}
+
 export function listAutomationSummaries(ctx: AuthedContext): AutomationSummary[] {
   return allAutomations(ctx).map(({ automation: a, url }) => ({
     bookmarkId: a.bookmarkId,

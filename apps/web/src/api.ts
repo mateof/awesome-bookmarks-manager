@@ -1265,6 +1265,8 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ variables }),
     }),
+  autofillVariableUsage: () =>
+    request<Record<string, number>>("/autofill/variables/usage"),
   listAutomations: () => request<AutomationSummary[]>("/automations"),
   getAutomation: (bookmarkId: string) =>
     request<{ automation: Automation | null }>(

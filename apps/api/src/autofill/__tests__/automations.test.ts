@@ -263,6 +263,25 @@ describe("autofill variables", () => {
     expect(() => m.apiAuth.requireAutofillAuth(bearer(plain, USER))).toThrow(/not allowed/);
   });
 
+  it("report how many automations use each one, so deleting a used variable can warn", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    const other = m.bookmarks.createBookmark(ctx, {
+      url: "https://sede.example.gob.es/otro",
+      title: "Otro",
+      folderId: null,
+      fetchSnapshot: false,
+    });
+    m.autofill.setAutomation(ctx, bookmark.id, steps(), { approve: true });
+    m.autofill.setAutomation(
+      ctx,
+      other.id,
+      { ...steps(), script: "x(ab.vars.dni, ab.vars.telefono)" },
+      { approve: false },
+    );
+    expect(m.autofill.variableUsage(ctx)).toEqual({ dni: 2, telefono: 1 });
+  });
+
   it("reject duplicate keys", async () => {
     const m = await boot(dir);
     const parsed = m.shared.SaveAutofillVariablesBodySchema.safeParse({
