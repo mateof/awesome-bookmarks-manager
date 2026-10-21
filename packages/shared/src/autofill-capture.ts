@@ -1,10 +1,31 @@
-import type { AutomationStep } from "@awesome-bookmarks/shared";
+import { z } from "zod";
+import { type AutomationStep, AutomationStepSchema } from "./autofill.js";
 
-export interface CapturedField {
-  selector: string;
-  kind: "fill" | "select" | "check";
-  value: string;
-}
+export const CapturedFieldSchema = z.object({
+  selector: z.string().trim().min(1).max(500),
+  kind: z.enum(["fill", "select", "check"]),
+  value: z.string().max(2000),
+});
+export type CapturedField = z.infer<typeof CapturedFieldSchema>;
+
+export const CaptureFormBodySchema = z.object({
+  bookmarkId: z.string().uuid().optional(),
+  url: z.string().url().max(8192),
+  title: z.string().min(1).max(1024).optional(),
+  folderId: z.string().uuid().nullable().optional(),
+  fields: z.array(CapturedFieldSchema).min(1).max(200),
+});
+export type CaptureFormBody = z.infer<typeof CaptureFormBodySchema>;
+
+export const CaptureFormResultSchema = z.object({
+  bookmarkId: z.string().uuid(),
+  createdBookmark: z.boolean(),
+  hadAutomation: z.boolean(),
+  added: z.number().int(),
+  kept: z.number().int(),
+  steps: z.array(AutomationStepSchema),
+});
+export type CaptureFormResult = z.infer<typeof CaptureFormResultSchema>;
 
 export function captureFormFields(): CapturedField[] {
   const SKIP = new Set([

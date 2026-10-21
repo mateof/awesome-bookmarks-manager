@@ -7,7 +7,11 @@ import {
   type AutomationContent,
   type AutomationInput,
   type AutomationSummary,
-  automationMatchesUrl,
+  type CaptureFormBody,
+  type CaptureFormResult,
+  AutomationInputSchema,
+  mergeCapturedSteps,
+  stepsFromCapture,
   automationScope,
   automationVariableKeys,
 } from "@awesome-bookmarks/shared";
@@ -15,7 +19,13 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { openField, sealField } from "../auth/encryption.js";
 import type { AuthedContext } from "../auth/session.js";
-import { bookmarkSnapshot, getBookmark, listBookmarks } from "../bookmarks/service.js";
+import {
+  bookmarkSnapshot,
+  createBookmark,
+  getBookmark,
+  listBookmarks,
+} from "../bookmarks/service.js";
+import { normalizeUrl } from "../util/url.js";
 import { getDb } from "../db/client.js";
 import { autofillProfiles, bookmarkAutomations } from "../db/schema.js";
 import { BadRequest, Conflict, NotFound } from "../util/errors.js";
@@ -250,12 +260,60 @@ export function autofillRuntime(ctx: AuthedContext): AutofillRuntime {
   return { variables, automations };
 }
 
-export function findBookmarkIdsForUrl(
+function sameUrl(a: string, b: string): boolean {
+  try {
+    return normalizeUrl(a) === normalizeUrl(b);
+  } catch {
+    return false;
+  }
+}
+
+export function captureIntoAutomation(
   ctx: AuthedContext,
-  pageUrl: string,
-): Array<{ id: string; title: string; url: string }> {
-  return listBookmarks(ctx, {})
-    .filter((b) => automationScope(b.url) && automationMatchesUrl(b.url, pageUrl))
-    .sort((a, b) => b.url.length - a.url.length)
-    .map((b) => ({ id: b.id, title: b.title, url: b.url }));
+  body: CaptureFormBody,
+): CaptureFormResult {
+  let bookmarkId = body.bookmarkId;
+  let createdBookmark = false;
+  if (bookmarkId) {
+    getBookmark(ctx, bookmarkId);
+  } else {
+    bookmarkId = listBookmarks(ctx, {}).find((b) => sameUrl(b.url, body.url))?.id;
+    if (!bookmarkId) {
+      bookmarkId = createBookmark(ctx, {
+        url: body.url,
+        ...(body.title ? { title: body.title } : {}),
+        folderId: body.folderId ?? null,
+        fetchSnapshot: true,
+      }).id;
+      createdBookmark = true;
+    }
+  }
+  const variables = Object.fromEntries(listVariables(ctx).map((v) => [v.key, v.value]));
+  const captured = stepsFromCapture(body.fields, variables);
+  const existing = readStored(ctx, bookmarkId)?.stored.input ?? null;
+  const merged = mergeCapturedSteps(existing?.steps ?? [], captured);
+  const result = {
+    bookmarkId,
+    createdBookmark,
+    hadAutomation: existing !== null,
+    added: merged.added,
+    kept: merged.kept,
+  };
+  if (existing && merged.added === 0) return { ...result, steps: existing.steps };
+  if (merged.steps.length > 50) {
+    throw BadRequest("The automation would exceed 50 steps");
+  }
+  const saved = setAutomation(
+    ctx,
+    bookmarkId,
+    AutomationInputSchema.parse({
+      enabled: existing?.enabled ?? true,
+      trigger: existing?.trigger ?? "open",
+      timeoutMs: existing?.timeoutMs ?? 10000,
+      steps: merged.steps,
+      script: existing?.script ?? "",
+    }),
+    { approve: false },
+  );
+  return { ...result, steps: saved.steps };
 }

@@ -1826,12 +1826,13 @@ const gl = {
       fecha_nacimiento: "Data de nacemento",
     },
     section: {
+      captureInApp: "Capturar na app",
       title: "Autoenchido",
       add: "Engadir",
       empty: "Sen automatización. Engade pasos para encher o formulario desta páxina ao abrila.",
       pendingTitle: "Pendente de aprobar",
       pendingHint:
-        "Creouna ou cambiouna un token (MCP, API ou a extensión), ou o enderezo do bookmark cambiou de sitio. Non se executa ata que revises os pasos e a aprobes.",
+        "Creouna ou cambiouna unha captura (extensión ou app), a IA ou a API, ou o enderezo do bookmark cambiou de sitio. Non se executa ata que revises os pasos e a aprobes.",
       approve: "Aprobar",
       unknownVariables: "Usa variables que non existen: {{keys}}.",
       defineVariables: "Definilas",

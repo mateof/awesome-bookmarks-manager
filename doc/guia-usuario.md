@@ -1306,6 +1306,14 @@ sustituye.
 
 ![Captura desde el popup](images/64-autofill-capture.png)
 
+**Capturar desde el móvil.** En la app Android (0.6.0 o posterior), la sección
+*Autorrelleno* de la ficha tiene **Capturar en la app**. Abre la página en una
+pantalla de la app (en el navegador no se puede leer nada); rellenas el
+formulario a mano y pulsas **Guardar formulario**. Funciona igual que la
+captura de la extensión: tus variables donde el valor coincide, se añade a lo
+que ya hubiera y queda pendiente de aprobar. Lo que hubieras rellenado antes en
+el navegador no pasa a la app.
+
 ### Lo que hace falta aprobar
 
 Una automatización ejecuta acciones en una página con tus datos, así que solo

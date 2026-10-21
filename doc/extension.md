@@ -126,7 +126,9 @@ que el bookmark; si redirige a otro dominio, no se escribe nada.
 **Capturar formulario de esta página**, en el popup, convierte lo que has
 rellenado a mano en pasos. Si el bookmark ya tenía automatización, añade al
 final solo los campos que no estaban (no la sustituye). Queda pendiente hasta
-que lo apruebes en la ficha del bookmark, que te enseña qué cambia.
+que lo apruebes en la ficha del bookmark, que te enseña qué cambia. Necesita el
+mismo token con permiso de autorrelleno, porque para poner `{{dni}}` donde
+escribiste tu DNI hay que conocer tus valores.
 
 **Scripts JavaScript.** Los pasos funcionan sin más. Para el campo de script:
 

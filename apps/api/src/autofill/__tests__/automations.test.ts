@@ -234,6 +234,45 @@ describe("autofill history", () => {
   });
 });
 
+describe("capturing a form", () => {
+  const fields = [
+    { selector: "#nif", kind: "fill" as const, value: "12345678z" },
+    { selector: "#acepto", kind: "check" as const, value: "" },
+  ];
+
+  it("writes the user's variables where the captured value matches, and leaves the result pending", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    const r = m.autofill.captureIntoAutomation(ctx, { bookmarkId: bookmark.id, url: bookmark.url, fields });
+    expect(r).toMatchObject({ createdBookmark: false, hadAutomation: false, added: 2, kept: 0 });
+    expect(r.steps[0]).toEqual({ action: "fill", selector: "#nif", value: "{{dni}}" });
+    expect(m.autofill.getAutomation(ctx, bookmark.id)!.status).toBe("pending");
+  });
+
+  it("adds to an existing automation instead of replacing it", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    m.autofill.setAutomation(ctx, bookmark.id, steps("#nombre"), { approve: true });
+    const r = m.autofill.captureIntoAutomation(ctx, { bookmarkId: bookmark.id, url: bookmark.url, fields });
+    expect(r).toMatchObject({ hadAutomation: true, added: 2, kept: 0 });
+    expect(r.steps.map((s) => ("selector" in s ? s.selector : ""))).toEqual(["#nombre", "#nif", "#acepto"]);
+  });
+
+  it("finds the bookmark by its exact address, and creates one when there is none", async () => {
+    const m = await boot(dir);
+    const { ctx, bookmark } = seed(m);
+    const found = m.autofill.captureIntoAutomation(ctx, { url: `${bookmark.url}#paso`, fields });
+    expect(found.bookmarkId).toBe(bookmark.id);
+    const fresh = m.autofill.captureIntoAutomation(ctx, {
+      url: "https://sede.example.gob.es/tramite/alta/otra",
+      title: "Otra",
+      fields,
+    });
+    expect(fresh.createdBookmark).toBe(true);
+    expect(fresh.bookmarkId).not.toBe(bookmark.id);
+  });
+});
+
 describe("autofill variables", () => {
   it("are described to API and MCP clients without their values", async () => {
     const m = await boot(dir);

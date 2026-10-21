@@ -289,6 +289,15 @@ variable values**. It accepts the web session or a token created with
 gets `403`. `GET /api/ext/autofill/runner.js` serves the code that applies the
 steps, so the Android app runs exactly what the extension runs.
 
+`POST /api/ext/autofill/capture` turns a filled form into steps. Body:
+`{ bookmarkId?, url, title?, folderId?, fields: [{ selector, kind, value }] }`,
+where `kind` is `fill`, `select` or `check`. Without `bookmarkId` it uses the
+bookmark with exactly that address, or creates one. Values that match a
+variable become `{{key}}`; the steps are **appended** to any existing
+automation (a selector already there is kept) and the result is `pending`.
+Same authentication as `GET /api/ext/autofill`. The code that reads the page
+is served at `GET /api/ext/autofill/capture.js`.
+
 ## Tags
 
 A tag: `{ "id": "…", "name": "dev", "color": "#3b82f6" }`.

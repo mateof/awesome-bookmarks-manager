@@ -16,6 +16,7 @@ import {
   PencilLine,
   Plus,
   ShieldAlert,
+  Smartphone,
   Trash2,
   WandSparkles,
 } from "lucide-react";
@@ -78,11 +79,28 @@ function draftFrom(a: Automation | null): AutomationInput {
   };
 }
 
+const APP_CAPTURE_SINCE = [0, 6, 0];
+
+export function appCaptureAvailable(userAgent: string): boolean {
+  const m = /AwesomeBookmarks\/(\d+)\.(\d+)\.(\d+)/.exec(userAgent);
+  if (!m) return false;
+  const version = m.slice(1).map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (version[i]! !== APP_CAPTURE_SINCE[i]!) return version[i]! > APP_CAPTURE_SINCE[i]!;
+  }
+  return true;
+}
+
+export function appCaptureHref(bookmarkId: string, url: string): string {
+  return `abapp://capture?bookmark=${encodeURIComponent(bookmarkId)}&url=${encodeURIComponent(url)}`;
+}
+
 export function AutomationSection({ bookmarkId, url }: { bookmarkId: string; url: string }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const extension = useExtensionAvailable();
   const automatable = /^https?:\/\//i.test(url);
+  const inApp = appCaptureAvailable(navigator.userAgent);
   const q = useQuery({
     queryKey: ["automation", bookmarkId],
     queryFn: () => api.getAutomation(bookmarkId),
@@ -142,14 +160,25 @@ export function AutomationSection({ bookmarkId, url }: { bookmarkId: string; url
       title={t("autofill.section.title")}
       action={
         !draft && (
-          <SectionAction
-            onClick={() => setDraft(draftFrom(automation))}
-            icon={
-              automation ? <PencilLine className="h-3 w-3" /> : <Plus className="h-3 w-3" />
-            }
-          >
-            {automation ? t("common.edit") : t("autofill.section.add")}
-          </SectionAction>
+          <div className="flex items-center gap-2">
+            {inApp && (
+              <a
+                href={appCaptureHref(bookmarkId, url)}
+                className="flex items-center gap-1 rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+              >
+                <Smartphone className="h-3 w-3" />
+                {t("autofill.section.captureInApp")}
+              </a>
+            )}
+            <SectionAction
+              onClick={() => setDraft(draftFrom(automation))}
+              icon={
+                automation ? <PencilLine className="h-3 w-3" /> : <Plus className="h-3 w-3" />
+              }
+            >
+              {automation ? t("common.edit") : t("autofill.section.add")}
+            </SectionAction>
+          </div>
         )
       }
     >
@@ -206,7 +235,7 @@ export function AutomationSection({ bookmarkId, url }: { bookmarkId: string; url
                 </Link>
               </p>
             )}
-            {!extension && (
+            {!extension && !inApp && (
               <p className="text-xs text-slate-500">{t("autofill.section.needsRunner")}</p>
             )}
             <div>

@@ -1824,12 +1824,13 @@ const es = {
       fecha_nacimiento: "Fecha de nacimiento",
     },
     section: {
+      captureInApp: "Capturar en la app",
       title: "Autorrelleno",
       add: "Añadir",
       empty: "Sin automatización. Añade pasos para rellenar el formulario de esta página al abrirla.",
       pendingTitle: "Pendiente de aprobar",
       pendingHint:
-        "La creó o cambió un token (MCP, API o la extensión), o la dirección del bookmark cambió de sitio. No se ejecuta hasta que revises los pasos y la apruebes.",
+        "La creó o cambió una captura (extensión o app), la IA o la API, o la dirección del bookmark cambió de sitio. No se ejecuta hasta que revises los pasos y la apruebes.",
       approve: "Aprobar",
       unknownVariables: "Usa variables que no existen: {{keys}}.",
       defineVariables: "Definirlas",

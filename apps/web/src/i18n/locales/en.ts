@@ -1822,12 +1822,13 @@ const en = {
       fecha_nacimiento: "Date of birth",
     },
     section: {
+      captureInApp: "Capture in the app",
       title: "Autofill",
       add: "Add",
       empty: "No automation. Add steps to fill this page's form when you open it.",
       pendingTitle: "Waiting for approval",
       pendingHint:
-        "A token (MCP, API or the extension) created or changed it, or the bookmark moved to another site. It will not run until you review the steps and approve it.",
+        "A capture (extension or app), an AI or the API created or changed it, or the bookmark moved to another site. It will not run until you review the steps and approve it.",
       approve: "Approve",
       unknownVariables: "Uses variables that do not exist: {{keys}}.",
       defineVariables: "Define them",

@@ -1,7 +1,7 @@
 import type {
   AutofillRuntime,
-  Automation,
-  AutomationInput,
+  CaptureFormBody,
+  CaptureFormResult,
 } from "@awesome-bookmarks/shared";
 import type { ExtConfig } from "./storage.js";
 
@@ -71,40 +71,21 @@ export async function fetchAutofill(cfg: ExtConfig): Promise<AutofillRuntime> {
   return req(cfg, "/ext/autofill", { method: "GET" });
 }
 
-export interface MatchedBookmark {
-  id: string;
-  title: string;
-  url: string;
-}
-
-export async function matchBookmarks(
+export async function captureForm(
   cfg: ExtConfig,
-  url: string,
-): Promise<MatchedBookmark[]> {
-  return req(cfg, `/ext/bookmarks/match?url=${encodeURIComponent(url)}`, {
-    method: "GET",
-  });
-}
-
-export async function getAutomation(
-  cfg: ExtConfig,
-  bookmarkId: string,
-): Promise<Automation | null> {
-  const body = (await req(cfg, `/v1/bookmarks/${bookmarkId}/automation`, {
-    method: "GET",
-  })) as { automation: Automation | null };
-  return body.automation;
-}
-
-export async function saveAutomation(
-  cfg: ExtConfig,
-  bookmarkId: string,
-  body: AutomationInput,
-) {
-  return req(cfg, `/v1/bookmarks/${bookmarkId}/automation`, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
+  body: CaptureFormBody,
+): Promise<CaptureFormResult> {
+  try {
+    return await req(cfg, "/ext/autofill/capture", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    if (e instanceof HttpError && e.status === 403) {
+      throw new Error("Este token no tiene permiso de autorrelleno: crea uno con esa casilla marcada");
+    }
+    throw e;
+  }
 }
 
 export async function quickAdd(cfg: ExtConfig, input: QuickAddInput) {

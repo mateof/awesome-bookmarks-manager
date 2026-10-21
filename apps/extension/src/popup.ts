@@ -1,23 +1,15 @@
 import {
   appOrigin,
+  captureForm,
   createFolder,
   createTag,
-  fetchAutofill,
-  getAutomation,
   listFolders,
   listTags,
-  matchBookmarks,
   quickAdd,
-  saveAutomation,
   type FolderLite,
   type TagLite,
 } from "./api.js";
-import {
-  type CapturedField,
-  captureFormFields,
-  mergeCapturedSteps,
-  stepsFromCapture,
-} from "./capture.js";
+import { type CapturedField, captureFormFields } from "@awesome-bookmarks/shared";
 import {
   type ExtConfig,
   getLastFolderId,
@@ -438,16 +430,6 @@ async function init() {
   });
 }
 
-function withoutHash(url: string): string {
-  try {
-    const u = new URL(url);
-    u.hash = "";
-    return u.href;
-  } catch {
-    return url;
-  }
-}
-
 async function capture() {
   const out = el("capture-status");
   out.className = "";
@@ -468,47 +450,27 @@ async function capture() {
       out.textContent = "No hay campos rellenos en esta página";
       return;
     }
-    let variables: Record<string, string> = {};
-    try {
-      variables = (await fetchAutofill(cfg)).variables;
-    } catch {
-      variables = {};
-    }
-    const steps = stepsFromCapture(fields, variables);
-    const matches = await matchBookmarks(cfg, tabUrl);
-    const page = withoutHash(tabUrl);
-    let bookmarkId = matches.find((m) => withoutHash(m.url) === page)?.id;
-    if (!bookmarkId) {
-      const title = el<HTMLInputElement>("title-input").value.trim();
-      const created = (await quickAdd(cfg, {
-        url: tabUrl,
-        ...(title ? { title } : {}),
-        folderId: selectedFolderId,
-      })) as { id: string };
-      bookmarkId = created.id;
-    }
-    const existing = await getAutomation(cfg, bookmarkId);
-    const merged = mergeCapturedSteps(existing?.steps ?? [], steps);
-    if (existing && merged.added === 0) {
+    const title = el<HTMLInputElement>("title-input").value.trim();
+    const result = await captureForm(cfg, {
+      url: tabUrl,
+      ...(title ? { title } : {}),
+      folderId: selectedFolderId,
+      fields,
+    });
+    const bookmarkId = result.bookmarkId;
+    if (result.hadAutomation && result.added === 0) {
       out.className = "ok";
       out.textContent = "Nada nuevo: esos campos ya estaban en la automatización.";
       return;
     }
-    await saveAutomation(cfg, bookmarkId, {
-      enabled: existing?.enabled ?? true,
-      trigger: existing?.trigger ?? "open",
-      timeoutMs: existing?.timeoutMs ?? 10000,
-      steps: merged.steps,
-      script: existing?.script ?? "",
-    });
     void chrome.runtime.sendMessage({ type: "autofill-changed" });
     out.className = "ok";
     const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-    out.textContent = existing
-      ? `${plural(merged.added, "paso añadido", "pasos añadidos")} a la automatización existente${
-          merged.kept ? ` (${plural(merged.kept, "ya estaba", "ya estaban")})` : ""
+    out.textContent = result.hadAutomation
+      ? `${plural(result.added, "paso añadido", "pasos añadidos")} a la automatización existente${
+          result.kept ? ` (${plural(result.kept, "ya estaba", "ya estaban")})` : ""
         }, pendiente de aprobar. `
-      : `${steps.length} pasos guardados, pendientes de aprobar. `;
+      : `${result.steps.length} pasos guardados, pendientes de aprobar. `;
     const origin = appOrigin(cfg);
     if (origin) {
       const link = document.createElement("a");

@@ -26,3 +26,4 @@ export * from "./databases.js";
 export * from "./formula.js";
 export * from "./autofill.js";
 export * from "./autofill-runner.js";
+export * from "./autofill-capture.js";

@@ -1,18 +1,20 @@
 import {
   ApproveAutomationBodySchema,
+  CaptureFormBodySchema,
+  captureFormFields,
   AutomationInputSchema,
   SaveAutofillVariablesBodySchema,
   runAutomationSteps,
 } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { requireApiAuth, requireAutofillAuth } from "../auth/api-auth.js";
+import { requireAutofillAuth } from "../auth/api-auth.js";
 import { requireAuth } from "../auth/session.js";
 import {
   approveAutomation,
   autofillRuntime,
+  captureIntoAutomation,
   deleteAutomation,
-  findBookmarkIdsForUrl,
   getAutomation,
   listAutomationSummaries,
   listVariables,
@@ -22,7 +24,10 @@ import {
 } from "./service.js";
 
 const IdParam = z.object({ id: z.string().uuid() });
-const UrlQuery = z.object({ url: z.string().url().max(8192) });
+
+const CAPTURE_JS = `var __name = function (f) { return f; };
+globalThis.__abCaptureFormFields = ${captureFormFields.toString()};
+`;
 
 const RUNNER_JS = `var __name = function (f) { return f; };
 globalThis.__abRunAutomationSteps = ${runAutomationSteps.toString()};
@@ -79,9 +84,14 @@ export const autofillRoutes: FastifyPluginAsync = async (app) => {
     return RUNNER_JS;
   });
 
-  app.get("/ext/bookmarks/match", async (req) => {
-    const ctx = requireApiAuth(req);
-    const { url } = UrlQuery.parse(req.query);
-    return findBookmarkIdsForUrl(ctx, url);
+  app.get("/ext/autofill/capture.js", async (_req, reply) => {
+    reply.type("application/javascript; charset=utf-8");
+    return CAPTURE_JS;
   });
+
+  app.post("/ext/autofill/capture", async (req) => {
+    const ctx = requireAutofillAuth(req);
+    return captureIntoAutomation(ctx, CaptureFormBodySchema.parse(req.body));
+  });
+
 };
