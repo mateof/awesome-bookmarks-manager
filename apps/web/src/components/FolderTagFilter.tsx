@@ -1,6 +1,6 @@
 import type { Tag } from "@awesome-bookmarks/shared";
 import { Tag as TagIcon, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface TagCandidate {
@@ -17,17 +17,23 @@ export function FolderTagFilter({
   onChange,
   resultFolders,
   resultBookmarks,
+  autoFocus = false,
 }: {
   selected: Tag[];
   candidates: TagCandidate[];
   onChange: (ids: string[]) => void;
   resultFolders: number;
   resultBookmarks: number;
+  autoFocus?: boolean;
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFocus) input.current?.focus();
+  }, [autoFocus]);
 
   const matches = useMemo(() => {
     const needle = fold(text.trim());

@@ -191,6 +191,8 @@ const gl = {
     trash: "Papeleira",
   },
   spotlight: {
+    openDetail: "Ver o detalle do bookmark",
+    keysHint: "Enter abre a web nunha lapela nova · Maiús+Enter abre o detalle do bookmark",
     placeholder: "Buscar cartafoles e marcadores…",
     hint: "Escribe para buscar nos teus cartafoles e marcadores.",
     inCurrentFolder: "Neste cartafol",

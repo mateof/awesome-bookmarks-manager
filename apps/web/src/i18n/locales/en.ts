@@ -191,6 +191,8 @@ const en = {
     trash: "Trash",
   },
   spotlight: {
+    openDetail: "Open the bookmark's details",
+    keysHint: "Enter opens the site in a new tab · Shift+Enter opens the bookmark's details",
     placeholder: "Search folders and bookmarks…",
     hint: "Type to search your folders and bookmarks.",
     inCurrentFolder: "In this folder",

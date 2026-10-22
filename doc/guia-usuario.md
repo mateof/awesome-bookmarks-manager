@@ -608,6 +608,17 @@ Los elementos de la carpeta en la que estás se agrupan y se resaltan arriba,
 bajo *En esta carpeta*, y el resto va después. Cada resultado muestra su icono
 real.
 
+Busca **carpetas y bookmarks**. Las carpetas, por su nombre y también por su
+descripción. Da igual escribir con tildes o sin ellas: `gestiones publicas`
+encuentra *Gestiones públicas*. La caja se abre con el cursor ya puesto; en la
+app Android, el buscador del botón flotante abre también el teclado.
+
+En un bookmark hay dos destinos:
+
+- **Enter** o un clic abren **la web** en una pestaña nueva.
+- **Mayús+Enter** o el botón de la derecha de la fila abren **el detalle** del
+  bookmark (su ficha, con tags, notas y autorrelleno).
+
 La misma caja ejecuta acciones: *Nuevo bookmark*, *Nueva carpeta*, *Filtrar por
 tags*, *Paneles*, *Papelera*, *Duplicados*, *Grupos*, *Importar y exportar*.
 Con la caja vacía se ofrecen las más usadas, y al escribir se filtran por

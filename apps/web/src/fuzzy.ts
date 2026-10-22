@@ -34,10 +34,14 @@ function maxDist(len: number): number {
   return 3;
 }
 
+export function foldText(text: string): string {
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 export function fuzzyScore(query: string, text: string): number | null {
-  const q = query.trim().toLowerCase();
+  const q = foldText(query.trim());
   if (!q) return 0;
-  const s = text.toLowerCase();
+  const s = foldText(text);
   const idx = s.indexOf(q);
   if (idx >= 0) return idx; // substring: 0 = starts with, higher = later
   const md = maxDist(q.length);

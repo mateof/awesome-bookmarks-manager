@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  PanelRightOpen,
   Copy,
   CornerDownLeft,
   FileText,
@@ -21,7 +22,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
-import { fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
+import { foldText, fuzzyScore, fuzzyScoreAny } from "../fuzzy.js";
 import { LetterIcon } from "./LetterIcon.js";
 import { useActiveFolderId } from "../hooks.js";
 import { runAppCommand, type AppCommand } from "../lib/commands.js";
@@ -334,8 +335,12 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
 
     // Levenshtein-tolerant scoring: exact substring first, typos after.
     const scored: Array<Result & { _s: number; _near: number }> = [];
+    const needle = foldText(query);
     for (const f of fs) {
-      const s = fuzzyScore(query, f.name);
+      const inDescription =
+        !!f.description &&
+        foldText(f.description.replace(/<[^>]*>/g, " ")).includes(needle);
+      const s = fuzzyScore(query, f.name) ?? (inDescription ? 900 : null);
       if (s !== null)
         scored.push({
           kind: "folder",
@@ -439,11 +444,12 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
 
   useEffect(() => setSel(0), [q]);
 
-  const activate = (r: Result) => {
+  const activate = (r: Result, detail = false) => {
     if (r.kind === "action") r.run();
     else if (r.kind === "folder") nav(`/folder/${r.id}`);
     else if (r.kind === "row")
       nav(`/databases/${r.databaseId}?fila=${r.rowId}`);
+    else if (detail) nav(`/bookmark/${r.id}`);
     else openExternal(r.url);
     onClose();
   };
@@ -459,7 +465,7 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
         setSel((s) => Math.max(s - 1, 0));
       } else if (e.key === "Enter") {
         const r = rows[sel];
-        if (r) activate(r);
+        if (r) activate(r, e.shiftKey);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -538,11 +544,14 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
                       {t("spotlight.elsewhere")}
                     </div>
                   )}
+                  <div className="relative">
                   <button
                     data-idx={i}
                     onMouseMove={() => setSel(i)}
                     onClick={() => activate(r)}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+                      r.kind === "bookmark" ? "pr-12" : ""
+                    } ${
                       r.near ? "border-l-2 border-blue-500 bg-blue-50/40 dark:bg-blue-500/10" : ""
                     } ${i === sel ? "bg-slate-100 dark:bg-slate-800" : ""}`}
                   >
@@ -581,15 +590,33 @@ export function Spotlight({ onClose }: { onClose: () => void }) {
                         </span>
                       )}
                     </span>
-                    {i === sel && (
+                    {i === sel && r.kind !== "bookmark" && (
                       <CornerDownLeft className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                     )}
                   </button>
+                  {r.kind === "bookmark" && (
+                    <button
+                      type="button"
+                      onMouseMove={() => setSel(i)}
+                      onClick={() => activate(r, true)}
+                      aria-label={t("spotlight.openDetail")}
+                      title={t("spotlight.openDetail")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                    >
+                      <PanelRightOpen className="h-4 w-4" />
+                    </button>
+                  )}
+                  </div>
                 </div>
               );
             })
           )}
         </div>
+        {rows[sel]?.kind === "bookmark" && (
+          <div className="hidden border-t border-slate-200 px-4 py-2 text-[11px] text-slate-400 dark:border-slate-800 sm:block">
+            {t("spotlight.keysHint")}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -191,6 +191,8 @@ const es = {
     trash: "Papelera",
   },
   spotlight: {
+    openDetail: "Ver el detalle del bookmark",
+    keysHint: "Enter abre la web en una pestaña nueva · Mayús+Enter abre el detalle del bookmark",
     placeholder: "Buscar carpetas y bookmarks…",
     hint: "Escribe para buscar en tus carpetas y bookmarks.",
     inCurrentFolder: "En esta carpeta",

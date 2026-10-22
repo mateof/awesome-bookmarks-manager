@@ -904,6 +904,7 @@ export function FolderPage() {
             onChange={setFilterTagIds}
             resultFolders={shownSubfolders.length}
             resultBookmarks={shownItems.length}
+            autoFocus={tagFilterOpen}
           />
         )}
 
