@@ -1404,6 +1404,14 @@ que se ve.
   elementos de varias carpetas y no hay un orden que tenga sentido cambiar. La
   selección y sus acciones funcionan igual.
 
+Con el filtro activo aparecen también controles de resultados: ordenar por
+fecha de alta, última modificación, nombre o sitio web, limitar a lo añadido en
+la última semana, mes o año, ver solo carpetas o bookmarks y quedarse con los
+favoritos. Ordenar no cambia el orden guardado de la carpeta. Los mismos
+controles están en **Filtrar por tags**, y la página de resultados de búsqueda
+añade además acotar por los tags de esos resultados (allí por defecto se ordena
+por relevancia, y lo aproximado por erratas siempre va detrás de lo exacto).
+
 El botón solo aparece si algo dentro de la carpeta tiene tags.
 
 ![Filtro de tags en una carpeta](images/67-folder-tag-filter.png)

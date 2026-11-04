@@ -18,6 +18,8 @@ export function FolderTagFilter({
   resultFolders,
   resultBookmarks,
   autoFocus = false,
+  placeholder,
+  summary,
 }: {
   selected: Tag[];
   candidates: TagCandidate[];
@@ -25,11 +27,14 @@ export function FolderTagFilter({
   resultFolders: number;
   resultBookmarks: number;
   autoFocus?: boolean;
+  placeholder?: string;
+  summary?: string;
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const prompt = placeholder ?? t("folder.tagFilter.placeholder");
 
   useEffect(() => {
     if (autoFocus) input.current?.focus();
@@ -95,10 +100,10 @@ export function FolderTagFilter({
             }}
             placeholder={
               candidates.length > 0
-                ? t("folder.tagFilter.placeholder")
+                ? prompt
                 : t("folder.tagFilter.noMore")
             }
-            aria-label={t("folder.tagFilter.placeholder")}
+            aria-label={prompt}
             className="w-full bg-transparent py-1 text-sm outline-none"
           />
           {open && matches.length > 0 && (
@@ -138,10 +143,11 @@ export function FolderTagFilter({
       </div>
       {ids.length > 0 && (
         <p className="mt-1 text-xs text-slate-500">
-          {t("folder.tagFilter.summary", {
-            folders: resultFolders,
-            bookmarks: resultBookmarks,
-          })}
+          {summary ??
+            t("folder.tagFilter.summary", {
+              folders: resultFolders,
+              bookmarks: resultBookmarks,
+            })}
         </p>
       )}
     </div>

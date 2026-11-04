@@ -1,4 +1,6 @@
 import type {
+  ResultSort,
+  ResultWindow,
   AdminInsights,
   AutofillVariable,
   Automation,
@@ -454,9 +456,22 @@ export const api = {
     }),
 
   // search
-  search: (q: string, opts: { folderId?: string | null } = {}) => {
+  search: (
+    q: string,
+    opts: {
+      folderId?: string | null;
+      sort?: ResultSort;
+      since?: ResultWindow | null;
+      favorite?: boolean;
+      tagIds?: string[];
+    } = {},
+  ) => {
     const params = new URLSearchParams({ q });
     if (opts.folderId) params.set("folderId", opts.folderId);
+    if (opts.sort && opts.sort !== "default") params.set("sort", opts.sort);
+    if (opts.since) params.set("since", opts.since);
+    if (opts.favorite) params.set("fav", "1");
+    if (opts.tagIds?.length) params.set("tags", opts.tagIds.join(","));
     return request<Array<{ bookmark: Bookmark; snippet?: string }>>(
       `/search?${params.toString()}`,
     );
