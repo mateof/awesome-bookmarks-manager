@@ -791,6 +791,33 @@ const es = {
     cannotEnqueue: "No se pudo encolar el re-snapshot: {{message}}",
     cannotEnqueueGeneric: "No se pudo encolar el re-snapshot",
   },
+  results: {
+    sortLabel: "Ordenar",
+    sinceLabel: "Añadidos",
+    typeLabel: "Tipo de resultado",
+    tagPlaceholder: "Acotar por tags de estos resultados…",
+    tagSummary: "Con todos estos tags: {{count}} bookmarks",
+    sort: {
+      default: "Por defecto",
+      relevance: "Relevancia",
+      newest: "Más recientes",
+      oldest: "Más antiguos",
+      updated: "Modificados hace menos",
+      name: "Nombre (A-Z)",
+      site: "Sitio web",
+    },
+    since: {
+      any: "Cuando sea",
+      week: "Última semana",
+      month: "Último mes",
+      year: "Último año",
+    },
+    type: {
+      all: "Todo",
+      folders: "Carpetas",
+      bookmarks: "Bookmarks",
+    },
+  },
   search: {
     pageTitle: "Búsqueda: {{query}}",
     typeAbove: "Escribe en la barra superior.",

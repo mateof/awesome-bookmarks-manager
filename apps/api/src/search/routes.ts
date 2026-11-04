@@ -1,3 +1,4 @@
+import { ResultSortSchema, ResultWindowSchema } from "@awesome-bookmarks/shared";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/session.js";
@@ -8,6 +9,15 @@ const Query = z.object({
   q: z.string().min(1).max(256),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   folderId: z.string().uuid().optional(),
+  sort: ResultSortSchema.default("default"),
+  since: ResultWindowSchema.optional(),
+  fav: z.literal("1").optional(),
+  tags: z
+    .string()
+    .max(2000)
+    .transform((v) => v.split(",").filter(Boolean))
+    .pipe(z.array(z.string().uuid()).max(50))
+    .optional(),
 });
 
 export const searchRoutes: FastifyPluginAsync = async (app) => {
@@ -27,7 +37,13 @@ export const searchRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/search", async (req) => {
     const ctx = requireAuth(req);
-    const { q, limit, folderId } = Query.parse(req.query);
-    return search(ctx, q, limit, { folderId: folderId ?? null });
+    const { q, limit, folderId, sort, since, fav, tags } = Query.parse(req.query);
+    return search(ctx, q, limit, {
+      folderId: folderId ?? null,
+      sort,
+      since,
+      favorite: fav === "1",
+      tagIds: tags,
+    });
   });
 };

@@ -791,6 +791,33 @@ const gl = {
     cannotEnqueue: "Non se puido encolar o re-snapshot: {{message}}",
     cannotEnqueueGeneric: "Non se puido encolar o re-snapshot",
   },
+  results: {
+    sortLabel: "Ordenar",
+    sinceLabel: "Engadidos",
+    typeLabel: "Tipo de resultado",
+    tagPlaceholder: "Acoutar por tags destes resultados…",
+    tagSummary: "Con todos estes tags: {{count}} marcadores",
+    sort: {
+      default: "Por defecto",
+      relevance: "Relevancia",
+      newest: "Máis recentes",
+      oldest: "Máis antigos",
+      updated: "Modificados hai menos",
+      name: "Nome (A-Z)",
+      site: "Sitio web",
+    },
+    since: {
+      any: "En calquera momento",
+      week: "Última semana",
+      month: "Último mes",
+      year: "Último ano",
+    },
+    type: {
+      all: "Todo",
+      folders: "Cartafoles",
+      bookmarks: "Marcadores",
+    },
+  },
   search: {
     pageTitle: "Busca: {{query}}",
     typeAbove: "Escribe na barra superior.",

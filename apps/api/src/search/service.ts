@@ -1,4 +1,10 @@
-import type { Bookmark } from "@awesome-bookmarks/shared";
+import {
+  isWithinWindow,
+  sortResults,
+  type Bookmark,
+  type ResultSort,
+  type ResultWindow,
+} from "@awesome-bookmarks/shared";
 import type { AuthedContext } from "../auth/session.js";
 import { getSqlite } from "../db/client.js";
 import { listBookmarks } from "../bookmarks/service.js";
@@ -13,7 +19,14 @@ export interface SnippetMatch {
 export interface SearchOptions {
   folderId?: string | null;
   fuzzy?: boolean;
+  sort?: ResultSort;
+  since?: ResultWindow;
+  favorite?: boolean;
+  tagIds?: string[];
 }
+
+const FUZZY_SCORE = 10;
+const FULL_SNAPSHOT_SCAN = 5000;
 
 /**
  * Run an FTS5 MATCH against the snapshot text index, scoped to the user.
@@ -61,9 +74,17 @@ export function search(
     : null;
 
   const all = listBookmarks(ctx, { limit: 5000 });
-  const inScope = folderScope
-    ? all.filter((b) => b.folderId && folderScope.has(b.folderId))
-    : all;
+  const sort = opts.sort ?? "default";
+  const tagIds = opts.tagIds ?? [];
+  const narrowed =
+    !!folderScope || !!opts.since || !!opts.favorite || tagIds.length > 0;
+  const inScope = all.filter(
+    (b) =>
+      (!folderScope || (b.folderId && folderScope.has(b.folderId))) &&
+      (!opts.favorite || b.favorite) &&
+      (!opts.since || isWithinWindow(b.createdAt, opts.since)) &&
+      tagIds.every((id) => b.tagIds.includes(id)),
+  );
 
   const q = query.trim();
   if (!q) return [];
@@ -86,18 +107,21 @@ export function search(
   }
 
   // FTS5 snapshot index hits (snippet attached for display).
-  const ftsHits = searchSnapshots(ctx, q, limit * 2);
-  const inScopeIds = new Set(inScope.map((b) => b.id));
+  const ftsHits = searchSnapshots(
+    ctx,
+    q,
+    narrowed || sort !== "default" ? FULL_SNAPSHOT_SCAN : limit * 2,
+  );
+  const inScopeById = new Map(inScope.map((b) => [b.id, b]));
   for (const hit of ftsHits) {
-    if (folderScope && !inScopeIds.has(hit.bookmarkId)) continue;
+    const b = inScopeById.get(hit.bookmarkId);
+    if (!b) continue;
     const existing = scored.get(hit.bookmarkId);
     if (existing) {
       existing.snippet = hit.snippet;
       existing.score = Math.min(existing.score, 3);
     } else {
-      const b = inScope.find((x) => x.id === hit.bookmarkId);
-      if (b)
-        scored.set(b.id, { bookmark: b, score: 3, snippet: hit.snippet });
+      scored.set(b.id, { bookmark: b, score: 3, snippet: hit.snippet });
     }
   }
 
@@ -109,13 +133,25 @@ export function search(
       if (scored.has(b.id)) continue;
       const distance = bestWordDistance(ql, b.title, b.url);
       if (distance <= threshold) {
-        scored.set(b.id, { bookmark: b, score: 10 + distance });
+        scored.set(b.id, { bookmark: b, score: FUZZY_SCORE + distance });
       }
     }
   }
 
-  return [...scored.values()]
-    .sort((a, b) => a.score - b.score)
+  const ranked = [...scored.values()].sort((a, b) => a.score - b.score);
+  const inOrder = (entries: typeof ranked) =>
+    sortResults(entries.map((e) => e.bookmark), sort).map(
+      (b) => scored.get(b.id)!,
+    );
+  const ordered =
+    sort === "default"
+      ? ranked
+      : [
+          ...inOrder(ranked.filter((e) => e.score < FUZZY_SCORE)),
+          ...inOrder(ranked.filter((e) => e.score >= FUZZY_SCORE)),
+        ];
+
+  return ordered
     .slice(0, limit)
     .map(({ bookmark, snippet }) => ({ bookmark, snippet }));
 }

@@ -1,3 +1,5 @@
+import { instantOf } from "@awesome-bookmarks/shared";
+
 /**
  * One place that turns a stored timestamp into a Date.
  *
@@ -8,8 +10,7 @@
  * out shifted by the reader's own offset rather than throwing.
  */
 function parse(iso: string): Date {
-  if (iso.includes("T")) return new Date(iso);
-  return new Date(`${iso.replace(" ", "T")}Z`);
+  return new Date(instantOf(iso));
 }
 
 export function fmtDateTime(iso: string): string {

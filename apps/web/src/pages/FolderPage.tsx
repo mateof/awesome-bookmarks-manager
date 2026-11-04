@@ -92,6 +92,14 @@ import {
 } from "@dnd-kit/sortable";
 import { openExternal } from "../lib/extensionBridge.js";
 import { FolderTagFilter, type TagCandidate } from "../components/FolderTagFilter.js";
+import { ResultControls } from "../components/ResultControls.js";
+import {
+  DEFAULT_VIEW,
+  type ResultView,
+  viewFromParams,
+  viewResults,
+  writeView,
+} from "../lib/resultView.js";
 
 
 
@@ -137,12 +145,31 @@ export function FolderPage() {
     [searchParams],
   );
   const [tagFilterOpen, setTagFilterOpen] = useState(false);
+  const resultView = useMemo(() => viewFromParams(searchParams), [searchParams]);
+  const onlyFavorites = searchParams.get("fav") === "1";
   const setFilterTagIds = (ids: string[]) =>
     setSearchParams(
       (prev) => {
+        if (ids.length === 0) {
+          const next = writeView(prev, DEFAULT_VIEW);
+          next.delete("tags");
+          next.delete("fav");
+          return next;
+        }
         const next = new URLSearchParams(prev);
-        if (ids.length > 0) next.set("tags", ids.join(","));
-        else next.delete("tags");
+        next.set("tags", ids.join(","));
+        return next;
+      },
+      { replace: true },
+    );
+  const setResultView = (view: ResultView) =>
+    setSearchParams((prev) => writeView(prev, view), { replace: true });
+  const setOnlyFavorites = (favorite: boolean) =>
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (favorite) next.set("fav", "1");
+        else next.delete("fav");
         return next;
       },
       { replace: true },
@@ -177,17 +204,18 @@ export function FolderPage() {
   const filtering = filterTagIds.length > 0;
   const carriesAll = (tagIds: string[] | undefined) =>
     filterTagIds.every((id) => tagIds?.includes(id));
-  const shownSubfolders = filtering
-    ? subtree.folders.filter((f) => carriesAll(f.tagIds))
-    : subfolders;
-  const shownItems = filtering
-    ? subtree.bookmarks.filter((b) => carriesAll(b.tagIds))
-    : items;
+  const taggedFolders = subtree.folders.filter((f) => carriesAll(f.tagIds));
+  const taggedItems = subtree.bookmarks.filter((b) => carriesAll(b.tagIds));
+  const viewed = viewResults(resultView, taggedFolders, taggedItems, {
+    favorite: onlyFavorites,
+  });
+  const shownSubfolders = filtering ? viewed.folders : subfolders;
+  const shownItems = filtering ? viewed.bookmarks : items;
   const tagCandidates = useMemo<TagCandidate[]>(() => {
     const counts = new Map<string, number>();
     const pool = [
-      ...(filtering ? shownSubfolders : subtree.folders),
-      ...(filtering ? shownItems : subtree.bookmarks),
+      ...(filtering ? taggedFolders : subtree.folders),
+      ...(filtering ? taggedItems : subtree.bookmarks),
     ];
     for (const entity of pool) {
       for (const id of entity.tagIds ?? []) {
@@ -197,7 +225,7 @@ export function FolderPage() {
     return allTags
       .filter((tag) => counts.has(tag.id))
       .map((tag) => ({ tag, count: counts.get(tag.id)! }));
-  }, [allTags, filtering, filterTagIds, shownSubfolders, shownItems, subtree]);
+  }, [allTags, filtering, filterTagIds, taggedFolders, taggedItems, subtree]);
   const subtreeHasTags = useMemo(
     () =>
       [...subtree.folders, ...subtree.bookmarks].some((e) => (e.tagIds?.length ?? 0) > 0),
@@ -906,6 +934,16 @@ export function FolderPage() {
             resultBookmarks={shownItems.length}
             autoFocus={tagFilterOpen}
           />
+        )}
+        {filtering && (
+          <div className="mt-2">
+            <ResultControls
+              view={resultView}
+              onChange={setResultView}
+              favorite={onlyFavorites}
+              onFavoriteChange={setOnlyFavorites}
+            />
+          </div>
         )}
 
         {/* Inside the same strip rather than sticking on its own: two bars

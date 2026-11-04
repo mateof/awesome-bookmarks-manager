@@ -790,6 +790,33 @@ const en = {
     cannotEnqueue: "Could not queue the re-snapshot: {{message}}",
     cannotEnqueueGeneric: "Could not queue the re-snapshot",
   },
+  results: {
+    sortLabel: "Sort",
+    sinceLabel: "Added",
+    typeLabel: "Result type",
+    tagPlaceholder: "Narrow by tags in these results…",
+    tagSummary: "With all these tags: {{count}} bookmarks",
+    sort: {
+      default: "Default",
+      relevance: "Relevance",
+      newest: "Newest",
+      oldest: "Oldest",
+      updated: "Recently changed",
+      name: "Name (A-Z)",
+      site: "Website",
+    },
+    since: {
+      any: "Any time",
+      week: "Last week",
+      month: "Last month",
+      year: "Last year",
+    },
+    type: {
+      all: "All",
+      folders: "Folders",
+      bookmarks: "Bookmarks",
+    },
+  },
   search: {
     pageTitle: "Search: {{query}}",
     typeAbove: "Type in the top bar.",

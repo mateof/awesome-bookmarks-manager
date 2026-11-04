@@ -17,6 +17,7 @@ import { dlg } from "../components/dialogs.js";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { Modal } from "../components/Modal.js";
+import { ResultControls } from "../components/ResultControls.js";
 import { TagChipList } from "../components/TagChip.js";
 import {
   filterUrl,
@@ -25,6 +26,13 @@ import {
   queryFromParams,
   sameQuery,
 } from "../lib/smartQuery.js";
+import {
+  DEFAULT_VIEW,
+  type ResultView,
+  viewFromParams,
+  viewResults,
+  writeView,
+} from "../lib/resultView.js";
 
 /**
  * Filter folders and bookmarks by tags, free text and favourites.
@@ -59,10 +67,14 @@ export function TagFilterPage() {
   const smartId = sp.get("sf");
   const smart = smartQ.data?.find((s) => s.id === smartId) ?? null;
   const drifted = smart ? !sameQuery(smart.query, query) : false;
+  const view = useMemo(() => viewFromParams(sp), [sp]);
 
   /** Rewrite the URL from a whole query, preserving the open smart folder. */
-  const apply = (next: SmartQuery, opts: { replace?: boolean } = {}) => {
-    const params = paramsFromQuery(next);
+  const apply = (
+    next: SmartQuery,
+    opts: { replace?: boolean; view?: ResultView } = {},
+  ) => {
+    const params = writeView(paramsFromQuery(next), opts.view ?? view);
     if (smartId) params.set("sf", smartId);
     setSp(params, { replace: opts.replace ?? false });
   };
@@ -110,6 +122,8 @@ export function TagFilterPage() {
             b.url.toLowerCase().includes(needle) ||
             (b.description?.toLowerCase().includes(needle) ?? false)),
       );
+
+  const shown = viewResults(view, matchingFolders, matchingBookmarks);
 
   // How many items each tag would bring on its own — useful to spot the tags
   // worth combining, and to hide tags nothing uses.
@@ -159,8 +173,7 @@ export function TagFilterPage() {
     mutationFn: () => api.deleteSmartFolder(smartId!),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["smart-folders"] });
-      const params = paramsFromQuery(query);
-      setSp(params, { replace: true });
+      setSp(writeView(paramsFromQuery(query), view), { replace: true });
     },
   });
 
@@ -181,8 +194,8 @@ export function TagFilterPage() {
         {!empty && (
           <span className="text-xs text-slate-500">
             {t("tags.filterSummary", {
-              folders: matchingFolders.length,
-              bookmarks: matchingBookmarks.length,
+              folders: shown.folders.length,
+              bookmarks: shown.bookmarks.length,
             })}
           </span>
         )}
@@ -361,7 +374,10 @@ export function TagFilterPage() {
           <button
             type="button"
             onClick={() =>
-              apply({ tagIds: [], match: "any", text: "", favorite: false })
+              apply(
+                { tagIds: [], match: "any", text: "", favorite: false },
+                { view: DEFAULT_VIEW },
+              )
             }
             className="inline-flex items-center gap-0.5 text-xs text-slate-500 hover:text-red-600"
           >
@@ -369,23 +385,27 @@ export function TagFilterPage() {
           </button>
         )}
         </div>
+
+        {!empty && (
+          <ResultControls view={view} onChange={(next) => apply(query, { replace: true, view: next })} />
+        )}
       </div>
 
       {empty && <p className="text-sm text-slate-400">{t("tags.pickToFilter")}</p>}
 
       {!empty &&
-        matchingFolders.length === 0 &&
-        matchingBookmarks.length === 0 && (
+        shown.folders.length === 0 &&
+        shown.bookmarks.length === 0 && (
           <p className="text-sm text-slate-400">{t("tags.filterEmpty")}</p>
         )}
 
-      {matchingFolders.length > 0 && (
+      {shown.folders.length > 0 && (
         <section>
           <h2 className="mb-2 text-xs font-medium uppercase text-slate-500">
             {t("folder.foldersSection")}
           </h2>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {matchingFolders.map((f) => (
+            {shown.folders.map((f) => (
               <Link
                 key={f.id}
                 to={`/folder/${f.id}`}
@@ -412,13 +432,13 @@ export function TagFilterPage() {
         </section>
       )}
 
-      {matchingBookmarks.length > 0 && (
+      {shown.bookmarks.length > 0 && (
         <section>
           <h2 className="mb-2 text-xs font-medium uppercase text-slate-500">
             {t("folder.bookmarksSection")}
           </h2>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {matchingBookmarks.map((b) => (
+            {shown.bookmarks.map((b) => (
               <div
                 key={b.id}
                 className="flex items-start gap-2 rounded border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
@@ -466,7 +486,7 @@ export function TagFilterPage() {
           onClose={() => setSaving(false)}
           onSaved={(id) => {
             setSaving(false);
-            const params = paramsFromQuery(query);
+            const params = writeView(paramsFromQuery(query), view);
             params.set("sf", id);
             setSp(params, { replace: true });
           }}

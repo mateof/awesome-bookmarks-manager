@@ -13,6 +13,7 @@ export * from "./groups.js";
 export * from "./admin.js";
 export * from "./panels.js";
 export * from "./smart-folders.js";
+export * from "./result-view.js";
 export * from "./trash.js";
 export * from "./duplicates.js";
 export * from "./storage.js";
